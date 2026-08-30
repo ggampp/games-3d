@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Simulador 3D Interativo de Cubo Mágico 3x3 com Three.js, temporizador de speedcubing WCA, solucionador passo a passo e controles táteis." />
+  <title>Rubik's Cube 3D Simulator | Simulador de Cubo Mágico 3x3</title>
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- 3D WebGL Canvas Container -->
+    <div id="canvas-container"></div>
+
+    <!-- Background Ambient Glows -->
+    <div class="ambient-glow glow-1"></div>
+    <div class="ambient-glow glow-2"></div>
+
+    <!-- Header Overlay -->
+    <header class="app-header glass-panel">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none">
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <line x1="9" y1="3" x2="9" y2="21" />
+            <line x1="15" y1="3" x2="15" y2="21" />
+            <line x1="3" y1="9" x2="21" y2="9" />
+            <line x1="3" y1="15" x2="21" y2="15" />
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>Rubik 3D <span class="badge-pro">PRO</span></h1>
+          <span class="brand-subtitle">Simulador 3x3</span>
+        </div>
+      </div>
+
+      <!-- Scramble sequence display -->
+      <div class="scramble-display-wrapper" id="scramble-wrapper">
+        <span class="scramble-label">Scramble:</span>
+        <span class="scramble-text" id="scramble-text">Clique em "Embaralhar" para iniciar</span>
+        <button id="btn-copy-scramble" class="icon-btn-sm" title="Copiar sequência de embaralhamento" aria-label="Copiar Scramble">
+          <i data-lucide="copy"></i>
+        </button>
+      </div>
+
+      <!-- Header actions -->
+      <div class="header-actions">
+        <button id="btn-scan-cube-header" class="icon-btn glass-btn highlight-btn" title="Escanear Foto do Cubo Real (Câmera / Upload)" aria-label="Escanear Foto">
+          <i data-lucide="camera"></i>
+        </button>
+        <button id="btn-sound" class="icon-btn glass-btn" title="Alternar Som (M)" aria-label="Som">
+          <i data-lucide="volume-2"></i>
+        </button>
+        <button id="btn-camera-reset" class="icon-btn glass-btn" title="Resetar Câmera (Espaço/C)" aria-label="Resetar Câmera">
+          <i data-lucide="rotate-ccw"></i>
+        </button>
+        <button id="btn-shortcuts" class="icon-btn glass-btn" title="Atalhos do Teclado (?)" aria-label="Atalhos">
+          <i data-lucide="keyboard"></i>
+        </button>
+        <button id="btn-settings" class="icon-btn glass-btn" title="Configurações e Temas" aria-label="Configurações">
+          <i data-lucide="settings"></i>
+        </button>
+        <button id="btn-fullscreen" class="icon-btn glass-btn" title="Tela Cheia (F)" aria-label="Tela Cheia">
+          <i data-lucide="maximize"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Speedcubing Timer Widget -->
+    <div class="timer-widget glass-panel" id="timer-widget">
+      <div class="timer-header">
+        <span class="timer-status-badge" id="timer-status">Pronto</span>
+        <div class="timer-stats">
+          <span title="Melhor Tempo Pessoal">PB: <strong id="stat-pb">--:--</strong></span>
+          <span title="Média dos últimos 5 solves">Ao5: <strong id="stat-ao5">--:--</strong></span>
+          <span title="Total de movimentos">Movs: <strong id="stat-moves">0</strong></span>
+        </div>
+      </div>
+      
+      <div class="timer-display-box" id="timer-trigger" tabindex="0" role="button" aria-label="Pressione Espaço ou clique para disparar o cronômetro">
+        <div class="timer-time" id="timer-time">0.00</div>
+        <div class="timer-hint" id="timer-hint">Segure [Espaço] ou clique para cronometrar</div>
+      </div>
+      
+      <div class="timer-controls">
+        <button id="btn-inspection-toggle" class="chip-btn" title="Alternar inspeção WCA de 15s">
+          <i data-lucide="clock"></i> Inspeção: <span id="inspection-state">OFF</span>
+        </button>
+        <button id="btn-history" class="chip-btn" title="Ver histórico de solves">
+          <i data-lucide="history"></i> Histórico (<span id="solve-count">0</span>)
+        </button>
+      </div>
+    </div>
+
+    <!-- Gesture Tooltip Indicator -->
+    <div class="gesture-hint glass-pill" id="gesture-hint">
+      <i data-lucide="mouse-pointer-click"></i>
+      <span>Arraste nas peças para girar • Arraste no fundo para girar a câmera 360°</span>
+    </div>
+
+    <!-- Face Color Legend Hub -->
+    <div class="face-legend-bar glass-pill" id="face-legend-bar">
+      <div class="face-tag" title="Topo (Up)"><span class="face-dot face-u"></span><strong>U:</strong> Branco</div>
+      <div class="face-tag" title="Frente (Front)"><span class="face-dot face-f"></span><strong>F:</strong> Verde</div>
+      <div class="face-tag" title="Direita (Right)"><span class="face-dot face-r"></span><strong>R:</strong> Vermelho</div>
+      <div class="face-tag" title="Esquerda (Left)"><span class="face-dot face-l"></span><strong>L:</strong> Laranja</div>
+      <div class="face-tag" title="Trás (Back)"><span class="face-dot face-b"></span><strong>B:</strong> Azul</div>
+      <div class="face-tag" title="Base (Down)"><span class="face-dot face-d"></span><strong>D:</strong> Amarelo</div>
+    </div>
+
+    <!-- Solver Progress Overlay (Visible during solution mode) -->
+    <div class="solver-bar glass-panel hidden" id="solver-bar">
+      <div class="solver-info">
+        <div class="solver-badge">SOLUCIONADOR PASSO A PASSO</div>
+        <div class="solver-step-text" id="solver-step-text">Calculando solução ideal...</div>
+      </div>
+      <div class="solver-current-move" id="solver-current-move">-</div>
+      <div class="solver-controls">
+        <button id="btn-solver-prev" class="glass-btn-sm" title="Passo Anterior" aria-label="Passo Anterior">
+          <i data-lucide="skip-back"></i>
+        </button>
+        <button id="btn-solver-play" class="primary-btn-sm" title="Reproduzir / Pausar" aria-label="Auto Play">
+          <i data-lucide="play" id="solver-play-icon"></i>
+          <span id="solver-play-text">Auto</span>
+        </button>
+        <button id="btn-solver-next" class="glass-btn-sm" title="Próximo Passo" aria-label="Próximo Passo">
+          <i data-lucide="skip-forward"></i>
+        </button>
+        <button id="btn-solver-close" class="icon-btn-sm danger-btn" title="Fechar Solucionador" aria-label="Fechar">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Bottom Controls Hub -->
+    <footer class="bottom-dock glass-panel">
+      <!-- Main Action Buttons -->
+      <div class="dock-actions">
+        <button id="btn-scan-cube" class="action-btn action-scan" title="Escanear fotos ou pintar as cores do seu cubo físico">
+          <i data-lucide="camera"></i>
+          <span>Escanear Foto</span>
+        </button>
+        <button id="btn-scramble" class="action-btn action-scramble" title="Embaralhar com algoritmo oficial WCA">
+          <i data-lucide="shuffle"></i>
+          <span>Embaralhar</span>
+        </button>
+        <button id="btn-solve" class="action-btn action-solve" title="Resolver passo a passo ou automaticamente">
+          <i data-lucide="sparkles"></i>
+          <span>Resolver</span>
+        </button>
+        <button id="btn-reset" class="action-btn action-reset" title="Restaurar cubo resolvido instantaneamente">
+          <i data-lucide="rotate-cw"></i>
+          <span>Resetar</span>
+        </button>
+        <div class="dock-divider"></div>
+        <button id="btn-undo" class="action-btn-icon" title="Desfazer movimento (Ctrl+Z)" aria-label="Desfazer">
+          <i data-lucide="undo-2"></i>
+        </button>
+        <button id="btn-redo" class="action-btn-icon" title="Refazer movimento (Ctrl+Y)" aria-label="Refazer">
+          <i data-lucide="redo-2"></i>
+        </button>
+      </div>
+
+      <!-- Notation Turns Dock -->
+      <div class="notation-pad-container">
+        <div class="notation-row primary-faces">
+          <span class="pad-label">Camadas:</span>
+          <div class="pad-buttons">
+            <button class="turn-btn" data-move="U" title="Up (Topo Horário)">U</button>
+            <button class="turn-btn" data-move="U'" title="Up Prime (Topo Anti-horário)">U'</button>
+            <button class="turn-btn" data-move="D" title="Down (Base Horário)">D</button>
+            <button class="turn-btn" data-move="D'" title="Down Prime (Base Anti-horário)">D'</button>
+            <button class="turn-btn" data-move="L" title="Left (Esquerda Horário)">L</button>
+            <button class="turn-btn" data-move="L'" title="Left Prime (Esquerda Anti-horário)">L'</button>
+            <button class="turn-btn" data-move="R" title="Right (Direita Horário)">R</button>
+            <button class="turn-btn" data-move="R'" title="Right Prime (Direita Anti-horário)">R'</button>
+            <button class="turn-btn" data-move="F" title="Front (Frente Horário)">F</button>
+            <button class="turn-btn" data-move="F'" title="Front Prime (Frente Anti-horário)">F'</button>
+            <button class="turn-btn" data-move="B" title="Back (Trás Horário)">B</button>
+            <button class="turn-btn" data-move="B'" title="Back Prime (Trás Anti-horário)">B'</button>
+          </div>
+        </div>
+
+        <!-- Slice & Whole Cube Turns (Toggleable) -->
+        <div class="notation-row secondary-faces" id="secondary-notation-row">
+          <span class="pad-label">Fatias & Eixos:</span>
+          <div class="pad-buttons">
+            <button class="turn-btn btn-slice" data-move="M" title="Middle slice (L-direction)">M</button>
+            <button class="turn-btn btn-slice" data-move="M'" title="Middle slice Prime">M'</button>
+            <button class="turn-btn btn-slice" data-move="E" title="Equatorial slice (D-direction)">E</button>
+            <button class="turn-btn btn-slice" data-move="E'" title="Equatorial slice Prime">E'</button>
+            <button class="turn-btn btn-slice" data-move="S" title="Standing slice (F-direction)">S</button>
+            <button class="turn-btn btn-slice" data-move="S'" title="Standing slice Prime">S'</button>
+            <button class="turn-btn btn-axis" data-move="x" title="Girar todo o cubo no eixo X">x</button>
+            <button class="turn-btn btn-axis" data-move="x'" title="Girar todo o cubo no eixo X inverso">x'</button>
+            <button class="turn-btn btn-axis" data-move="y" title="Girar todo o cubo no eixo Y">y</button>
+            <button class="turn-btn btn-axis" data-move="y'" title="Girar todo o cubo no eixo Y inverso">y'</button>
+            <button class="turn-btn btn-axis" data-move="z" title="Girar todo o cubo no eixo Z">z</button>
+            <button class="turn-btn btn-axis" data-move="z'" title="Girar todo o cubo no eixo Z inverso">z'</button>
+          </div>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Solved Victory Banner -->
+    <div class="victory-banner glass-panel hidden" id="victory-banner">
+      <div class="victory-icon">🏆</div>
+      <h2>CUBO RESOLVIDO!</h2>
+      <p id="victory-stats">Tempo: 0.00s • 0 Movimentos</p>
+      <button class="primary-btn" id="btn-victory-close">Continuar Praticando</button>
+    </div>
+
+    <!-- Modals -->
+    <!-- Settings Modal -->
+    <div class="modal-backdrop hidden" id="settings-modal">
+      <div class="modal-dialog glass-panel">
+        <div class="modal-header">
+          <h3><i data-lucide="sliders"></i> Configurações do Cubo</h3>
+          <button class="icon-btn-sm modal-close" data-target="settings-modal" aria-label="Fechar">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="setting-group">
+            <label for="select-theme">Tema Visual / Cores:</label>
+            <select id="select-theme" class="custom-select">
+              <option value="classic">Clássico Competição (WCA Studio)</option>
+              <option value="cyberpunk">Cyberpunk Neon Glow</option>
+              <option value="carbon">Carbon Fiber Dark Pro</option>
+              <option value="pastel">Pastel Moderno Minimalista</option>
+            </select>
+          </div>
+
+          <div class="setting-group">
+            <label for="select-cube-style">Estilo das Peças:</label>
+            <select id="select-cube-style" class="custom-select">
+              <option value="stickerless">Stickerless (Cor Sólida Integral)</option>
+              <option value="stickered">Stickered (Bordas Pretas com Adesivos)</option>
+              <option value="frosted">Frosted Glass (Translúcido)</option>
+            </select>
+          </div>
+
+          <div class="setting-group">
+            <label for="range-anim-speed">Velocidade de Rotação:</label>
+            <div class="range-wrapper">
+              <input type="range" id="range-anim-speed" min="80" max="600" step="20" value="220" />
+              <span id="label-anim-speed">220 ms</span>
+            </div>
+          </div>
+
+          <div class="setting-group checkbox-group">
+            <label>
+              <input type="checkbox" id="check-sound-fx" checked />
+              <span>Sons mecânicos e cliques táteis</span>
+            </label>
+          </div>
+
+          <div class="setting-group checkbox-group">
+            <label>
+              <input type="checkbox" id="check-shadows" checked />
+              <span>Sombras e reflexos realistas</span>
+            </label>
+          </div>
+
+          <div class="setting-group checkbox-group">
+            <label>
+              <input type="checkbox" id="check-auto-timer" checked />
+              <span>Iniciar cronômetro automaticamente ao fazer o 1º movimento</span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Keyboard Shortcuts Modal -->
+    <div class="modal-backdrop hidden" id="shortcuts-modal">
+      <div class="modal-dialog glass-panel">
+        <div class="modal-header">
+          <h3><i data-lucide="keyboard"></i> Atalhos do Teclado</h3>
+          <button class="icon-btn-sm modal-close" data-target="shortcuts-modal" aria-label="Fechar">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="shortcuts-grid">
+            <div class="shortcut-card">
+              <h4>Camadas Básicas (Segure Shift para Inverso / ')</h4>
+              <div class="keys-list">
+                <div class="key-item"><kbd>U</kbd> / <kbd>⇧ Shift+U</kbd> <span>Face Superior (Up)</span></div>
+                <div class="key-item"><kbd>D</kbd> / <kbd>⇧ Shift+D</kbd> <span>Face Inferior (Down)</span></div>
+                <div class="key-item"><kbd>L</kbd> / <kbd>⇧ Shift+L</kbd> <span>Face Esquerda (Left)</span></div>
+                <div class="key-item"><kbd>R</kbd> / <kbd>⇧ Shift+R</kbd> <span>Face Direita (Right)</span></div>
+                <div class="key-item"><kbd>F</kbd> / <kbd>⇧ Shift+F</kbd> <span>Face Frontal (Front)</span></div>
+                <div class="key-item"><kbd>B</kbd> / <kbd>⇧ Shift+B</kbd> <span>Face Traseira (Back)</span></div>
+              </div>
+            </div>
+
+            <div class="shortcut-card">
+              <h4>Fatias e Rotação do Cubo</h4>
+              <div class="keys-list">
+                <div class="key-item"><kbd>M</kbd> <span>Fatia do Meio (M)</span></div>
+                <div class="key-item"><kbd>E</kbd> <span>Fatia Equatorial (E)</span></div>
+                <div class="key-item"><kbd>S</kbd> <span>Fatia Standing (S)</span></div>
+                <div class="key-item"><kbd>X</kbd> / <kbd>Y</kbd> / <kbd>Z</kbd> <span>Girar Cubo Todo nos Eixos</span></div>
+              </div>
+            </div>
+
+            <div class="shortcut-card">
+              <h4>Ações Globais</h4>
+              <div class="keys-list">
+                <div class="key-item"><kbd>Espaço</kbd> <span>Iniciar / Parar Cronômetro</span></div>
+                <div class="key-item"><kbd>S</kbd> + <kbd>Ctrl</kbd> ou <kbd>N</kbd> <span>Embaralhar (Scramble)</span></div>
+                <div class="key-item"><kbd>C</kbd> <span>Resetar Câmera</span></div>
+                <div class="key-item"><kbd>M</kbd> <span>Mudo / Desmudo Áudio</span></div>
+                <div class="key-item"><kbd>Ctrl+Z</kbd> / <kbd>Ctrl+Y</kbd> <span>Desfazer / Refazer</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Solves History Modal -->
+    <div class="modal-backdrop hidden" id="history-modal">
+      <div class="modal-dialog glass-panel">
+        <div class="modal-header">
+          <h3><i data-lucide="trophy"></i> Histórico de Solves (Speedcubing)</h3>
+          <button class="icon-btn-sm modal-close" data-target="history-modal" aria-label="Fechar">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="history-stats-banner">
+            <div class="hist-stat-card">
+              <span class="hist-stat-label">Melhor Tempo (PB)</span>
+              <span class="hist-stat-val" id="modal-stat-pb">--:--</span>
+            </div>
+            <div class="hist-stat-card">
+              <span class="hist-stat-label">Média Ao5</span>
+              <span class="hist-stat-val" id="modal-stat-ao5">--:--</span>
+            </div>
+            <div class="hist-stat-card">
+              <span class="hist-stat-label">Total Resolvidos</span>
+              <span class="hist-stat-val" id="modal-stat-total">0</span>
+            </div>
+          </div>
+
+          <div class="history-list-wrapper">
+            <table class="history-table" id="history-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Tempo</th>
+                  <th>Movimentos</th>
+                  <th>TPS</th>
+                  <th>Data</th>
+                </tr>
+              </thead>
+              <tbody id="history-tbody">
+                <tr><td colspan="5" style="text-align:center; opacity:0.6;">Nenhum solve registrado ainda. Complete uma resolução para salvar!</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="modal-footer">
+            <button id="btn-clear-history" class="glass-btn-sm danger-btn">Limpar Histórico</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scan & Photo Cube Modal -->
+    <div class="modal-backdrop hidden" id="scan-modal">
+      <div class="modal-dialog glass-panel scan-modal-dialog">
+        <div class="modal-header">
+          <h3><i data-lucide="camera"></i> Escanear / Importar Fotos do Cubo Real (6 Lados)</h3>
+          <button class="icon-btn-sm modal-close" id="btn-close-scan-modal" aria-label="Fechar">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <!-- Sub-tabs: 6 Fotos vs Editor 2D -->
+          <div class="scan-tabs-header">
+            <button class="scan-tab-btn active" data-tab="sixfaces">
+              <i data-lucide="boxes"></i> 6 Fotos dos Lados
+            </button>
+            <button class="scan-tab-btn" data-tab="editor2d">
+              <i data-lucide="grid"></i> Editor Visual 2D
+            </button>
+          </div>
+
+          <!-- Tab Pane: 6 Fotos dos Lados -->
+          <div class="scan-tab-pane active" data-pane="sixfaces">
+            <div class="scan-upload-card">
+              <p class="scan-instructions">
+                Adicione as fotos dos <strong>6 lados do seu cubo real</strong>. 
+                Tire uma foto de frente para cada face mantendo o topo (Branco) orientado para cima:
+              </p>
+
+              <!-- Top Bar Actions: Teste rápido & Upload em Lote -->
+              <div class="scan-examples-row">
+                <span class="examples-label">Ações rápidas:</span>
+                <button type="button" class="chip-btn" id="btn-load-six-example">
+                  <i data-lucide="sparkles"></i> Carregar 6 fotos de exemplo
+                </button>
+                <button type="button" class="chip-btn chip-btn-primary" id="btn-batch-upload-trigger">
+                  <i data-lucide="upload-cloud"></i> Adicionar várias fotos juntas
+                </button>
+                <input type="file" id="batch-photos-input" accept="image/*" multiple class="hidden" />
+                <button type="button" class="chip-btn chip-btn-danger" id="btn-clear-all-photos" title="Limpar todas as fotos">
+                  <i data-lucide="trash-2"></i> Limpar Fotos
+                </button>
+              </div>
+
+              <!-- 6-Faces Upload Grid -->
+              <div class="six-faces-grid" id="six-faces-grid">
+                <!-- Face U: Topo / Branco -->
+                <div class="face-card" data-face="U">
+                  <div class="face-card-header">
+                    <div class="face-badge-group">
+                      <span class="face-color-dot" style="background:#ffffff; border:1px solid #94a3b8;"></span>
+                      <strong class="face-code">U</strong>
+                      <span class="face-name">Topo (Branco)</span>
+                    </div>
+                    <span class="face-status-badge" id="badge-face-U">Vazia</span>
+                  </div>
+                  <div class="face-preview-area" id="preview-area-U">
+                    <img id="face-img-U" alt="Face Topo" class="hidden face-thumb-img" />
+                    <div class="face-placeholder" id="ph-face-U">
+                      <i data-lucide="camera"></i>
+                      <span>Foto do Topo</span>
+                    </div>
+                    <!-- Mini 3x3 Grid Overlay -->
+                    <div class="face-mini-grid hidden" id="mini-grid-U"></div>
+                  </div>
+                  <div class="face-card-controls">
+                    <input type="file" id="file-input-U" accept="image/*" class="hidden" />
+                    <button type="button" class="btn-face-action btn-face-upload" data-face="U" title="Escolher foto da face">
+                      <i data-lucide="upload"></i> Foto
+                    </button>
+                    <button type="button" class="btn-face-action btn-face-rotate" data-face="U" title="Girar 90° no sentido horário">
+                      <i data-lucide="rotate-cw"></i> 90°
+                    </button>
+                    <button type="button" class="btn-face-action btn-face-remove" data-face="U" title="Remover foto">
+                      <i data-lucide="x"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Face L: Esquerda / Laranja -->
+                <div class="face-card" data-face="L">
+                  <div class="face-card-header">
+                    <div class="face-badge-group">
+                      <span class="face-color-dot" style="background:#ea580c;"></span>
+                      <strong class="face-code">L</strong>
+                      <span class="face-name">Esquerda (Laranja)</span>
+                    </div>
+                    <span class="face-status-badge" id="badge-face-L">Vazia</span>
+                  </div>
+                  <div class="face-preview-area" id="preview-area-L">
+                    <img id="face-img-L" alt="Face Esquerda" class="hidden face-thumb-img" />
+                    <div class="face-placeholder" id="ph-face-L">
+                      <i data-lucide="camera"></i>
+                      <span>Foto da Esquerda</span>
+                    </div>
+                    <div class="face-mini-grid hidden" id="mini-grid-L"></div>
+                  </div>
+                  <div class="face-card-controls">
+                    <input type="file" id="file-input-L" accept="image/*" class="hidden" />
+                    <button type="button" class="btn-face-action btn-face-upload" data-face="L" title="Escolher foto da face">
+                      <i data-lucide="upload"></i> Foto
+                    </button>
+                    <button type="button" class="btn-face-action btn-face-rotate" data-face="L" title="Girar 90° no sentido horário">
+                      <i data-lucide="rotate-cw"></i> 90°
+                    </button>
+                    <button type="button" class="btn-face-action btn-face-remove" data-face="L" title="Remover foto">
+                      <i data-lucide="x"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Face F: Frente / Verde -->
+                <div class="face-card" data-face="F">
+                  <div class="face-card-header">
+                    <div class="face-badge-group">
+                      <span class="face-color-dot" style="background:#16a34a;"></span>
+                      <strong class="face-code">F</strong>
+                      <span class="face-name">Frente (Verde)</span>
+                    </div>
+                    <span class="face-status-badge" id="badge-face-F">Vazia</span>
+                  </div>
+                  <div class="face-preview-area" id="preview-area-F">
+                    <img id="face-img-F" alt="Face Frente" class="hidden face-thumb-img" />
+                    <div class="face-placeholder" id="ph-face-F">
+                      <i data-lucide="camera"></i>
+                      <span>Foto da Frente</span>
+                    </div>
+                    <div class="face-mini-grid hidden" id="mini-grid-F"></div>
+                  </div>
+                  <div class="face-card-controls">
+                    <input type="file" id="file-input-F" accept="image/*" class="hidden" />
+                    <button type="button" class="btn-face-action btn-face-upload" data-face="F" title="Escolher foto da face">
+                      <i data-lucide="upload"></i> Foto
+                    </button>
+                    <button type="button" class="btn-face-action btn-face-rotate" data-face="F" title="Girar 90° no sentido horário">
+                      <i data-lucide="rotate-cw"></i> 90°
+                    </button>
+                    <button type="button" class="btn-face-action btn-face-remove" data-face="F" title="Remover foto">
+                      <i data-lucide="x"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Face R: Direita / Vermelho -->
+                <div class="face-card" data-face="R">
+                  <div class="face-card-header">
+                    <div class="face-badge-group">
+                      <span class="face-color-dot" style="background:#dc2626;"></span>
+                      <strong class="face-code">R</strong>
+                      <span class="face-name">Direita (Vermelho)</span>
+                    </div>
+                    <span class="face-status-badge" id="badge-face-R">Vazia</span>
+                  </div>
+                  <div class="face-preview-area" id="preview-area-R">
+                    <img id="face-img-R" alt="Face Direita" class="hidden face-thumb-img" />
+                    <div class="face-placeholder" id="ph-face-R">
+                      <i data-lucide="camera"></i>
+                      <span>Foto da Direita</span>
+                    </div>
+                    <div class="face-mini-grid hidden" id="mini-grid-R"></div>
+                  </div>
+                  <div class="face-card-controls">
+                    <input type="file" id="file-input-R" accept="image/*" class="hidden" />
+                    <button type="button" class="btn-face-action btn-face-upload" data-face="R" title="Escolher foto da face">
+                      <i data-lucide="upload"></i> Foto
+                    </button>
+                    <button type="button" class="btn-face-action btn-face-rotate" data-face="R" title="Girar 90° no sentido horário">
+                      <i data-lucide="rotate-cw"></i> 90°
+                    </button>
+                    <button type="button" class="btn-face-action btn-face-remove" data-face="R" title="Remover foto">
+                      <i data-lucide="x"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Face B: Trás / Azul -->
+                <div class="face-card" data-face="B">
+                  <div class="face-card-header">
+                    <div class="face-badge-group">
+                      <span class="face-color-dot" style="background:#2563eb;"></span>
+                      <strong class="face-code">B</strong>
+                      <span class="face-name">Trás (Azul)</span>
+                    </div>
+                    <span class="face-status-badge" id="badge-face-B">Vazia</span>
+                  </div>
+                  <div class="face-preview-area" id="preview-area-B">
+                    <img id="face-img-B" alt="Face Trás" class="hidden face-thumb-img" />
+                    <div class="face-placeholder" id="ph-face-B">
+                      <i data-lucide="camera"></i>
+                      <span>Foto de Trás</span>
+                    </div>
+                    <div class="face-mini-grid hidden" id="mini-grid-B"></div>
+                  </div>
+                  <div class="face-card-controls">
+                    <input type="file" id="file-input-B" accept="image/*" class="hidden" />
+                    <button type="button" class="btn-face-action btn-face-upload" data-face="B" title="Escolher foto da face">
+                      <i data-lucide="upload"></i> Foto
+                    </button>
+                    <button type="button" class="btn-face-action btn-face-rotate" data-face="B" title="Girar 90° no sentido horário">
+                      <i data-lucide="rotate-cw"></i> 90°
+                    </button>
+                    <button type="button" class="btn-face-action btn-face-remove" data-face="B" title="Remover foto">
+                      <i data-lucide="x"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Face D: Base / Amarelo -->
+                <div class="face-card" data-face="D">
+                  <div class="face-card-header">
+                    <div class="face-badge-group">
+                      <span class="face-color-dot" style="background:#facc15;"></span>
+                      <strong class="face-code">D</strong>
+                      <span class="face-name">Base (Amarelo)</span>
+                    </div>
+                    <span class="face-status-badge" id="badge-face-D">Vazia</span>
+                  </div>
+                  <div class="face-preview-area" id="preview-area-D">
+                    <img id="face-img-D" alt="Face Base" class="hidden face-thumb-img" />
+                    <div class="face-placeholder" id="ph-face-D">
+                      <i data-lucide="camera"></i>
+                      <span>Foto da Base</span>
+                    </div>
+                    <div class="face-mini-grid hidden" id="mini-grid-D"></div>
+                  </div>
+                  <div class="face-card-controls">
+                    <input type="file" id="file-input-D" accept="image/*" class="hidden" />
+                    <button type="button" class="btn-face-action btn-face-upload" data-face="D" title="Escolher foto da face">
+                      <i data-lucide="upload"></i> Foto
+                    </button>
+                    <button type="button" class="btn-face-action btn-face-rotate" data-face="D" title="Girar 90° no sentido horário">
+                      <i data-lucide="rotate-cw"></i> 90°
+                    </button>
+                    <button type="button" class="btn-face-action btn-face-remove" data-face="D" title="Remover foto">
+                      <i data-lucide="x"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Status Box & Action Button -->
+              <div class="six-faces-status" id="six-faces-status">
+                Adicione as 6 fotos ou clique em "Carregar 6 fotos de exemplo" para testar.
+              </div>
+
+              <div class="six-faces-actions">
+                <button type="button" class="primary-btn" id="btn-analyze-six-faces" disabled>
+                  <i data-lucide="sparkles"></i> Analisar e Montar Cubo dos 6 Lados
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab Pane 2: Editor Visual 2D (Mapa Desdobrado) -->
+          <div class="scan-tab-pane hidden" data-pane="editor2d">
+            <div class="editor2d-wrapper">
+              <!-- Color Palette -->
+              <div class="palette-container">
+                <span class="palette-label">Selecione uma cor para pintar as facetas:</span>
+                <div class="palette-chips">
+                  <button class="color-palette-chip selected" data-color="U" style="background:#ffffff; color:#0f172a; border-color:#94a3b8;" title="Branco (U)">⚪ Branco</button>
+                  <button class="color-palette-chip" data-color="F" style="background:#16a34a; color:#fff;" title="Verde (F)">🟢 Verde</button>
+                  <button class="color-palette-chip" data-color="R" style="background:#dc2626; color:#fff;" title="Vermelho (R)">🔴 Vermelho</button>
+                  <button class="color-palette-chip" data-color="L" style="background:#ea580c; color:#fff;" title="Laranja (L)">🟠 Laranja</button>
+                  <button class="color-palette-chip" data-color="B" style="background:#2563eb; color:#fff;" title="Azul (B)">🔵 Azul</button>
+                  <button class="color-palette-chip" data-color="D" style="background:#facc15; color:#0f172a;" title="Amarelo (D)">🟡 Amarelo</button>
+                </div>
+              </div>
+
+              <!-- Unfolded 2D Cube Net -->
+              <div class="cube-2d-net-container" id="cube-2d-net"></div>
+            </div>
+          </div>
+
+          <!-- Validation & Summary Footer -->
+          <div class="scan-summary-box">
+            <div class="scan-validation-badge" id="scan-validation-badge">
+              ✔ Cubo 100% Válido! Pronto para resolver.
+            </div>
+            <div class="scan-color-counts" id="scan-color-counts"></div>
+          </div>
+
+          <div class="modal-footer scan-modal-footer">
+            <button class="glass-btn-sm" id="btn-reset-scan">
+              <i data-lucide="rotate-ccw"></i> Limpar / Resetar Cores
+            </button>
+            <button class="primary-btn" id="btn-apply-scan-solve">
+              <i data-lucide="sparkles"></i> Aplicar no 3D e Resolver
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+{
+  "systems": [
+    { "id": "hex-placement", "spec": "specs/hex-placement.spec.md" },
+    { "id": "cards-deck", "spec": "specs/cards-deck.spec.md" },
+    { "id": "production-harmony", "spec": "specs/production-harmony.spec.md" },
+    { "id": "campaign-quests", "spec": "specs/campaign-quests.spec.md" },
+    { "id": "hud-ui", "spec": "specs/hud-ui.spec.md" }
+  ]
+}

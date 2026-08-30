@@ -1,0 +1,120 @@
+{
+  "quests": [
+    {
+      "id": "p1-rocas",
+      "titulo": "Plantar o chão",
+      "descricao": "Coloque 3 roças no reino.",
+      "type": "count",
+      "tileId": "roca",
+      "amount": 3
+    },
+    {
+      "id": "p1-casas",
+      "titulo": "Chamar gente",
+      "descricao": "Coloque 2 casas de telha.",
+      "type": "count",
+      "tileId": "casa",
+      "amount": 2
+    },
+    {
+      "id": "p2-matas",
+      "titulo": "Sombra de verão",
+      "descricao": "Coloque 4 hexes de mata.",
+      "type": "count",
+      "tileId": "mata",
+      "amount": 4
+    },
+    {
+      "id": "p2-engenho",
+      "titulo": "Farinha na pedra",
+      "descricao": "Ligue um engenho a duas roças.",
+      "type": "adjacentCount",
+      "tileId": "engenho",
+      "neighborId": "roca",
+      "amount": 2
+    },
+    {
+      "id": "p2-serraria",
+      "titulo": "Madeira clara",
+      "descricao": "Coloque uma serraria junto de uma mata.",
+      "type": "adjacentCount",
+      "tileId": "serraria",
+      "neighborId": "mata",
+      "amount": 1
+    },
+    {
+      "id": "p3-rio",
+      "titulo": "Água em fila",
+      "descricao": "Faça um rio contínuo de 4 hexes.",
+      "type": "connected",
+      "tileId": "rio",
+      "amount": 4
+    },
+    {
+      "id": "p3-padaria",
+      "titulo": "Cheiro de pão",
+      "descricao": "Construa uma padaria.",
+      "type": "count",
+      "tileId": "padaria",
+      "amount": 1
+    },
+    {
+      "id": "p3-mercado",
+      "titulo": "Banca na praça",
+      "descricao": "Coloque um mercado ao lado de uma casa ou sobrado.",
+      "type": "adjacentAny",
+      "tileId": "mercado",
+      "neighborIds": ["casa", "sobrado"],
+      "amount": 1
+    },
+    {
+      "id": "p4-montes",
+      "titulo": "Serra fria",
+      "descricao": "Coloque 3 montes.",
+      "type": "count",
+      "tileId": "monte",
+      "amount": 3
+    },
+    {
+      "id": "p4-cais",
+      "titulo": "Beira d'água",
+      "descricao": "Construa um cais encostado no rio.",
+      "type": "adjacentCount",
+      "tileId": "cais",
+      "neighborId": "rio",
+      "amount": 1
+    },
+    {
+      "id": "p4-capela",
+      "titulo": "Sino na bruma",
+      "descricao": "Erga uma capela.",
+      "type": "count",
+      "tileId": "capela",
+      "amount": 1
+    },
+    {
+      "id": "p5-povo",
+      "titulo": "Povo miúdo",
+      "descricao": "Chegue a 8 de população. (opcional)",
+      "type": "populacao",
+      "amount": 8,
+      "optional": true
+    },
+    {
+      "id": "p5-harmonia",
+      "titulo": "Três cores",
+      "descricao": "Tenha 12 em Natureza, Povo e Água. (opcional)",
+      "type": "harmonyAll",
+      "amount": 12,
+      "optional": true
+    },
+    {
+      "id": "p5-tamanho",
+      "titulo": "Mapa cheio",
+      "descricao": "Posar 20 tiles no total. (opcional)",
+      "type": "mapSize",
+      "amount": 20,
+      "optional": true
+    }
+  ]
+}

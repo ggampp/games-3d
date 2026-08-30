@@ -1,0 +1,15 @@
+{
+  "gameId": "gm_mt1vr3w4_2bee78cb",
+  "kind": "folder",
+  "title": "Pequeno Reino",
+  "source": "d:\\\\claude_projects\\\\dev-games\\\\pequeno-reino",
+  "createdAt": "2026-08-20T18:54:56.897Z",
+  "updatedAt": "2026-08-20T18:54:56.897Z",
+  "genreId": "city-builder",
+  "engine": "unknown",
+  "paths": {
+    "meta": "d:\\claude_projects\\dev-games\\pequeno-reino\\.gameforge\\games\\gm_mt1vr3w4_2bee78cb\\meta.json",
+    "extract": "d:\\claude_projects\\dev-games\\pequeno-reino\\.gameforge\\games\\gm_mt1vr3w4_2bee78cb\\extract.json",
+    "systems": "d:\\claude_projects\\dev-games\\pequeno-reino\\.gameforge\\games\\gm_mt1vr3w4_2bee78cb\\systems\\index.json"
+  }
+}

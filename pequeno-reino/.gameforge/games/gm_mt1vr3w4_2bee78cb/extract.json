@@ -1,0 +1,69 @@
+{
+  "gameId": "gm_mt1vr3w4_2bee78cb",
+  "kind": "folder",
+  "title": "Pequeno Reino",
+  "source": "d:\\\\claude_projects\\\\dev-games\\\\pequeno-reino",
+  "engine": "unknown",
+  "classified": {
+    "genre": {
+      "id": "city-builder",
+      "name": "Builder / sim",
+      "score": 9,
+      "reasons": [
+        "alias:builder",
+        "alias:city builder",
+        "id:city-builder"
+      ]
+    },
+    "alternatives": [
+      {
+        "id": "card",
+        "name": "Card / deckbuilder",
+        "score": 5,
+        "reasons": [
+          "alias:card",
+          "id:card"
+        ]
+      },
+      {
+        "id": "endless-runner",
+        "name": "Endless runner",
+        "score": 0,
+        "reasons": []
+      },
+      {
+        "id": "arcade-action",
+        "name": "Arcade action",
+        "score": 0,
+        "reasons": []
+      }
+    ],
+    "artStyle": {
+      "id": "paper",
+      "name": "Paper / diorama",
+      "score": 7,
+      "reasons": [
+        "alias:paper",
+        "alias:diorama",
+        "id:paper"
+      ]
+    },
+    "artAlternatives": [
+      {
+        "id": "low-poly",
+        "name": "Low poly stylized",
+        "score": 0,
+        "reasons": []
+      },
+      {
+        "id": "pbr-realistic",
+        "name": "PBR semi-realista",
+        "score": 0,
+        "reasons": []
+      }
+    ],
+    "confidence": 0.9,
+    "textUsed": "Pequeno Reino is an original Portuguese (PT-BR) peaceful hex tile city-builder for the web. The player is the cartografo-rei of a pocket Lusophone kingdom. Each turn they hold 3 cards, choose one, and place a hexagonal tile adjacent to the existing realm. Tiles are terrain, buildings, or people. Adjacency creates production chains: roca next to engenho yields flour; flour plus padaria yields bread"
+  },
+  "systems": []
+}

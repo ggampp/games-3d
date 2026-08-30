@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Stagsmere — a living town</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div id="boot">unrolling the parish map…</div>
+  <canvas id="c"></canvas>
+  <div id="ui">
+    <header class="ledger">
+      <p class="parish">parish of the antlered keep</p>
+      <h1>Stagsmere</h1>
+      <div class="row"><span>roofs</span><span class="dots">···············</span><span class="n" id="roofN">0</span></div>
+      <div class="row"><span>souls</span><span class="dots">···············</span><span class="n" id="soulN">0</span></div>
+      <div class="row"><span>abroad</span><span class="dots">···············</span><span class="n" id="outN">0</span></div>
+      <div class="notables" id="notables"></div>
+    </header>
+    <div class="clockbox">
+      <svg class="clockface" viewBox="0 0 100 100" aria-hidden="true">
+        <circle cx="50" cy="50" r="48" fill="#1c140e" stroke="#b08a3e" stroke-width="2.2" />
+        <circle cx="50" cy="50" r="43" fill="none" stroke="#3d2a18" stroke-width="0.6" />
+        <g fill="#c9b48a" font-family="IM Fell English, serif" font-size="9" text-anchor="middle">
+          <text x="50" y="18">XII</text><text x="82" y="54">III</text>
+          <text x="50" y="88">VI</text><text x="18" y="54">IX</text>
+        </g>
+        <path d="M50 10 L53 18 L47 18 Z" fill="#9a2f2a" />
+        <g id="hourHand" transform="rotate(0 50 50)">
+          <rect x="48.4" y="28" width="3.2" height="24" rx="1" fill="#d5c29a" />
+        </g>
+        <g id="minHand" transform="rotate(0 50 50)">
+          <rect x="49" y="16" width="2" height="36" rx="1" fill="#b08a3e" />
+        </g>
+        <circle cx="50" cy="50" r="2.6" fill="#9a2f2a" />
+      </svg>
+      <div class="digits" id="digits">06:00</div>
+      <div class="phase" id="phase">before dawn</div>
+    </div>
+    <aside class="soul" id="soulCard" hidden>
+      <p class="who" id="soulName"></p>
+      <p class="job" id="soulJob"></p>
+      <p class="now" id="soulNow"></p>
+      <ol class="itin" id="soulItin"></ol>
+    </aside>
+    <p class="hint">drag to look · click a roof or a soul · space pauses</p>
+    <div class="hovername" id="hovername"></div>
+    <footer class="daystrip">
+      <div class="speeds">
+        <button type="button" id="btnPause" aria-label="Pause">halt</button>
+        <button type="button" data-spd="0.35">walk</button>
+        <button type="button" data-spd="1" class="on">trot</button>
+        <button type="button" data-spd="4">gallop</button>
+      </div>
+      <div class="arc">
+        <div class="glass"></div>
+        <input id="timeRange" type="range" min="0" max="1439" value="510" aria-label="Hour of the day" />
+      </div>
+      <div class="tools">
+        <button type="button" id="btnRoofs">roofs</button>
+        <button type="button" id="btnXray">x-ray</button>
+        <button type="button" id="btnFree" hidden>release</button>
+        <button type="button" id="btnMute" aria-label="Sound">quiet</button>
+      </div>
+    </footer>
+  </div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script type="module" src="./town.js"></script>
+</body>
+</html>

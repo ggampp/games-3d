@@ -1,0 +1,27 @@
+{
+  "skillsLoaded": {
+    "gameforge": "active"
+  },
+  "referencesLoaded": {},
+  "credentials": {},
+  "assetSourcing": {},
+  "phases": {
+    "extract": {
+      "status": "done",
+      "evidence": "folder"
+    }
+  },
+  "tracks": [
+    "A",
+    "B",
+    "C",
+    "I",
+    "H"
+  ],
+  "provider": "none",
+  "qa": {
+    "automaticMinimum": true,
+    "desktopApproved": false,
+    "mobileApproved": false
+  }
+}

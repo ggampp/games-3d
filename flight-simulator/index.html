@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#07090d" />
+    <title>Skywatch — BA246 e voos ao vivo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <main id="app">
+      <canvas id="game-canvas" aria-label="Visualização 3D do voo"></canvas>
+
+      <header class="topbar">
+        <p class="mark">Skywatch</p>
+        <form id="flight-search">
+          <label for="flight-query">Voo</label>
+          <input
+            id="flight-query"
+            name="q"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="BAW246"
+            value="BAW246"
+          />
+          <button type="submit">Rastrear</button>
+        </form>
+        <p id="status-line">Carregando BA246…</p>
+      </header>
+
+      <section id="featured-flights" aria-label="Voos em destaque"></section>
+
+      <aside class="cameras" aria-label="Câmeras">
+        <button type="button" data-camera="chase" class="is-active">1 Perseguição</button>
+        <button type="button" data-camera="orbit">2 Órbita</button>
+        <button type="button" data-camera="cockpit">3 Cabine</button>
+        <button type="button" data-camera="wing">4 Asa</button>
+        <button type="button" data-camera="globe">5 Globo</button>
+      </aside>
+
+      <section class="strip" aria-label="Faixa de voo">
+        <div>
+          <span>Callsign</span>
+          <strong id="strip-callsign">BAW246</strong>
+        </div>
+        <div>
+          <span>Companhia</span>
+          <strong id="strip-airline">British Airways</strong>
+        </div>
+        <div>
+          <span>Rota</span>
+          <strong id="strip-route">GRU → LHR</strong>
+        </div>
+        <div>
+          <span>Aeronave</span>
+          <strong id="strip-aircraft">Airbus A350-1000</strong>
+        </div>
+        <div>
+          <span>Fonte</span>
+          <strong id="strip-source">REPLAY</strong>
+        </div>
+      </section>
+
+      <section class="instruments" aria-label="Instrumentos">
+        <div><span>Altitude</span><strong id="read-alt">—</strong></div>
+        <div><span>GS</span><strong id="read-spd">—</strong></div>
+        <div><span>Proa</span><strong id="read-hdg">—</strong></div>
+        <div><span>VS</span><strong id="read-vs">—</strong></div>
+        <div><span>Posição</span><strong id="read-pos">—</strong></div>
+      </section>
+
+      <footer class="transport">
+        <button type="button" id="pause-btn">Pausar</button>
+        <div class="speeds">
+          <button type="button" data-speed="1">1×</button>
+          <button type="button" data-speed="8">8×</button>
+          <button type="button" data-speed="32" class="is-active">32×</button>
+          <button type="button" data-speed="128">128×</button>
+        </div>
+        <progress id="replay-progress" max="1" value="0.38"></progress>
+      </footer>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

@@ -1,0 +1,260 @@
+{
+  "tiles": [
+    {
+      "id": "clareira",
+      "nome": "Clareira",
+      "tipo": "terreno",
+      "bioma": "clareira",
+      "descricao": "Grama macia. O primeiro chão de todo reino.",
+      "unlockPhase": 1
+    },
+    {
+      "id": "mata",
+      "nome": "Mata",
+      "tipo": "terreno",
+      "bioma": "mata",
+      "descricao": "Árvores baixas e sombra boa para a cabana.",
+      "unlockPhase": 1
+    },
+    {
+      "id": "rio",
+      "nome": "Rio",
+      "tipo": "terreno",
+      "bioma": "rio",
+      "descricao": "Água clara. Gosta de continuar em linha.",
+      "unlockPhase": 3
+    },
+    {
+      "id": "monte",
+      "nome": "Monte",
+      "tipo": "terreno",
+      "bioma": "serra",
+      "descricao": "Pedra morna ao sol da serra.",
+      "unlockPhase": 4
+    },
+    {
+      "id": "roca",
+      "nome": "Roça",
+      "tipo": "predio",
+      "bioma": "clareira",
+      "descricao": "Milho e mandioca. O engenho adora vizinha-la.",
+      "unlockPhase": 1
+    },
+    {
+      "id": "pomar",
+      "nome": "Pomar",
+      "tipo": "predio",
+      "bioma": "mata",
+      "descricao": "Fruta baixa. Brilha junto da mata.",
+      "unlockPhase": 2
+    },
+    {
+      "id": "engenho",
+      "nome": "Engenho",
+      "tipo": "predio",
+      "bioma": "clareira",
+      "descricao": "Moí o que a roça planta. Melhor ainda à beira do rio.",
+      "unlockPhase": 2
+    },
+    {
+      "id": "padaria",
+      "nome": "Padaria",
+      "tipo": "predio",
+      "bioma": "povo",
+      "descricao": "Pão quente quando o engenho está perto.",
+      "unlockPhase": 3
+    },
+    {
+      "id": "serraria",
+      "nome": "Serraria",
+      "tipo": "predio",
+      "bioma": "mata",
+      "descricao": "Madeira clara das árvores vizinhas.",
+      "unlockPhase": 2
+    },
+    {
+      "id": "cabana_mateiro",
+      "nome": "Cabana do Mateiro",
+      "tipo": "predio",
+      "bioma": "mata",
+      "descricao": "Quanto mais mata ao redor, mais o reino respira.",
+      "unlockPhase": 3
+    },
+    {
+      "id": "cais",
+      "nome": "Cais",
+      "tipo": "predio",
+      "bioma": "rio",
+      "descricao": "Peixe e conversa. Precisa de rio encostado.",
+      "unlockPhase": 4
+    },
+    {
+      "id": "pedreira",
+      "nome": "Pedreira",
+      "tipo": "predio",
+      "bioma": "serra",
+      "descricao": "Tira pedra dos montes vizinhos.",
+      "unlockPhase": 5
+    },
+    {
+      "id": "casa",
+      "nome": "Casa",
+      "tipo": "predio",
+      "bioma": "povo",
+      "descricao": "Telha de barro e gente miúda.",
+      "unlockPhase": 1
+    },
+    {
+      "id": "sobrado",
+      "nome": "Sobrado",
+      "tipo": "predio",
+      "bioma": "povo",
+      "descricao": "Dois andares, mais família na janela.",
+      "unlockPhase": 3
+    },
+    {
+      "id": "mercado",
+      "nome": "Mercado",
+      "tipo": "predio",
+      "bioma": "povo",
+      "descricao": "Ganha vida com casas ao redor.",
+      "unlockPhase": 3
+    },
+    {
+      "id": "capela",
+      "nome": "Capela",
+      "tipo": "predio",
+      "bioma": "povo",
+      "descricao": "Sino pequeno, paz grande.",
+      "unlockPhase": 4
+    },
+    {
+      "id": "aldeao",
+      "nome": "Aldeão",
+      "tipo": "gente",
+      "bioma": "povo",
+      "descricao": "Alguém para andar entre a casa e o trabalho.",
+      "unlockPhase": 1
+    },
+    {
+      "id": "trigo",
+      "nome": "Trigo",
+      "tipo": "terreno",
+      "bioma": "clareira",
+      "descricao": "Espigas douradas. O moinho e o engenho gostam.",
+      "unlockPhase": 1
+    },
+    {
+      "id": "horta",
+      "nome": "Horta",
+      "tipo": "predio",
+      "bioma": "clareira",
+      "descricao": "Tomate, couve e cheiro de terra molhada.",
+      "unlockPhase": 1
+    },
+    {
+      "id": "poco",
+      "nome": "Poço",
+      "tipo": "predio",
+      "bioma": "clareira",
+      "descricao": "Água boa no meio da vila.",
+      "unlockPhase": 1
+    },
+    {
+      "id": "vinha",
+      "nome": "Vinha",
+      "tipo": "predio",
+      "bioma": "mata",
+      "descricao": "Parreira baixa. O mercado ganha cor.",
+      "unlockPhase": 2
+    },
+    {
+      "id": "moinho_vento",
+      "nome": "Moinho de Vento",
+      "tipo": "predio",
+      "bioma": "clareira",
+      "descricao": "Pá no céu, farinha no chão. Funciona sem rio.",
+      "unlockPhase": 2
+    },
+    {
+      "id": "estabulo",
+      "nome": "Estábulo",
+      "tipo": "predio",
+      "bioma": "clareira",
+      "descricao": "Cavalos e burros perto das casas.",
+      "unlockPhase": 2
+    },
+    {
+      "id": "moleiro",
+      "nome": "Moleiro",
+      "tipo": "gente",
+      "bioma": "povo",
+      "descricao": "Farinha na roupa. Adora um engenho vizinho.",
+      "unlockPhase": 2
+    },
+    {
+      "id": "lago",
+      "nome": "Lago",
+      "tipo": "terreno",
+      "bioma": "rio",
+      "descricao": "Água parada, peixe e reflexo.",
+      "unlockPhase": 3
+    },
+    {
+      "id": "ponte",
+      "nome": "Ponte",
+      "tipo": "predio",
+      "bioma": "rio",
+      "descricao": "Madeira sobre a corrente. Quer rio dos dois lados.",
+      "unlockPhase": 3
+    },
+    {
+      "id": "escola",
+      "nome": "Escola",
+      "tipo": "predio",
+      "bioma": "povo",
+      "descricao": "Sino pequeno e gente aprendendo.",
+      "unlockPhase": 3
+    },
+    {
+      "id": "padeiro",
+      "nome": "Padeiro",
+      "tipo": "gente",
+      "bioma": "povo",
+      "descricao": "Mãos de farinha. Melhor ao lado da padaria.",
+      "unlockPhase": 3
+    },
+    {
+      "id": "olaria",
+      "nome": "Olaria",
+      "tipo": "predio",
+      "bioma": "serra",
+      "descricao": "Forno de barro. Gosta de monte por perto.",
+      "unlockPhase": 4
+    },
+    {
+      "id": "farol",
+      "nome": "Farol",
+      "tipo": "predio",
+      "bioma": "rio",
+      "descricao": "Luz mansa na beira d'água.",
+      "unlockPhase": 4
+    },
+    {
+      "id": "casa_pedra",
+      "nome": "Casa de Pedra",
+      "tipo": "predio",
+      "bioma": "serra",
+      "descricao": "Paredes frias, família quente.",
+      "unlockPhase": 4
+    },
+    {
+      "id": "pescador",
+      "nome": "Pescador",
+      "tipo": "gente",
+      "bioma": "rio",
+      "descricao": "Vara e paciência. Brilha junto do cais.",
+      "unlockPhase": 4
+    }
+  ]
+}

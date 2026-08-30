@@ -1,0 +1,18 @@
+{
+  "assets": [
+    {
+      "key": "ui.title-hero",
+      "kind": "sprite",
+      "path": "d:\\claude_projects\\dev-games\\pequeno-reino\\public\\images\\title-hero.png",
+      "provider": "fal",
+      "registeredAt": "2026-08-20T19:09:00.751Z"
+    },
+    {
+      "key": "audio.place",
+      "kind": "audio",
+      "path": "d:\\claude_projects\\dev-games\\pequeno-reino\\public\\audio\\place.mp3",
+      "provider": "elevenlabs",
+      "registeredAt": "2026-08-20T19:09:01.563Z"
+    }
+  ]
+}
