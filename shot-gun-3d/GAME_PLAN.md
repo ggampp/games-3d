@@ -59,8 +59,11 @@ Vite + TypeScript + Three.js + `@dimforge/rapier3d-compat`.
 
 ## 4. Estado
 
-Jogo completo e jogável: cinco armas, portas com dobradiça, lanternas em
-corrente, destruição com entulho, reset e HUD. Viewmodels GLB gerados com Fal
-(`python scripts/generate_weapons_fal.py`, `FAL_KEY` no ambiente); o pórtico
-continua voxel. Testes cobrem conectividade, suporte, dano com atenuação e o
-catálogo de armas.
+Jogo completo e jogável. A v2 (ver `GAMEPLAY_PLAN.md`) trouxe: personagem com
+character controller do Rapier (anda, corre, pula, agacha, empurra entulho),
+vila com 14 estruturas em prefabs escritos em metros, voxel de 0,08 m (~60 k
+voxels), física incremental (só o corpo atingido é refeito, pose preservada),
+colliders fundidos, render por slots, entulho em pedaços, poeira, 13 materiais,
+joystick no celular, 14 SFX e 7 texturas geradas, modo contrato. A v3 (ver
+`GAMEPLAY_PLAN.md`) trouxe chunk meshing com AO, céu e ciclo de dia, pós, fogo
+que se espalha, munição, três armas novas, contratos, alvos e gamepad.

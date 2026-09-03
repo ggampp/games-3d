@@ -31,6 +31,18 @@ WEAPONS = {
         "game-ready first-person steampunk laser gun, dark metal and brass, "
         "glowing cyan chamber, readable silhouette, PBR, centered, no hands, no text"
     ),
+    "water": (
+        "game-ready first-person brass and copper water cannon gun with a round glass tank "
+        "on top, western steampunk, readable silhouette, PBR, centered, no hands, no text"
+    ),
+    "hook": (
+        "game-ready first-person grappling hook launcher, dark iron barrel with a three-prong "
+        "hook at the muzzle and a coil of rope, western, readable silhouette, PBR, centered, no hands, no text"
+    ),
+    "detonator": (
+        "game-ready handheld wooden box plunger detonator with brass plunger and red wire, "
+        "old west mining, readable silhouette, PBR, centered, no hands, no text"
+    ),
 }
 
 

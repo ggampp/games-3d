@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { spreadDirection, weaponById, weaponBySlot, WEAPONS } from './catalog.ts';
 
 describe('armas', () => {
-  it('cinco slots distintos de 1 a 5', () => {
-    expect(WEAPONS).toHaveLength(5);
-    expect(WEAPONS.map((w) => w.slot).sort().join('')).toBe('12345');
+  it('oito slots distintos de 1 a 8', () => {
+    expect(WEAPONS).toHaveLength(8);
+    expect(WEAPONS.map((w) => w.slot).sort().join('')).toBe('12345678');
   });
 
   it('escopeta espalha vários pellets; o revólver não', () => {

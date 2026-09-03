@@ -1,51 +1,64 @@
-import type { Voxel, VoxelGroup } from './types.ts';
+import type { Voxel } from './types.ts';
 import { VoxelGrid, NEIGHBORS } from './grid.ts';
 
-/** Grupos que se ligam por contato 6-conectado (o resto usa juntas). */
-const SOLID_JOIN: ReadonlySet<VoxelGroup> = new Set(['structure']);
-
+/** Só `structure` se liga por contato 6-conectado; o resto vive em juntas. */
 export function sameSolid(a: Voxel, b: Voxel): boolean {
   if (a.group === b.group) return true;
-  return SOLID_JOIN.has(a.group) && SOLID_JOIN.has(b.group);
+  return a.group === 'structure' && b.group === 'structure';
 }
 
-export function connectedComponents(grid: VoxelGrid): Voxel[][] {
+/** Flood fill a partir de um voxel, restrito a `allow` (se dado). */
+export function componentFrom(
+  grid: VoxelGrid,
+  start: Voxel,
+  seen: Set<number>,
+  allow?: (v: Voxel) => boolean,
+): Voxel[] {
+  const stack: Voxel[] = [start];
+  const comp: Voxel[] = [];
+  seen.add(start.id);
+  while (stack.length > 0) {
+    const cur = stack.pop()!;
+    comp.push(cur);
+    for (const [dx, dy, dz] of NEIGHBORS) {
+      const n = grid.get(cur.ix + dx, cur.iy + dy, cur.iz + dz);
+      if (!n || seen.has(n.id) || !sameSolid(cur, n)) continue;
+      if (allow && !allow(n)) continue;
+      seen.add(n.id);
+      stack.push(n);
+    }
+  }
+  return comp;
+}
+
+export function connectedComponents(grid: VoxelGrid, subset?: Iterable<Voxel>): Voxel[][] {
   const seen = new Set<number>();
   const result: Voxel[][] = [];
-  for (const start of grid.values()) {
+  for (const start of subset ?? grid.values()) {
     if (seen.has(start.id)) continue;
-    const stack: Voxel[] = [start];
-    const comp: Voxel[] = [];
-    seen.add(start.id);
-    while (stack.length > 0) {
-      const cur = stack.pop()!;
-      comp.push(cur);
-      for (const [dx, dy, dz] of NEIGHBORS) {
-        const n = grid.get(cur.ix + dx, cur.iy + dy, cur.iz + dz);
-        if (!n || seen.has(n.id) || !sameSolid(cur, n)) continue;
-        seen.add(n.id);
-        stack.push(n);
-      }
-    }
-    result.push(comp);
+    result.push(componentFrom(grid, start, seen));
   }
   return result;
 }
 
 /**
- * Um componente de estrutura apoia-se no deck (iy === 1) ou no chão.
- * Portas, correntes e lanternas nunca são "supported" — vivem nas juntas.
+ * Um componente de estrutura apoia-se no chão se algum voxel tem base em
+ * `iy <= groundIndex`. O `groundIndex` é a camada mais alta que toca deck/chão
+ * (derivada de metros pelo chamador, para não depender do tamanho do voxel).
  */
-export function isSupported(comp: Voxel[]): boolean {
+export function isSupported(comp: Voxel[], groundIndex: number): boolean {
   if (comp.length === 0) return false;
-  const group = comp[0].group;
-  if (group !== 'structure') return false;
+  if (comp[0].group !== 'structure') return false;
   for (const v of comp) {
-    if (v.iy <= 1) return true;
+    if (v.iy <= groundIndex) return true;
   }
   return false;
 }
 
+/**
+ * Aplica dano em esfera. Só visita a caixa de índices que cobre o raio.
+ * Voxels cujo corpo se mexeu (`poseOf`) são medidos na pose visual.
+ */
 export function damageAt(
   grid: VoxelGrid,
   wx: number,
@@ -55,19 +68,18 @@ export function damageAt(
   damage: number,
   voxelSize: number,
   direct?: Voxel,
+  extra?: Iterable<Voxel>,
+  poseOf?: (v: Voxel) => { x: number; y: number; z: number } | null,
 ): Voxel[] {
   const destroyed: Voxel[] = [];
   const r2 = radius * radius;
-  for (const v of grid.values()) {
-    const cx = v.ix * voxelSize;
-    const cy = v.iy * voxelSize + voxelSize * 0.5;
-    const cz = v.iz * voxelSize;
+  const hurt = (v: Voxel, cx: number, cy: number, cz: number) => {
     const dx = cx - wx;
     const dy = cy - wy;
     const dz = cz - wz;
     const d2 = dx * dx + dy * dy + dz * dz;
     const isDirect = direct !== undefined && v.id === direct.id;
-    if (!isDirect && d2 > r2) continue;
+    if (!isDirect && d2 > r2) return;
     if (isDirect) {
       v.hp -= damage;
     } else {
@@ -75,19 +87,55 @@ export function damageAt(
       v.hp -= damage * (0.4 + 0.6 * t);
     }
     if (v.hp <= 0) destroyed.push(v);
+  };
+
+  const seen = new Set<number>();
+  const n = Math.ceil(radius / voxelSize) + 1;
+  const cx0 = Math.round(wx / voxelSize);
+  const cy0 = Math.floor(wy / voxelSize);
+  const cz0 = Math.round(wz / voxelSize);
+  for (let iy = cy0 - n; iy <= cy0 + n; iy++) {
+    for (let iz = cz0 - n; iz <= cz0 + n; iz++) {
+      for (let ix = cx0 - n; ix <= cx0 + n; ix++) {
+        const v = grid.get(ix, iy, iz);
+        if (!v) continue;
+        seen.add(v.id);
+        const p = poseOf?.(v);
+        if (p) hurt(v, p.x, p.y, p.z);
+        else hurt(v, ix * voxelSize, iy * voxelSize + voxelSize * 0.5, iz * voxelSize);
+      }
+    }
+  }
+  // Voxels de corpos dinâmicos (fora da posição de grade).
+  if (extra) {
+    for (const v of extra) {
+      if (seen.has(v.id)) continue;
+      const p = poseOf?.(v);
+      if (!p) continue;
+      hurt(v, p.x, p.y, p.z);
+    }
+  }
+  if (direct && !seen.has(direct.id) && !destroyed.includes(direct)) {
+    hurt(direct, wx, wy, wz);
   }
   return destroyed;
 }
 
-/** Ray vs esfera na pose visual do voxel (portas/lanternas que já se mexeram). */
+export interface RayHit {
+  voxel: Voxel;
+  dist: number;
+  point: { x: number; y: number; z: number };
+}
+
+/** Ray vs esfera na pose visual — só para voxels de corpos que se mexem. */
 export function voxelRaycastWorld(
-  grid: VoxelGrid,
+  voxels: Iterable<Voxel>,
   origin: { x: number; y: number; z: number },
   dir: { x: number; y: number; z: number },
   maxDist: number,
   voxelSize: number,
   poseOf: (v: Voxel) => { x: number; y: number; z: number } | null,
-): { voxel: Voxel; dist: number; point: { x: number; y: number; z: number } } | null {
+): RayHit | null {
   const len = Math.hypot(dir.x, dir.y, dir.z);
   if (len < 1e-8) return null;
   const dx = dir.x / len;
@@ -97,7 +145,7 @@ export function voxelRaycastWorld(
   const r2 = radius * radius;
   let best: Voxel | null = null;
   let bestT = maxDist;
-  for (const v of grid.values()) {
+  for (const v of voxels) {
     const p = poseOf(v) ?? { x: v.ix * voxelSize, y: v.iy * voxelSize + voxelSize * 0.5, z: v.iz * voxelSize };
     const ox = origin.x - p.x;
     const oy = origin.y - p.y;
@@ -120,23 +168,24 @@ export function voxelRaycastWorld(
   };
 }
 
-/** DDA em grade de voxels. Origem e direção em metros. */
+/** DDA em grade de voxels. Origem e direção em metros. `accept` filtra (ex.: só estáticos). */
 export function voxelRaycast(
   grid: VoxelGrid,
   origin: { x: number; y: number; z: number },
   dir: { x: number; y: number; z: number },
   maxDist: number,
   voxelSize: number,
-): { voxel: Voxel; dist: number; point: { x: number; y: number; z: number } } | null {
+  accept?: (v: Voxel) => boolean,
+): RayHit | null {
   const len = Math.hypot(dir.x, dir.y, dir.z);
   if (len < 1e-8) return null;
   const dx = dir.x / len;
   const dy = dir.y / len;
   const dz = dir.z / len;
 
-  let x = origin.x;
-  let y = origin.y;
-  let z = origin.z;
+  const x = origin.x;
+  const y = origin.y;
+  const z = origin.z;
   let ix = Math.round(x / voxelSize);
   let iy = Math.floor(y / voxelSize);
   let iz = Math.round(z / voxelSize);
@@ -165,7 +214,7 @@ export function voxelRaycast(
   let t = 0;
   while (t <= maxDist) {
     const hit = grid.get(ix, iy, iz);
-    if (hit) {
+    if (hit && (!accept || accept(hit))) {
       return {
         voxel: hit,
         dist: t,
@@ -187,4 +236,52 @@ export function voxelRaycast(
     }
   }
   return null;
+}
+
+/**
+ * Funde voxels em cuboides (greedy): runs em X, depois em Z, depois em Y.
+ * Devolve caixas em índices inclusivos. Usado para colliders de corpos fixos.
+ */
+export interface IndexBox {
+  x0: number; y0: number; z0: number;
+  x1: number; y1: number; z1: number;
+}
+
+export function greedyBoxes(voxels: Voxel[]): IndexBox[] {
+  const cells = new Set<number>();
+  const key = (x: number, y: number, z: number) => ((x + 1024) * 2048 + (y + 1024)) * 2048 + (z + 1024);
+  for (const v of voxels) cells.add(key(v.ix, v.iy, v.iz));
+  const sorted = voxels.slice().sort((a, b) => a.iy - b.iy || a.iz - b.iz || a.ix - b.ix);
+  const boxes: IndexBox[] = [];
+  const used = new Set<number>();
+  for (const v of sorted) {
+    const k0 = key(v.ix, v.iy, v.iz);
+    if (used.has(k0)) continue;
+    // Estende em X.
+    let x1 = v.ix;
+    while (cells.has(key(x1 + 1, v.iy, v.iz)) && !used.has(key(x1 + 1, v.iy, v.iz))) x1++;
+    // Estende em Z enquanto a linha inteira existe.
+    let z1 = v.iz;
+    outerZ: while (true) {
+      for (let x = v.ix; x <= x1; x++) {
+        const k = key(x, v.iy, z1 + 1);
+        if (!cells.has(k) || used.has(k)) break outerZ;
+      }
+      z1++;
+    }
+    // Estende em Y enquanto o plano inteiro existe.
+    let y1 = v.iy;
+    outerY: while (true) {
+      for (let z = v.iz; z <= z1; z++) {
+        for (let x = v.ix; x <= x1; x++) {
+          const k = key(x, y1 + 1, z);
+          if (!cells.has(k) || used.has(k)) break outerY;
+        }
+      }
+      y1++;
+    }
+    for (let y = v.iy; y <= y1; y++) for (let z = v.iz; z <= z1; z++) for (let x = v.ix; x <= x1; x++) used.add(key(x, y, z));
+    boxes.push({ x0: v.ix, y0: v.iy, z0: v.iz, x1, y1, z1 });
+  }
+  return boxes;
 }

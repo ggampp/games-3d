@@ -8,6 +8,9 @@ const TARGET_LEN: Record<WeaponId, number> = {
   rifle: 0.68,
   bomb: 0.28,
   laser: 0.5,
+  water: 0.52,
+  hook: 0.5,
+  detonator: 0.26,
 };
 
 /** Yaw extra depois de alinhar o eixo longo em Z. O rifle do Fal já nasce apontando -Z. */
@@ -17,6 +20,9 @@ const EXTRA_YAW: Record<WeaponId, number> = {
   rifle: 0,
   bomb: 0,
   laser: Math.PI,
+  water: Math.PI,
+  hook: Math.PI,
+  detonator: 0,
 };
 
 function box(
@@ -128,6 +134,23 @@ export class Viewmodel {
     box(laser, 0.05, 0.14, 0.07, 0, -0.08, 0.12, m.dark, 'grip');
     this.guns.set('laser', laser);
 
+    const water = new THREE.Group();
+    box(water, 0.06, 0.06, 0.34, 0, 0.03, -0.1, m.brass, 'barrel');
+    box(water, 0.12, 0.12, 0.14, 0, 0.1, 0.06, m.glow, 'tank');
+    box(water, 0.05, 0.14, 0.07, 0, -0.08, 0.1, m.wood, 'grip');
+    this.guns.set('water', water);
+
+    const hook = new THREE.Group();
+    box(hook, 0.07, 0.07, 0.3, 0, 0.04, -0.08, m.dark, 'barrel');
+    box(hook, 0.12, 0.03, 0.03, 0, 0.04, -0.25, m.metal, 'prongs');
+    box(hook, 0.06, 0.14, 0.07, 0, -0.08, 0.1, m.wood, 'grip');
+    this.guns.set('hook', hook);
+
+    const det = new THREE.Group();
+    box(det, 0.14, 0.1, 0.12, 0, -0.02, 0, m.wood, 'box');
+    box(det, 0.03, 0.12, 0.03, 0, 0.08, 0, m.brass, 'plunger');
+    this.guns.set('detonator', det);
+
     for (const [id, g] of this.guns) {
       g.visible = id === this.active;
       this.group.add(g);
@@ -137,7 +160,7 @@ export class Viewmodel {
   async loadGenerated(): Promise<void> {
     const loader = new GLTFLoader();
     const base = `${import.meta.env.BASE_URL}assets/models/`;
-    const ids: WeaponId[] = ['bullet', 'shotgun', 'rifle', 'bomb', 'laser'];
+    const ids: WeaponId[] = ['bullet', 'shotgun', 'rifle', 'bomb', 'laser', 'water', 'hook', 'detonator'];
     await Promise.all(ids.map(async (id) => {
       try {
         const gltf = await loader.loadAsync(`${base}${id}.glb`);
@@ -177,9 +200,15 @@ export class Viewmodel {
     this.kick = 1;
   }
 
+  /** 0..1 durante a recarga: a arma desce e gira. */
+  reloadT = 0;
+
   update(dt: number): void {
     this.kick = Math.max(0, this.kick - dt * 6);
+    const r = Math.sin(this.reloadT * Math.PI);
     this.group.position.z = -0.52 - this.kick * 0.09;
-    this.group.rotation.x = this.kick * 0.12;
+    this.group.rotation.x = this.kick * 0.12 + r * 0.5;
+    this.group.rotation.z = r * 0.35;
+    this.group.position.y += 0; // y é controlado pelo jogo (sway)
   }
 }
