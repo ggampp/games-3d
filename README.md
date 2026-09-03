@@ -13,6 +13,7 @@ Cada pasta é um projeto independente. Instale e rode **dentro** dela.
 | [`rubik-cube/`](./rubik-cube) | Cubo mágico 3D | `npm install && npm run dev` |
 | [`prisma/`](./prisma) | Puzzle diário de luz e espelhos | `npm install && npm run dev` |
 | [`pequeno-reino/`](./pequeno-reino) | Diorama de reino | `npm install && npm run dev` |
+| [`night-sortie/`](./night-sortie) | Night Sortie — F-35A, corrida aérea noturna + dogfight | `npm install && npm run dev` |
 
 Remote previsto: `git@github-pessoal:ggampp/games-3d.git`
 
