@@ -101,7 +101,20 @@
     <!-- Gesture Tooltip Indicator -->
     <div class="gesture-hint glass-pill" id="gesture-hint">
       <i data-lucide="mouse-pointer-click"></i>
-      <span>Arraste nas peças para girar • Arraste no fundo para girar a câmera 360°</span>
+      <span>Arraste uma peça na direção do giro • Arraste o fundo para orbitar a câmera</span>
+    </div>
+
+    <div class="drag-move-hint hidden" id="drag-move-hint">U</div>
+
+    <div class="orbit-pad glass-panel" id="orbit-pad" aria-label="Girar a câmera ao redor do cubo">
+      <span class="orbit-pad-label">Olhar</span>
+      <button type="button" class="orbit-btn" data-orbit="up" title="Inclinar para cima" aria-label="Câmera para cima">↑</button>
+      <div class="orbit-pad-mid">
+        <button type="button" class="orbit-btn" data-orbit="left" title="Girar para a esquerda" aria-label="Câmera esquerda">←</button>
+        <button type="button" class="orbit-btn orbit-btn-reset" id="btn-orbit-reset" title="Vista padrão" aria-label="Resetar vista">⊙</button>
+        <button type="button" class="orbit-btn" data-orbit="right" title="Girar para a direita" aria-label="Câmera direita">→</button>
+      </div>
+      <button type="button" class="orbit-btn" data-orbit="down" title="Inclinar para baixo" aria-label="Câmera para baixo">↓</button>
     </div>
 
     <!-- Face Color Legend Hub -->
@@ -121,6 +134,7 @@
         <div class="solver-step-text" id="solver-step-text">Calculando solução ideal...</div>
       </div>
       <div class="solver-current-move" id="solver-current-move">-</div>
+      <div class="solver-moves-scroller" id="solver-moves-list" aria-label="Sequência de movimentos"></div>
       <div class="solver-controls">
         <button id="btn-solver-prev" class="glass-btn-sm" title="Passo Anterior" aria-label="Passo Anterior">
           <i data-lucide="skip-back"></i>
@@ -142,9 +156,9 @@
     <footer class="bottom-dock glass-panel">
       <!-- Main Action Buttons -->
       <div class="dock-actions">
-        <button id="btn-scan-cube" class="action-btn action-scan" title="Escanear fotos ou pintar as cores do seu cubo físico">
+        <button id="btn-scan-cube" class="action-btn action-scan" title="Importar seu cubo real pela câmera, fotos ou editor 2D">
           <i data-lucide="camera"></i>
-          <span>Escanear Foto</span>
+          <span>Importar cubo</span>
         </button>
         <button id="btn-scramble" class="action-btn action-scramble" title="Embaralhar com algoritmo oficial WCA">
           <i data-lucide="shuffle"></i>
@@ -378,7 +392,7 @@
     <div class="modal-backdrop hidden" id="scan-modal">
       <div class="modal-dialog glass-panel scan-modal-dialog">
         <div class="modal-header">
-          <h3><i data-lucide="camera"></i> Escanear / Importar Fotos do Cubo Real (6 Lados)</h3>
+          <h3><i data-lucide="camera"></i> Importar cubo real</h3>
           <button class="icon-btn-sm modal-close" id="btn-close-scan-modal" aria-label="Fechar">
             <i data-lucide="x"></i>
           </button>
@@ -386,16 +400,69 @@
         <div class="modal-body">
           <!-- Sub-tabs: 6 Fotos vs Editor 2D -->
           <div class="scan-tabs-header">
-            <button class="scan-tab-btn active" data-tab="sixfaces">
-              <i data-lucide="boxes"></i> 6 Fotos dos Lados
+            <button class="scan-tab-btn active" data-tab="camera">
+              <i data-lucide="scan-line"></i> Câmera guiada
+            </button>
+            <button class="scan-tab-btn" data-tab="sixfaces">
+              <i data-lucide="images"></i> 6 fotos
             </button>
             <button class="scan-tab-btn" data-tab="editor2d">
-              <i data-lucide="grid"></i> Editor Visual 2D
+              <i data-lucide="grid"></i> Ajustar cores
             </button>
           </div>
 
+          <div class="scan-tab-pane active" data-pane="camera">
+            <div class="camera-wizard">
+              <ol class="wizard-steps" id="wizard-steps"></ol>
+              <div class="wizard-current">
+                <div class="wizard-face-badge" id="wizard-face-badge">
+                  <span class="wizard-face-dot" id="wizard-face-dot"></span>
+                  <div>
+                    <strong id="wizard-face-title">1/6 · Topo branco</strong>
+                    <p id="wizard-face-hint">Aponte a face branca para a câmera. A face verde fica na parte de baixo da foto.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="wizard-stage">
+                <div class="wizard-viewport" id="wizard-viewport">
+                  <video id="wizard-video" playsinline muted autoplay></video>
+                  <img id="wizard-freeze" class="hidden" alt="Foto capturada da face" />
+                  <div class="wizard-grid-overlay" id="wizard-grid-overlay"></div>
+                  <div class="wizard-idle" id="wizard-idle">
+                    <i data-lucide="camera"></i>
+                    <p>Abra a câmera ou envie uma foto desta face.</p>
+                  </div>
+                </div>
+                <div class="wizard-preview-card">
+                  <span class="wizard-preview-label">Cores lidas — toque para corrigir</span>
+                  <div class="wizard-color-grid" id="wizard-color-grid"></div>
+                  <div class="wizard-palette" id="wizard-palette"></div>
+                </div>
+              </div>
+
+              <div class="wizard-actions">
+                <button type="button" class="chip-btn" id="btn-wizard-prev">Anterior</button>
+                <button type="button" class="primary-btn" id="btn-wizard-camera">
+                  <i data-lucide="video"></i> Abrir câmera
+                </button>
+                <button type="button" class="chip-btn-primary chip-btn" id="btn-wizard-capture" disabled>
+                  <i data-lucide="aperture"></i> Capturar
+                </button>
+                <button type="button" class="chip-btn" id="btn-wizard-file">
+                  <i data-lucide="image"></i> Usar foto
+                </button>
+                <input type="file" id="wizard-file-input" accept="image/*" capture="environment" class="hidden" />
+                <button type="button" class="primary-btn" id="btn-wizard-next" disabled>
+                  Confirmar face
+                </button>
+              </div>
+              <p class="wizard-status" id="wizard-status">Siga as 6 faces na ordem. Depois você ainda pode ajustar no mapa 2D.</p>
+            </div>
+          </div>
+
           <!-- Tab Pane: 6 Fotos dos Lados -->
-          <div class="scan-tab-pane active" data-pane="sixfaces">
+          <div class="scan-tab-pane hidden" data-pane="sixfaces">
             <div class="scan-upload-card">
               <p class="scan-instructions">
                 Adicione as fotos dos <strong>6 lados do seu cubo real</strong>. 
@@ -659,8 +726,11 @@
             <button class="glass-btn-sm" id="btn-reset-scan">
               <i data-lucide="rotate-ccw"></i> Limpar / Resetar Cores
             </button>
+            <button class="glass-btn-sm" id="btn-apply-scan">
+              <i data-lucide="box"></i> Só aplicar no 3D
+            </button>
             <button class="primary-btn" id="btn-apply-scan-solve">
-              <i data-lucide="sparkles"></i> Aplicar no 3D e Resolver
+              <i data-lucide="sparkles"></i> Aplicar e ver solução
             </button>
           </div>
         </div>

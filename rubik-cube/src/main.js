@@ -7,22 +7,12 @@ import { CubeState } from './cube/CubeState.js';
 import { CubeView3D } from './cube/CubeView3D.js';
 import { TimerManager } from './ui/TimerManager.js';
 import { UIManager } from './ui/UIManager.js';
-import { EXAMPLE_SIX_FACES_GRIDS } from './scanner/exampleSixFaceData.js';
-
 window.addEventListener('DOMContentLoaded', () => {
   const container = document.getElementById('canvas-container');
 
-  // Inicializa o estado lógico do cubo com o estado das 6 faces reais de exemplo
   const cubeState = new CubeState();
-  try {
-    if (EXAMPLE_SIX_FACES_GRIDS) {
-      cubeState.setFaces(EXAMPLE_SIX_FACES_GRIDS);
-    }
-  } catch (err) {
-    console.warn('Iniciando com cubo padrão resolvido:', err);
-  }
 
-  // Inicializa a visualização 3D Three.js
+  // Visualização 3D Three.js
   let uiManager = null;
   const cubeView = new CubeView3D(container, (move) => {
     // Callback disparado quando um movimento interativo por drag for executado na cena 3D
@@ -44,5 +34,5 @@ window.addEventListener('DOMContentLoaded', () => {
     timerManager
   });
 
-  console.log('🚀 Simulador 3D de Cubo Mágico inicializado com o cubo real das fotos!');
+  console.log('Simulador 3D de Cubo Mágico inicializado.');
 });

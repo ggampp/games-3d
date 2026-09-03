@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { createCubieGeometry, createStickerGeometry, createCubieMaterials, THEMES } from './CubeGeometry.js';
 import { sounds } from '../audio/SoundEffects.js';
+import { notationFromAngle, resolveDragLayer, shortestSnapAngle } from './dragMoves.js';
 
 export class CubeView3D {
   constructor(containerElement, onMoveExecuted = null) {
@@ -28,6 +29,22 @@ export class CubeView3D {
     this.dragStartPos = new THREE.Vector2();
     this.dragIntersection = null;
     this.isDraggingFace = false;
+    this.dragLocked = false;
+    this.dragPivot = null;
+    this.dragCubies = [];
+    this.dragAxis = null;
+    this.dragLayer = null;
+    this.dragStartAngle = 0;
+    this.dragAngle = 0;
+    this.activePointerId = null;
+    this.hintMeshes = [];
+    this._boundPointerDown = this.onPointerDown.bind(this);
+    this._boundPointerMove = this.onPointerMove.bind(this);
+    this._boundPointerUp = this.onPointerUp.bind(this);
+    this._tmpV = new THREE.Vector3();
+    this._tmpQ = new THREE.Quaternion();
+    this._tmpN = new THREE.Vector3();
+    this._plane = new THREE.Plane();
 
     this.initScene();
     this.initLights();
@@ -60,13 +77,17 @@ export class CubeView3D {
     this.renderer.toneMappingExposure = 1.1;
 
     this.container.appendChild(this.renderer.domElement);
+    this.renderer.domElement.style.touchAction = 'none';
+    this.renderer.domElement.style.display = 'block';
 
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.enableDamping = true;
-    this.controls.dampingFactor = 0.08;
+    this.controls.dampingFactor = 0.12;
     this.controls.minDistance = 3.5;
     this.controls.maxDistance = 14;
-    this.controls.rotateSpeed = 0.85;
+    this.controls.rotateSpeed = 1.05;
+    this.controls.zoomSpeed = 0.9;
+    this.controls.enablePan = false;
     this.controls.target.set(0, 0, 0);
 
     this.cubeGroup = new THREE.Group();
@@ -337,6 +358,7 @@ export class CubeView3D {
     });
 
     this.scene.remove(pivot);
+    this.snapCubies(affectedCubies);
     sounds.playTurn();
   }
 
@@ -381,6 +403,7 @@ export class CubeView3D {
         });
 
         this.scene.remove(pivot);
+        this.snapCubies(affectedCubies);
         this.isAnimating = false;
         if (onComplete) onComplete();
       }
@@ -493,169 +516,255 @@ export class CubeView3D {
     });
   }
 
-  /**
-   * Configuração de Interação Direta com Mouse / Toque no Cubo
-   */
-  initInteractions() {
-    const el = this.renderer.domElement;
-
-    el.addEventListener('pointerdown', this.onPointerDown.bind(this));
-    el.addEventListener('pointermove', this.onPointerMove.bind(this));
-    el.addEventListener('pointerup', this.onPointerUp.bind(this));
-    el.addEventListener('pointercancel', this.onPointerUp.bind(this));
-  }
-
-  onPointerDown(event) {
-    if (this.isAnimating) return;
-
+  setPointerNDC(event) {
     const rect = this.container.getBoundingClientRect();
     this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+  }
 
+  worldDragFromScreen(dx, dy) {
+    const right = new THREE.Vector3();
+    const up = new THREE.Vector3();
+    this.camera.matrixWorld.extractBasis(right, up, this._tmpV);
+    const scale = 2.4 / Math.min(this.container.clientWidth, this.container.clientHeight);
+    return right.multiplyScalar(dx * scale).add(up.multiplyScalar(-dy * scale));
+  }
+
+  angleOnAxisPlane(event, axis) {
+    this.setPointerNDC(event);
+    this.raycaster.setFromCamera(this.mouse, this.camera);
+    this._tmpN.set(0, 0, 0);
+    this._tmpN[axis] = 1;
+    this._plane.setFromNormalAndCoplanarPoint(this._tmpN, new THREE.Vector3());
+    const hit = new THREE.Vector3();
+    if (!this.raycaster.ray.intersectPlane(this._plane, hit)) return null;
+    hit[axis] = 0;
+    if (hit.lengthSq() < 1e-6) return null;
+    hit.normalize();
+    return hit;
+  }
+
+  signedAngle(from, to, axis) {
+    const cross = from.clone().cross(to);
+    const sign = Math.sign(cross[axis]) || 1;
+    return from.angleTo(to) * sign;
+  }
+
+  snapCubies(cubies) {
+    const matrix = new THREE.Matrix4();
+    cubies.forEach((cubie) => {
+      cubie.updateMatrixWorld(true);
+      cubie.matrixWorld.decompose(this._tmpV, this._tmpQ, new THREE.Vector3());
+      cubie.position.set(
+        Math.round(this._tmpV.x),
+        Math.round(this._tmpV.y),
+        Math.round(this._tmpV.z)
+      );
+      matrix.makeRotationFromQuaternion(this._tmpQ);
+      const te = matrix.elements;
+      for (let col = 0; col < 3; col++) {
+        const i = col * 4;
+        const x = te[i];
+        const y = te[i + 1];
+        const z = te[i + 2];
+        const ax = Math.abs(x);
+        const ay = Math.abs(y);
+        const az = Math.abs(z);
+        te[i] = te[i + 1] = te[i + 2] = 0;
+        if (ax >= ay && ax >= az) te[i] = Math.sign(x) || 1;
+        else if (ay >= az) te[i + 1] = Math.sign(y) || 1;
+        else te[i + 2] = Math.sign(z) || 1;
+      }
+      cubie.quaternion.setFromRotationMatrix(matrix);
+      cubie.scale.set(1, 1, 1);
+    });
+  }
+
+  clearLayerHint() {
+    this.hintMeshes.forEach((mesh) => {
+      if (mesh.parent) mesh.parent.remove(mesh);
+    });
+    if (this.hintMeshes[0]) {
+      this.hintMeshes[0].geometry.dispose();
+      this.hintMeshes[0].material.dispose();
+    }
+    this.hintMeshes = [];
+    const hint = document.getElementById('drag-move-hint');
+    if (hint) hint.classList.add('hidden');
+  }
+
+  showLayerHint(cubies, moveLabel) {
+    this.clearLayerHint();
+    const geo = new THREE.BoxGeometry(1.04, 1.04, 1.04);
+    const mat = new THREE.MeshBasicMaterial({
+      color: 0x38bdf8,
+      wireframe: true,
+      transparent: true,
+      opacity: 0.9,
+      depthTest: false
+    });
+    cubies.forEach((cubie) => {
+      const mesh = new THREE.Mesh(geo, mat);
+      cubie.add(mesh);
+      this.hintMeshes.push(mesh);
+    });
+    const hint = document.getElementById('drag-move-hint');
+    if (hint && moveLabel) {
+      hint.textContent = moveLabel;
+      hint.classList.remove('hidden');
+    }
+  }
+
+  updateDragHintLabel() {
+    const move = notationFromAngle(this.dragAxis, this.dragLayer, this.dragAngle);
+    const hint = document.getElementById('drag-move-hint');
+    if (!hint) return;
+    hint.textContent = move || 'solte para cancelar';
+    hint.classList.remove('hidden');
+  }
+
+  lockDragLayer(event) {
+    const hit = this.dragIntersection;
+    if (!hit) return false;
+
+    const worldNormal = hit.face.normal
+      .clone()
+      .applyQuaternion(hit.object.getWorldQuaternion(this._tmpQ))
+      .normalize();
+    const cubie = hit.object.userData.parentCubie || hit.object.parent;
+    cubie.getWorldPosition(this._tmpV);
+
+    const dx = event.clientX - this.dragStartPos.x;
+    const dy = event.clientY - this.dragStartPos.y;
+    const drag = this.worldDragFromScreen(dx, dy);
+    const resolved = resolveDragLayer(
+      worldNormal.x, worldNormal.y, worldNormal.z,
+      this._tmpV.x, this._tmpV.y, this._tmpV.z,
+      drag.x, drag.y, drag.z
+    );
+    if (!resolved) return false;
+
+    this.dragAxis = resolved.axis;
+    this.dragLayer = resolved.layer;
+    this.dragCubies = this.getAffectedCubies(this.dragAxis, this.dragLayer);
+    this.dragPivot = new THREE.Group();
+    this.scene.add(this.dragPivot);
+    this.dragCubies.forEach((c) => this.dragPivot.attach(c));
+
+    const startDir = this.angleOnAxisPlane(event, this.dragAxis);
+    this.dragStartDir = startDir;
+    this.dragAngle = 0;
+    this.dragLocked = true;
+    this.showLayerHint(this.dragCubies, 'arraste para girar');
+    return true;
+  }
+
+  finishDragLayer() {
+    if (!this.dragLocked || !this.dragPivot) {
+      this.resetDragState();
+      return;
+    }
+
+    const snapped = shortestSnapAngle(this.dragAngle);
+    this.dragPivot.rotation[this.dragAxis] = snapped;
+    this.dragPivot.updateMatrixWorld(true);
+    this.dragCubies.forEach((c) => this.cubeGroup.attach(c));
+    this.scene.remove(this.dragPivot);
+    this.snapCubies(this.dragCubies);
+
+    const move = notationFromAngle(this.dragAxis, this.dragLayer, snapped);
+    this.resetDragState();
+
+    if (move) {
+      sounds.playTurn();
+      if (this.onMoveExecuted) this.onMoveExecuted(move);
+    }
+  }
+
+  resetDragState() {
+    this.clearLayerHint();
+    this.isDraggingFace = false;
+    this.dragLocked = false;
+    this.dragIntersection = null;
+    this.dragPivot = null;
+    this.dragCubies = [];
+    this.dragAxis = null;
+    this.dragLayer = null;
+    this.dragAngle = 0;
+    this.dragStartDir = null;
+    this.activePointerId = null;
+    this.controls.enabled = true;
+    this.container.style.cursor = 'grab';
+  }
+
+  orbitBy(deltaTheta, deltaPhi) {
+    const offset = this.camera.position.clone().sub(this.controls.target);
+    const spherical = new THREE.Spherical().setFromVector3(offset);
+    spherical.theta += deltaTheta;
+    spherical.phi = THREE.MathUtils.clamp(spherical.phi + deltaPhi, 0.18, Math.PI - 0.18);
+    offset.setFromSpherical(spherical);
+    this.camera.position.copy(this.controls.target).add(offset);
+    this.camera.lookAt(this.controls.target);
+    this.controls.update();
+  }
+
+  initInteractions() {
+    const el = this.renderer.domElement;
+    el.addEventListener('pointerdown', this._boundPointerDown, { capture: true });
+    el.addEventListener('pointermove', this._boundPointerMove);
+    el.addEventListener('pointerup', this._boundPointerUp);
+    el.addEventListener('pointercancel', this._boundPointerUp);
+    el.addEventListener('lostpointercapture', this._boundPointerUp);
+  }
+
+  onPointerDown(event) {
+    if (this.isAnimating || event.button !== 0) return;
+
+    this.setPointerNDC(event);
     this.raycaster.setFromCamera(this.mouse, this.camera);
     const intersects = this.raycaster.intersectObjects(this.cubeGroup.children, true);
 
-    if (intersects.length > 0) {
-      const hit = intersects[0];
-      this.dragIntersection = hit;
-      this.dragStartPos.set(event.clientX, event.clientY);
-      this.isDraggingFace = true;
-      // Desabilita rotação de câmera para capturar o gesto no cubo
-      this.controls.enabled = false;
+    if (intersects.length === 0) return;
+
+    event.stopPropagation();
+    this.controls.enabled = false;
+    this.dragIntersection = intersects[0];
+    this.dragStartPos.set(event.clientX, event.clientY);
+    this.isDraggingFace = true;
+    this.dragLocked = false;
+    this.activePointerId = event.pointerId;
+    this.container.style.cursor = 'grabbing';
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch {
+      /* ignore */
     }
   }
 
   onPointerMove(event) {
-    if (!this.isDraggingFace || !this.dragIntersection || this.isAnimating) return;
+    if (!this.isDraggingFace || this.isAnimating) return;
+    if (this.activePointerId !== null && event.pointerId !== this.activePointerId) return;
 
-    const dx = event.clientX - this.dragStartPos.x;
-    const dy = event.clientY - this.dragStartPos.y;
-    const distSq = dx * dx + dy * dy;
+    if (!this.dragLocked) {
+      const dx = event.clientX - this.dragStartPos.x;
+      const dy = event.clientY - this.dragStartPos.y;
+      if (dx * dx + dy * dy < 100) return;
+      this.lockDragLayer(event);
+      return;
+    }
 
-    // Se o arraste ultrapassar o limiar de 18 pixels, calcula o movimento de face
-    if (distSq > 324) {
-      this.handleFaceDrag(dx, dy);
-      this.isDraggingFace = false;
-      this.dragIntersection = null;
-      this.controls.enabled = true;
+    const currentDir = this.angleOnAxisPlane(event, this.dragAxis);
+    if (currentDir && this.dragStartDir) {
+      this.dragAngle = this.signedAngle(this.dragStartDir, currentDir, this.dragAxis);
+      this.dragPivot.rotation[this.dragAxis] = this.dragAngle;
+      this.updateDragHintLabel();
     }
   }
 
-  onPointerUp() {
-    this.isDraggingFace = false;
-    this.dragIntersection = null;
-    this.controls.enabled = true;
-  }
-
-  handleFaceDrag(dx, dy) {
-    if (!this.dragIntersection) return;
-
-    const hit = this.dragIntersection;
-    const worldNormal = hit.face.normal.clone().applyQuaternion(hit.object.getWorldQuaternion(new THREE.Quaternion())).normalize();
-    const hitWorldPos = hit.point.clone();
-
-    // Determina a face principal atingida com base na normal mundial
-    const absX = Math.abs(worldNormal.x);
-    const absY = Math.abs(worldNormal.y);
-    const absZ = Math.abs(worldNormal.z);
-
-    let mainFace = 'F';
-    if (absX > absY && absX > absZ) {
-      mainFace = worldNormal.x > 0 ? 'R' : 'L';
-    } else if (absY > absX && absY > absZ) {
-      mainFace = worldNormal.y > 0 ? 'U' : 'D';
-    } else {
-      mainFace = worldNormal.z > 0 ? 'F' : 'B';
-    }
-
-    // Calcula o vetor de movimento 2D na tela
-    const dragDir = new THREE.Vector2(dx, dy).normalize();
-    const isHorizontal = Math.abs(dragDir.x) > Math.abs(dragDir.y);
-
-    let determinedMove = null;
-
-    if (mainFace === 'F') {
-      if (isHorizontal) {
-        // Arraste horizontal na face frontal gira U, E ou D
-        const isRight = dx > 0;
-        if (hitWorldPos.y > 0.4) determinedMove = isRight ? 'U' : "U'";
-        else if (hitWorldPos.y < -0.4) determinedMove = isRight ? "D'" : 'D';
-        else determinedMove = isRight ? "E'" : 'E';
-      } else {
-        // Arraste vertical na face frontal gira L, M ou R
-        const isDown = dy > 0;
-        if (hitWorldPos.x > 0.4) determinedMove = isDown ? 'R' : "R'";
-        else if (hitWorldPos.x < -0.4) determinedMove = isDown ? "L'" : 'L';
-        else determinedMove = isDown ? 'M' : "M'";
-      }
-    } else if (mainFace === 'R') {
-      if (isHorizontal) {
-        const isRight = dx > 0;
-        if (hitWorldPos.y > 0.4) determinedMove = isRight ? 'U' : "U'";
-        else if (hitWorldPos.y < -0.4) determinedMove = isRight ? "D'" : 'D';
-        else determinedMove = isRight ? "E'" : 'E';
-      } else {
-        const isDown = dy > 0;
-        if (hitWorldPos.z > 0.4) determinedMove = isDown ? "F'" : 'F';
-        else if (hitWorldPos.z < -0.4) determinedMove = isDown ? 'B' : "B'";
-        else determinedMove = isDown ? "S'" : 'S';
-      }
-    } else if (mainFace === 'U') {
-      if (isHorizontal) {
-        const isRight = dx > 0;
-        if (hitWorldPos.z > 0.4) determinedMove = isRight ? 'F' : "F'";
-        else if (hitWorldPos.z < -0.4) determinedMove = isRight ? "B'" : 'B';
-        else determinedMove = isRight ? 'S' : "S'";
-      } else {
-        const isDown = dy > 0;
-        if (hitWorldPos.x > 0.4) determinedMove = isDown ? 'R' : "R'";
-        else if (hitWorldPos.x < -0.4) determinedMove = isDown ? "L'" : 'L';
-        else determinedMove = isDown ? 'M' : "M'";
-      }
-    } else if (mainFace === 'L') {
-      if (isHorizontal) {
-        const isRight = dx > 0;
-        if (hitWorldPos.y > 0.4) determinedMove = isRight ? "U'" : 'U';
-        else if (hitWorldPos.y < -0.4) determinedMove = isRight ? 'D' : "D'";
-        else determinedMove = isRight ? 'E' : "E'";
-      } else {
-        const isDown = dy > 0;
-        if (hitWorldPos.z > 0.4) determinedMove = isDown ? 'F' : "F'";
-        else if (hitWorldPos.z < -0.4) determinedMove = isDown ? "B'" : 'B';
-        else determinedMove = isDown ? 'S' : "S'";
-      }
-    } else if (mainFace === 'D') {
-      if (isHorizontal) {
-        const isRight = dx > 0;
-        if (hitWorldPos.z > 0.4) determinedMove = isRight ? "F'" : 'F';
-        else if (hitWorldPos.z < -0.4) determinedMove = isRight ? 'B' : "B'";
-        else determinedMove = isRight ? "S'" : 'S';
-      } else {
-        const isDown = dy > 0;
-        if (hitWorldPos.x > 0.4) determinedMove = isDown ? "R'" : 'R';
-        else if (hitWorldPos.x < -0.4) determinedMove = isDown ? 'L' : "L'";
-        else determinedMove = isDown ? "M'" : 'M';
-      }
-    } else if (mainFace === 'B') {
-      if (isHorizontal) {
-        const isRight = dx > 0;
-        if (hitWorldPos.y > 0.4) determinedMove = isRight ? "U'" : 'U';
-        else if (hitWorldPos.y < -0.4) determinedMove = isRight ? 'D' : "D'";
-        else determinedMove = isRight ? 'E' : "E'";
-      } else {
-        const isDown = dy > 0;
-        if (hitWorldPos.x > 0.4) determinedMove = isDown ? "R'" : 'R';
-        else if (hitWorldPos.x < -0.4) determinedMove = isDown ? 'L' : "L'";
-        else determinedMove = isDown ? "M'" : 'M';
-      }
-    }
-
-    if (determinedMove) {
-      this.rotate(determinedMove);
-      if (this.onMoveExecuted) {
-        this.onMoveExecuted(determinedMove);
-      }
-    }
+  onPointerUp(event) {
+    if (!this.isDraggingFace) return;
+    if (event && this.activePointerId !== null && event.pointerId !== this.activePointerId) return;
+    this.finishDragLayer();
   }
 
   onResize() {

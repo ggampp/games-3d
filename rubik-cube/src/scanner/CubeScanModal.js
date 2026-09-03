@@ -23,6 +23,39 @@ export const COLOR_LABELS = {
 
 const ALL_FACES = ['U', 'L', 'F', 'R', 'B', 'D'];
 
+const WIZARD_STEPS = [
+  {
+    face: 'U',
+    title: 'Topo branco',
+    hint: 'Aponte a face BRANCA para a câmera. A face VERDE deve ficar na parte de baixo da foto.'
+  },
+  {
+    face: 'F',
+    title: 'Frente verde',
+    hint: 'Aponte a face VERDE. Mantenha o BRANCO no topo da foto.'
+  },
+  {
+    face: 'R',
+    title: 'Direita vermelha',
+    hint: 'Aponte a face VERMELHA. Mantenha o BRANCO no topo da foto.'
+  },
+  {
+    face: 'B',
+    title: 'Trás azul',
+    hint: 'Aponte a face AZUL. Mantenha o BRANCO no topo da foto.'
+  },
+  {
+    face: 'L',
+    title: 'Esquerda laranja',
+    hint: 'Aponte a face LARANJA. Mantenha o BRANCO no topo da foto.'
+  },
+  {
+    face: 'D',
+    title: 'Base amarela',
+    hint: 'Vire o cubo e aponte o AMARELO. A face VERDE deve ficar no topo da foto.'
+  }
+];
+
 export class CubeScanModal {
   constructor({ cubeState, cubeView, onApplyState }) {
     this.cubeState = cubeState;
@@ -47,10 +80,19 @@ export class CubeScanModal {
     this.detectedGrids = { U: null, L: null, F: null, R: null, B: null, D: null };
     this.isExampleLoaded = false;
 
+    this.wizardIndex = 0;
+    this.wizardGrid = Array(9).fill(null);
+    this.wizardSelectedCell = -1;
+    this.wizardStream = null;
+    this.wizardLive = false;
+    this.wizardRaf = 0;
+    this.wizardConfirmed = { U: false, L: false, F: false, R: false, B: false, D: false };
+
     this.initElements();
     this.bindEvents();
     this.render2DNet();
     this.updateStatsAndValidation();
+    this.renderWizard();
   }
 
   initElements() {
@@ -96,6 +138,25 @@ export class CubeScanModal {
     this.netContainer = document.getElementById('cube-2d-net');
     this.validationBadge = document.getElementById('scan-validation-badge');
     this.colorCountsContainer = document.getElementById('scan-color-counts');
+
+    this.btnApplyScan = document.getElementById('btn-apply-scan');
+    this.wizardStepsEl = document.getElementById('wizard-steps');
+    this.wizardFaceDot = document.getElementById('wizard-face-dot');
+    this.wizardFaceTitle = document.getElementById('wizard-face-title');
+    this.wizardFaceHint = document.getElementById('wizard-face-hint');
+    this.wizardVideo = document.getElementById('wizard-video');
+    this.wizardFreeze = document.getElementById('wizard-freeze');
+    this.wizardIdle = document.getElementById('wizard-idle');
+    this.wizardGridOverlay = document.getElementById('wizard-grid-overlay');
+    this.wizardColorGrid = document.getElementById('wizard-color-grid');
+    this.wizardPalette = document.getElementById('wizard-palette');
+    this.wizardStatus = document.getElementById('wizard-status');
+    this.btnWizardPrev = document.getElementById('btn-wizard-prev');
+    this.btnWizardCamera = document.getElementById('btn-wizard-camera');
+    this.btnWizardCapture = document.getElementById('btn-wizard-capture');
+    this.btnWizardFile = document.getElementById('btn-wizard-file');
+    this.wizardFileInput = document.getElementById('wizard-file-input');
+    this.btnWizardNext = document.getElementById('btn-wizard-next');
   }
 
   bindEvents() {
@@ -186,9 +247,28 @@ export class CubeScanModal {
       });
     }
 
-    // Aplicar e Iniciar Solução
     if (this.btnApplyAndSolve) {
-      this.btnApplyAndSolve.addEventListener('click', () => this.applyAndSolve());
+      this.btnApplyAndSolve.addEventListener('click', () => this.applyAndSolve(true));
+    }
+    if (this.btnApplyScan) {
+      this.btnApplyScan.addEventListener('click', () => this.applyAndSolve(false));
+    }
+
+    if (this.btnWizardPrev) {
+      this.btnWizardPrev.addEventListener('click', () => this.wizardGo(-1));
+    }
+    if (this.btnWizardNext) {
+      this.btnWizardNext.addEventListener('click', () => this.confirmWizardFace());
+    }
+    if (this.btnWizardCamera) {
+      this.btnWizardCamera.addEventListener('click', () => this.startWizardCamera());
+    }
+    if (this.btnWizardCapture) {
+      this.btnWizardCapture.addEventListener('click', () => this.captureWizardFrame());
+    }
+    if (this.btnWizardFile && this.wizardFileInput) {
+      this.btnWizardFile.addEventListener('click', () => this.wizardFileInput.click());
+      this.wizardFileInput.addEventListener('change', (e) => this.handleWizardFile(e));
     }
   }
 
@@ -204,15 +284,21 @@ export class CubeScanModal {
 
     this.render2DNet();
     this.updateStatsAndValidation();
+    this.renderWizard();
+    this.switchTab('camera');
     if (this.modal) this.modal.classList.remove('hidden');
     createIcons({ icons });
   }
 
   close() {
+    this.stopWizardCamera();
     if (this.modal) this.modal.classList.add('hidden');
   }
 
   switchTab(tabName) {
+    if (tabName !== 'camera') {
+      this.wizardLive = false;
+    }
     this.tabButtons.forEach(btn => {
       btn.classList.toggle('active', btn.getAttribute('data-tab') === tabName);
     });
@@ -590,10 +676,265 @@ export class CubeScanModal {
     }
   }
 
+  currentWizardStep() {
+    return WIZARD_STEPS[this.wizardIndex];
+  }
+
+  renderWizard() {
+    const step = this.currentWizardStep();
+    if (!step) return;
+
+    if (this.wizardStepsEl) {
+      this.wizardStepsEl.innerHTML = WIZARD_STEPS.map((s, i) => {
+        const done = this.wizardConfirmed[s.face];
+        const current = i === this.wizardIndex;
+        const cls = current ? 'is-current' : done ? 'is-done' : '';
+        return `<li class="${cls}">${i + 1}. ${s.face}</li>`;
+      }).join('');
+    }
+
+    if (this.wizardFaceDot) {
+      this.wizardFaceDot.style.background = COLOR_HEX_MAP[step.face];
+    }
+    if (this.wizardFaceTitle) {
+      this.wizardFaceTitle.textContent = `${this.wizardIndex + 1}/6 · ${step.title}`;
+    }
+    if (this.wizardFaceHint) {
+      this.wizardFaceHint.textContent = step.hint;
+    }
+
+    if (this.wizardGridOverlay && this.wizardGridOverlay.childElementCount !== 9) {
+      this.wizardGridOverlay.innerHTML = Array.from({ length: 9 }, () => '<span></span>').join('');
+    }
+
+    if (this.wizardPalette && this.wizardPalette.childElementCount === 0) {
+      this.wizardPalette.innerHTML = FACE_NAMES.map((color) => `
+        <button type="button" class="color-palette-chip" data-color="${color}"
+          style="background:${COLOR_HEX_MAP[color]}; width:28px; height:28px; border-radius:50%; border:2px solid rgba(15,23,42,0.2);"
+          title="${COLOR_LABELS[color]}"></button>
+      `).join('');
+      this.wizardPalette.querySelectorAll('button').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          if (this.wizardSelectedCell < 0) this.wizardSelectedCell = 0;
+          this.wizardGrid[this.wizardSelectedCell] = btn.getAttribute('data-color');
+          this.paintWizardGrid();
+        });
+      });
+    }
+
+    const stored = this.detectedGrids[step.face];
+    if (stored) {
+      this.wizardGrid = [...stored];
+    } else {
+      this.wizardGrid = Array(9).fill(null);
+    }
+    this.paintWizardGrid();
+    this.updateWizardButtons();
+    createIcons({ icons });
+  }
+
+  paintWizardGrid() {
+    if (!this.wizardColorGrid) return;
+    const step = this.currentWizardStep();
+    if (step) this.wizardGrid[4] = step.face;
+
+    if (this.wizardColorGrid.childElementCount !== 9) {
+      this.wizardColorGrid.innerHTML = '';
+      for (let i = 0; i < 9; i++) {
+        const cell = document.createElement('button');
+        cell.type = 'button';
+        cell.className = 'wizard-color-cell';
+        if (i === 4) cell.classList.add('is-center');
+        cell.addEventListener('click', () => {
+          this.wizardSelectedCell = i;
+          this.paintWizardGrid();
+        });
+        this.wizardColorGrid.appendChild(cell);
+      }
+    }
+
+    const cells = this.wizardColorGrid.children;
+    for (let i = 0; i < 9; i++) {
+      const color = this.wizardGrid[i];
+      const cell = cells[i];
+      cell.classList.toggle('is-selected', i === this.wizardSelectedCell);
+      cell.style.background = color ? COLOR_HEX_MAP[color] : '#cbd5e1';
+      cell.title = color ? COLOR_LABELS[color] : 'sem cor';
+    }
+
+    const ready = this.wizardGrid.every(Boolean);
+    if (this.btnWizardNext) this.btnWizardNext.disabled = !ready;
+  }
+
+  updateWizardButtons() {
+    if (this.btnWizardPrev) this.btnWizardPrev.disabled = this.wizardIndex === 0;
+    if (this.btnWizardCapture) this.btnWizardCapture.disabled = !this.wizardLive;
+  }
+
+  setWizardStatus(message) {
+    if (this.wizardStatus) this.wizardStatus.textContent = message;
+  }
+
+  wizardGo(delta) {
+    const next = this.wizardIndex + delta;
+    if (next < 0 || next >= WIZARD_STEPS.length) return;
+    this.wizardIndex = next;
+    this.wizardSelectedCell = -1;
+    this.renderWizard();
+  }
+
+  async startWizardCamera() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      this.setWizardStatus('Este navegador não permite câmera. Use “Usar foto” e envie uma imagem da face.');
+      return;
+    }
+
+    try {
+      this.stopWizardCamera();
+      this.wizardStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 720 }, height: { ideal: 720 } },
+        audio: false
+      });
+      if (this.wizardVideo) {
+        this.wizardVideo.srcObject = this.wizardStream;
+        await this.wizardVideo.play();
+      }
+      if (this.wizardFreeze) this.wizardFreeze.classList.add('hidden');
+      if (this.wizardIdle) this.wizardIdle.classList.add('hidden');
+      this.wizardLive = true;
+      this.updateWizardButtons();
+      this.setWizardStatus('Enquadre a face no quadrado. As 9 cores atualizam ao vivo — depois toque em Capturar.');
+      this.loopWizardPreview();
+    } catch (err) {
+      this.setWizardStatus('Não foi possível abrir a câmera. Permita o acesso ou envie uma foto.');
+      console.warn(err);
+    }
+  }
+
+  stopWizardCamera() {
+    this.wizardLive = false;
+    if (this.wizardRaf) {
+      cancelAnimationFrame(this.wizardRaf);
+      this.wizardRaf = 0;
+    }
+    if (this.wizardStream) {
+      this.wizardStream.getTracks().forEach((track) => track.stop());
+      this.wizardStream = null;
+    }
+    if (this.wizardVideo) this.wizardVideo.srcObject = null;
+    this.updateWizardButtons();
+  }
+
+  loopWizardPreview() {
+    if (!this.wizardLive || !this.wizardVideo) return;
+    const video = this.wizardVideo;
+    if (video.readyState >= 2 && video.videoWidth > 0) {
+      try {
+        this.wizardGrid = CubeImageScanner.extractGridColors(video);
+        this.paintWizardGrid();
+      } catch {
+        /* frame ainda não está pronto */
+      }
+    }
+    this.wizardRaf = requestAnimationFrame(() => this.loopWizardPreview());
+  }
+
+  captureWizardFrame() {
+    if (!this.wizardVideo || !this.wizardLive) return;
+    this.wizardLive = false;
+    if (this.wizardRaf) cancelAnimationFrame(this.wizardRaf);
+
+    const video = this.wizardVideo;
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth || 480;
+    canvas.height = video.videoHeight || 480;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+
+    this.wizardGrid = CubeImageScanner.extractGridColors(video);
+    this.paintWizardGrid();
+
+    if (this.wizardFreeze) {
+      this.wizardFreeze.src = dataUrl;
+      this.wizardFreeze.classList.remove('hidden');
+    }
+
+    const step = this.currentWizardStep();
+    this.facePhotos[step.face] = dataUrl;
+    this.detectedGrids[step.face] = [...this.wizardGrid];
+    this.setWizardStatus('Foto congelada. Toque numa célula e numa cor se precisar corrigir, depois confirme.');
+    this.updateWizardButtons();
+  }
+
+  handleWizardFile(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const src = e.target.result;
+      this.stopWizardCamera();
+      if (this.wizardIdle) this.wizardIdle.classList.add('hidden');
+      if (this.wizardFreeze) {
+        this.wizardFreeze.src = src;
+        this.wizardFreeze.classList.remove('hidden');
+      }
+      try {
+        const result = await CubeImageScanner.scanFaceImage(src);
+        this.wizardGrid = result.grid;
+        this.paintWizardGrid();
+        const step = this.currentWizardStep();
+        this.facePhotos[step.face] = src;
+        this.detectedGrids[step.face] = [...this.wizardGrid];
+        this.setWizardStatus('Foto lida. Corrija as cores se alguma estiver errada e confirme a face.');
+      } catch (err) {
+        this.setWizardStatus(err.message || 'Falha ao ler a foto.');
+      }
+    };
+    reader.readAsDataURL(file);
+    event.target.value = '';
+  }
+
+  async confirmWizardFace() {
+    if (!this.wizardGrid.every(Boolean)) return;
+    const step = this.currentWizardStep();
+    this.scannedFaces[step.face] = [...this.wizardGrid];
+    this.detectedGrids[step.face] = [...this.wizardGrid];
+    this.wizardConfirmed[step.face] = true;
+    this.render2DNet();
+    this.updateStatsAndValidation();
+
+    if (this.wizardIndex < WIZARD_STEPS.length - 1) {
+      this.wizardIndex += 1;
+      this.wizardSelectedCell = -1;
+      if (this.wizardFreeze) this.wizardFreeze.classList.add('hidden');
+      this.renderWizard();
+      this.setWizardStatus(`Face ${step.face} ok. Agora fotografe: ${this.currentWizardStep().title}.`);
+      if (this.wizardStream && this.wizardVideo) {
+        this.wizardLive = true;
+        this.updateWizardButtons();
+        this.loopWizardPreview();
+      } else if (this.wizardIdle) {
+        this.wizardIdle.classList.remove('hidden');
+      }
+      return;
+    }
+
+    const missing = ALL_FACES.filter((f) => !this.scannedFaces[f] || this.scannedFaces[f].length !== 9);
+    if (missing.length) {
+      this.setWizardStatus(`Ainda faltam faces: ${missing.join(', ')}.`);
+      return;
+    }
+
+    this.stopWizardCamera();
+    this.switchTab('editor2d');
+    this.setWizardStatus('As 6 faces foram lidas. Confira o mapa 2D e aplique no cubo 3D.');
+  }
+
   /**
-   * Aplica o estado ao cubo 3D e dispara o solucionador Kociemba
+   * Aplica o estado ao cubo 3D e opcionalmente dispara o solucionador.
    */
-  applyAndSolve() {
+  applyAndSolve(startSolver = true) {
     const counts = { U: 0, D: 0, F: 0, B: 0, R: 0, L: 0 };
     for (const face of FACE_NAMES) {
       for (let i = 0; i < 9; i++) {
@@ -610,9 +951,14 @@ export class CubeScanModal {
       if (!confirmContinue) return;
     }
 
-    this.cubeState.setFaces(this.scannedFaces);
+    try {
+      this.cubeState.setFaces(this.scannedFaces);
+    } catch (err) {
+      alert(err.message || 'Não foi possível aplicar este cubo.');
+      return;
+    }
     this.cubeView.applyState(this.cubeState);
     this.close();
-    this.onApplyState();
+    this.onApplyState(startSolver);
   }
 }

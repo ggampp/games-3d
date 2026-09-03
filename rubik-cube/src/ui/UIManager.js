@@ -25,11 +25,11 @@ export class UIManager {
     this.scanModal = new CubeScanModal({
       cubeState: this.cubeState,
       cubeView: this.cubeView,
-      onApplyState: () => {
+      onApplyState: (startSolver = true) => {
         if (this.scrambleText) {
-          this.scrambleText.innerText = 'Cubo Físico Configurado (Pronto para Resolver)';
+          this.scrambleText.innerText = 'Cubo físico importado — use Resolver para ver os movimentos';
         }
-        this.startSolver();
+        if (startSolver) this.startSolver();
       }
     });
 
@@ -79,6 +79,7 @@ export class UIManager {
     this.solverBar = document.getElementById('solver-bar');
     this.solverStepText = document.getElementById('solver-step-text');
     this.solverCurrentMove = document.getElementById('solver-current-move');
+    this.solverMovesList = document.getElementById('solver-moves-list');
     this.btnSolverPrev = document.getElementById('btn-solver-prev');
     this.btnSolverPlay = document.getElementById('btn-solver-play');
     this.btnSolverPlayIcon = document.getElementById('solver-play-icon');
@@ -200,6 +201,21 @@ export class UIManager {
 
     // 9. Câmera e Fullscreen
     this.btnCameraReset.addEventListener('click', () => this.cubeView.resetView());
+
+    document.querySelectorAll('[data-orbit]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const dir = btn.getAttribute('data-orbit');
+        const step = 0.38;
+        if (dir === 'left') this.cubeView.orbitBy(-step, 0);
+        if (dir === 'right') this.cubeView.orbitBy(step, 0);
+        if (dir === 'up') this.cubeView.orbitBy(0, -step);
+        if (dir === 'down') this.cubeView.orbitBy(0, step);
+      });
+    });
+    const orbitReset = document.getElementById('btn-orbit-reset');
+    if (orbitReset) {
+      orbitReset.addEventListener('click', () => this.cubeView.resetView());
+    }
     this.btnFullscreen.addEventListener('click', () => this.toggleFullscreen());
 
     // 10. Inspeção do Timer
@@ -475,6 +491,11 @@ export class UIManager {
     if (this.currentStepIdx >= this.solverSteps.length) {
       this.solverStepText.innerText = 'Parabéns! Cubo 100% resolvido!';
       this.solverCurrentMove.innerText = '✔';
+      if (this.solverMovesList) {
+        this.solverMovesList.innerHTML = this.solverSteps
+          .map((s) => `<span class="solver-move-chip is-done">${s.move}</span>`)
+          .join('');
+      }
       this.stopAutoSolve();
       this.checkIfSolved();
       return;
@@ -483,6 +504,15 @@ export class UIManager {
     const step = this.solverSteps[this.currentStepIdx];
     this.solverStepText.innerText = `[${step.stepIndex}/${step.totalSteps}] ${step.phase}: ${step.description}`;
     this.solverCurrentMove.innerText = step.move;
+
+    if (this.solverMovesList) {
+      this.solverMovesList.innerHTML = this.solverSteps.map((s, i) => {
+        const cls = i < this.currentStepIdx ? 'is-done' : i === this.currentStepIdx ? 'is-current' : '';
+        return `<span class="solver-move-chip ${cls}">${s.move}</span>`;
+      }).join('');
+      const currentChip = this.solverMovesList.querySelector('.is-current');
+      if (currentChip) currentChip.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
   }
 
   solverNextStep(onComplete = null) {
