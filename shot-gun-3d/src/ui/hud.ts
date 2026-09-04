@@ -1,6 +1,7 @@
 import './styles.css';
 import type { WeaponDef, WeaponId } from '../weapons/catalog.ts';
 import { WEAPONS } from '../weapons/catalog.ts';
+import { weaponIconSvg } from './weapon-icons.ts';
 
 export interface HudState {
   weapon: WeaponDef;
@@ -117,7 +118,7 @@ export class Hud {
       btn.className = 'slot';
       btn.dataset.id = w.id;
       btn.innerHTML = `<span class="num">${w.slot}</span>
-        <span class="ico" aria-hidden="true">${iconFor(w.id)}</span>
+        <span class="ico" aria-hidden="true">${weaponIconSvg(w.id)}</span>
         <span class="lab">${w.label}</span>`;
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -333,19 +334,6 @@ export class Hud {
     } else {
       this.fireWarn.classList.add('hidden');
     }
-  }
-}
-
-function iconFor(id: WeaponId): string {
-  switch (id) {
-    case 'bullet': return '•';
-    case 'shotgun': return '≡';
-    case 'rifle': return '—';
-    case 'bomb': return '*';
-    case 'laser': return '▸';
-    case 'water': return '≈';
-    case 'hook': return '⌐';
-    case 'detonator': return '⏚';
   }
 }
 

@@ -7,7 +7,7 @@ describe('fogo', () => {
   it('acende madeira, espalha e apaga com água; adobe não queima', async () => {
     const sim = await PhysicsSim.create();
     const grid = new VoxelGrid();
-    const wall = grid.fillBox(0, 0, 0, 6, 8, 0, 'plank', 'structure', 0);
+    const wall = grid.fillBox(0, 0, 0, 8, 12, 0, 'plank', 'structure', 0);
     grid.fillBox(10, 0, 0, 12, 4, 0, 'adobe', 'structure', 1);
     sim.rebuild(grid);
     const dead: number[] = [];
@@ -15,11 +15,11 @@ describe('fogo', () => {
     const fire = new FireSystem(grid, sim, { burnOut: (vs) => { dead.push(vs.length); }, setBurning: () => {}, flame: () => { flames += 1; } });
     expect(fire.ignite(grid.get(11, 1, 0)!)).toBe(false);
     expect(fire.ignite(wall[0])).toBe(true);
-    for (let i = 0; i < 300; i++) fire.update(1 / 30); // 10 s
+    for (let i = 0; i < 120; i++) fire.update(1 / 30); // ~4 s: fogo espalhando ativamente
     expect(fire.count).toBeGreaterThan(3);
     expect(flames).toBeGreaterThan(0);
     const put = fire.extinguishAround(0, 0.3, 0, 10);
-    expect(put).toBe(fire.count + put - fire.count);
+    expect(put).toBeGreaterThan(0);
     expect(fire.count).toBe(0);
   });
 

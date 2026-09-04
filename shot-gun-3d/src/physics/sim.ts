@@ -116,9 +116,9 @@ export class PhysicsSim {
       RAPIER.ColliderDesc.cuboid(48, 0.25, 48).setFriction(0.9).setCollisionGroups(colGroups(COL_GROUND, 0xffff)),
       ground,
     );
-    const deck = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(0, DECK_TOP / 2, 0));
+    const deck = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(-3.8, DECK_TOP / 2, 4.8));
     world.createCollider(
-      RAPIER.ColliderDesc.cylinder(DECK_TOP / 2, 3.5).setFriction(0.85).setCollisionGroups(colGroups(COL_GROUND, 0xffff)),
+      RAPIER.ColliderDesc.cylinder(DECK_TOP / 2, 0.8).setFriction(0.85).setCollisionGroups(colGroups(COL_GROUND, 0xffff)),
       deck,
     );
     const plaza = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(GAZEBO.x, PLAZA_TOP / 2, GAZEBO.z));

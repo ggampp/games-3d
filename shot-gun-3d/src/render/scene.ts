@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { GAZEBO, GROUND_RADIUS, DECK_TOP, PLAZA_TOP } from '../voxels/town.ts';
+import { GAZEBO, GROUND_RADIUS, PLAZA_TOP } from '../voxels/town.ts';
 
 export function createRenderer(canvas: HTMLCanvasElement): THREE.WebGLRenderer {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
@@ -87,26 +87,6 @@ export function createWorldKit(
   ground.name = 'sand';
   scene.add(ground);
 
-  const woodMat = new THREE.MeshStandardMaterial({
-    color: 0xe0c9a8,
-    map: textures.wood,
-    roughness: 0.86,
-    metalness: 0.04,
-  });
-  textures.wood.repeat.set(6, 6);
-  const deck = new THREE.Mesh(new THREE.CylinderGeometry(3.5, 3.6, DECK_TOP, 32), woodMat);
-  deck.position.y = DECK_TOP / 2;
-  deck.castShadow = true;
-  deck.receiveShadow = true;
-  deck.name = 'deck';
-  scene.add(deck);
-
-  const rim = new THREE.Mesh(new THREE.TorusGeometry(3.52, 0.07, 8, 40), woodMat);
-  rim.rotation.x = Math.PI / 2;
-  rim.position.y = DECK_TOP;
-  rim.castShadow = true;
-  scene.add(rim);
-
   const stoneMat = new THREE.MeshStandardMaterial({
     color: 0xd8cbb8,
     map: textures.adobe,
@@ -120,12 +100,18 @@ export function createWorldKit(
   plaza.name = 'plaza';
   scene.add(plaza);
 
-  // Estrada de terra batida entre o saloon e a capela.
-  const roadMat = new THREE.MeshStandardMaterial({ color: 0xbfa27a, roughness: 1, metalness: 0 });
-  const road = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 9), roadMat);
-  road.rotation.x = -Math.PI / 2;
-  road.position.set(0, 0.01, -4.6);
-  road.receiveShadow = true;
-  scene.add(road);
-
+  // Estrada principal de terra batida da Main Street (corredor central como na foto de referência)
+  const roadMat = new THREE.MeshStandardMaterial({
+    color: 0xcaa06e,
+    map: textures.sand,
+    roughness: 0.95,
+    metalness: 0.01,
+  });
+  textures.sand.repeat.set(3, 8);
+  const mainStreet = new THREE.Mesh(new THREE.PlaneGeometry(7.2, 22), roadMat);
+  mainStreet.rotation.x = -Math.PI / 2;
+  mainStreet.position.set(0, 0.01, -1.0);
+  mainStreet.receiveShadow = true;
+  mainStreet.name = 'road';
+  scene.add(mainStreet);
 }
