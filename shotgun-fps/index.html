@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Western Low-Poly FPS - Shotgun Prototype</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rye&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <div id="game-container">
+    <canvas id="webgl-canvas"></canvas>
+
+    <!-- Crosshair -->
+    <div id="crosshair">
+      <div class="ch-dot"></div>
+      <div class="ch-line top"></div>
+      <div class="ch-line bottom"></div>
+      <div class="ch-line left"></div>
+      <div class="ch-line right"></div>
+    </div>
+
+    <!-- HUD Overlay -->
+    <div id="hud">
+      <div class="hud-top">
+        <div class="badge-title">WESTERN LOW-POLY FPS PROTOTYPE</div>
+      </div>
+
+      <div class="hud-bottom">
+        <div class="ammo-box">
+          <div class="ammo-label">CARTUCHOS</div>
+          <div class="ammo-count"><span id="ammo-current">6</span><span class="ammo-max"> / 6</span></div>
+          <div class="shells-display" id="shells-container"></div>
+        </div>
+
+        <div class="controls-hint">
+          <div class="key-row"><span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> Mover</div>
+          <div class="key-row"><span class="key">SHIFT</span> Correr &bull; <span class="key">ESPAÇO</span> Pular</div>
+          <div class="key-row"><span class="key">MOUSE 1</span> Disparar &bull; <span class="key">R</span> Recarregar</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Start / Pause Screen -->
+    <div id="blocker">
+      <div id="instructions">
+        <h1 class="western-title">DESPERADO</h1>
+        <p class="subtitle">Low-Poly Western FPS Viewmodel & Controller</p>
+        
+        <div class="preview-card">
+          <div class="card-feature">🌵 Cenário Velho Oeste Low Poly</div>
+          <div class="card-feature">💥 Espingarda Pump-Action com Recoil & Sway</div>
+          <div class="card-feature">🦾 Braço do Atirador em 1ª Pessoa</div>
+          <div class="card-feature">🔊 Efeitos Sonoros Procedurais (Web Audio)</div>
+        </div>
+
+        <button id="play-btn" class="play-btn">CLIQUE PARA JOGAR</button>
+        <p class="escape-hint">Pressione <strong>ESC</strong> a qualquer momento para liberar o mouse</p>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
