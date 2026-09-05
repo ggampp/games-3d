@@ -4,7 +4,11 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#3a2a1c" />
+    <meta name="description" content="Pequeno Reino: um jogo calmo de cartas e hexágonos. Pose um reino lusófono de papel, cadeia por cadeia." />
     <title>Pequeno Reino</title>
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/images/icon-512.png" />
+    <link rel="apple-touch-icon" href="/images/icon-512.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -23,9 +27,10 @@
             <p class="kicker">Cartas · hexágonos · sem pressa</p>
             <h1>Pequeno Reino</h1>
             <p class="lead">Um reino no bolso. Cada carta é um pedaço de chão, um telhado ou um aldeão.</p>
+            <p id="title-stars" class="stars-line"></p>
             <div class="btn-col">
+              <button id="btn-continue" type="button" class="btn primary">Continuar</button>
               <button id="btn-play" type="button" class="btn primary">Jogar</button>
-              <button id="btn-continue" type="button" class="btn">Continuar</button>
               <button id="btn-map" type="button" class="btn">Mapa da campanha</button>
               <button id="btn-album" type="button" class="btn">Álbum de tiles</button>
               <button id="btn-options" type="button" class="btn">Opções</button>
@@ -49,6 +54,7 @@
               <h2>Álbum de tiles</h2>
               <button type="button" class="btn ghost" data-back-title>Voltar</button>
             </header>
+            <p id="album-count" class="muted"></p>
             <div id="album-grid" class="album-grid"></div>
           </div>
         </section>
@@ -63,46 +69,102 @@
               <input id="opt-music" type="checkbox" checked />
               Som
             </label>
+            <label class="range">
+              <span>Música</span>
+              <input id="opt-music-volume" type="range" min="0" max="1" step="0.05" value="0.6" />
+            </label>
+            <label class="range">
+              <span>Efeitos</span>
+              <input id="opt-sfx-volume" type="range" min="0" max="1" step="0.05" value="0.8" />
+            </label>
+            <label class="check">
+              <input id="opt-voice" type="checkbox" checked />
+              Narração
+            </label>
+            <label class="check">
+              <input id="opt-models" type="checkbox" checked />
+              Modelos 3D gerados
+            </label>
             <label class="check">
               <input id="opt-particles" type="checkbox" />
               Reduzir partículas
             </label>
+            <div class="btn-col options-actions">
+              <button id="btn-tutorial-reset" type="button" class="btn">Rever o tutorial</button>
+              <button id="btn-reset-save" type="button" class="btn danger">Apagar progresso</button>
+            </div>
           </div>
         </section>
 
         <section id="screen-play" class="screen play" hidden>
           <div class="hud-top">
             <div class="phase-label">
-              <strong id="phase-title">Primavera</strong>
-              <span id="phase-sub"></span>
+              <img id="phase-badge" class="phase-badge" src="" alt="" width="40" height="40" />
+              <div>
+                <strong id="phase-title">Primavera</strong>
+                <span id="phase-sub"></span>
+              </div>
             </div>
             <div class="stats">
-              <div class="stat natureza"><span>Natureza</span><strong id="stat-natureza">0</strong></div>
-              <div class="stat povo"><span>Povo</span><strong id="stat-povo">0</strong></div>
-              <div class="stat agua"><span>Água</span><strong id="stat-agua">0</strong></div>
-              <div class="stat"><span>Pão</span><strong id="stat-pao">0</strong></div>
+              <div class="stat natureza" title="Natureza"><span>Natureza</span><strong id="stat-natureza">0</strong></div>
+              <div class="stat povo" title="Povo"><span>Povo</span><strong id="stat-povo">0</strong></div>
+              <div class="stat agua" title="Água"><span>Água</span><strong id="stat-agua">0</strong></div>
+              <div class="stat moedas" title="Moedas: pão vale 2, os outros recursos valem 1"><span>Moedas</span><strong id="stat-moedas">0</strong></div>
               <div class="stat"><span>Povoado</span><strong id="stat-pop">0</strong></div>
-              <div class="stat"><span>Baralho</span><strong id="stat-deck">0</strong></div>
+              <div class="stat"><span>Cartas</span><strong id="stat-deck">0</strong></div>
             </div>
             <button id="btn-pause" type="button" class="btn ghost">Pausar</button>
+          </div>
+
+          <div id="resource-strip" class="resource-strip" aria-label="Recursos">
+            <span title="Pão">🍞 <b id="res-pao">0</b></span>
+            <span title="Farinha">🌾 <b id="res-farinha">0</b></span>
+            <span title="Madeira">🪵 <b id="res-madeira">0</b></span>
+            <span title="Peixe">🐟 <b id="res-peixe">0</b></span>
+            <span title="Pedra">🪨 <b id="res-pedra">0</b></span>
           </div>
 
           <aside id="quest-box">
             <h3>Missões</h3>
             <ul id="quest-list"></ul>
+            <div id="score-line" class="score-line"></div>
           </aside>
+
+          <div id="hint" class="hint" hidden>
+            <p id="hint-text"></p>
+            <button id="btn-hint-close" type="button" class="btn ghost small">Entendi</button>
+          </div>
+
+          <div id="hover-tip" class="hover-tip" hidden></div>
 
           <div class="hud-bottom">
             <div id="card-hand" class="card-hand"></div>
-            <button id="btn-pack" type="button" class="btn pack">Novo pacote</button>
-            <button id="btn-end-day" type="button" class="btn ghost" hidden>Encerrar o dia</button>
+            <div class="hand-actions">
+              <button id="btn-pack" type="button" class="btn pack">Novo pacote · 2 moedas</button>
+              <div class="hand-actions-row">
+                <button id="btn-discard" type="button" class="btn ghost small">Descartar</button>
+                <button id="btn-undo" type="button" class="btn ghost small">Desfazer</button>
+              </div>
+              <button id="btn-finish" type="button" class="btn primary" hidden>Encerrar a fase</button>
+            </div>
           </div>
         </section>
+
+        <div id="toast" class="toast" hidden></div>
 
         <div id="pause-overlay" class="overlay" hidden>
           <div class="panel">
             <h2>Pausa</h2>
             <p>O reino espera sem pressa.</p>
+            <div class="help-grid">
+              <span>Arrastar</span><span>girar a câmera</span>
+              <span>Botão direito · dois dedos</span><span>mover o mapa</span>
+              <span>Roda · pinça · + −</span><span>zoom</span>
+              <span>WASD · setas · Q E</span><span>mover e girar</span>
+              <span>R · duplo clique</span><span>recentrar</span>
+              <span>1 2 3 · Tab</span><span>escolher carta</span>
+              <span>X · Z · P</span><span>descartar · desfazer · pacote</span>
+            </div>
             <div class="btn-col">
               <button id="btn-resume" type="button" class="btn primary">Continuar o jogo</button>
               <button id="btn-quit" type="button" class="btn">Tela inicial</button>
@@ -113,6 +175,7 @@
         <div id="modal" class="overlay" hidden>
           <div class="panel">
             <h2 id="modal-title">Fase</h2>
+            <p id="modal-stars" class="modal-stars"></p>
             <p id="modal-body"></p>
             <p id="modal-unlock" class="unlock"></p>
             <div class="btn-col">

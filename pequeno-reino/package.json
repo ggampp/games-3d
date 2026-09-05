@@ -1,6 +1,6 @@
 {
   "name": "pequeno-reino",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -12,7 +12,9 @@
     "test:e2e": "playwright test",
     "verify:visual": "playwright test tests/visual.spec.ts",
     "inspect:canvas": "node scripts/inspect-threejs-canvas.mjs",
-    "assets:generate": "node scripts/generate-assets.mjs"
+    "assets:generate": "node scripts/generate-assets.mjs",
+    "assets:extra": "node scripts/generate-assets-extra.mjs",
+    "shots": "node scripts/shot.mjs artifacts/shots"
   },
   "dependencies": {
     "three": "^0.184.0"

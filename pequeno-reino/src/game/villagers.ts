@@ -1,4 +1,4 @@
-import { hexDistance, hexNeighbors, hexToWorld, parseHexKey, type Hex } from './hex';
+import { hexKey, hexNeighbors, hexToWorld, parseHexKey, type Hex } from './hex';
 import type { TileMap } from './production';
 
 export type Villager = {
@@ -8,6 +8,7 @@ export type Villager = {
   t: number;
   speed: number;
   wait: number;
+  goal: Hex | null;
 };
 
 const HOME_IDS = new Set(['casa', 'sobrado', 'casa_pedra', 'aldeao', 'moleiro', 'padeiro', 'pescador']);
@@ -35,42 +36,52 @@ function tilesOf(map: TileMap, ids: Set<string>): Hex[] {
   return [...map.entries()].filter(([, id]) => ids.has(id)).map(([key]) => parseHexKey(key));
 }
 
-function greedyStep(from: Hex, to: Hex): Hex {
-  if (from.q === to.q && from.r === to.r) return from;
-  let best = from;
-  let bestDist = hexDistance(from, to);
-  for (const neighbor of hexNeighbors(from)) {
-    const dist = hexDistance(neighbor, to);
-    if (dist < bestDist) {
-      best = neighbor;
-      bestDist = dist;
+/** Próximo passo de um caminho por hexes ocupados (BFS). Fica parado se não há rota. */
+export function nextStepOnMap(map: TileMap, from: Hex, to: Hex): Hex {
+  const start = hexKey(from);
+  const goal = hexKey(to);
+  if (start === goal) return from;
+  const prev = new Map<string, string>();
+  const queue = [start];
+  prev.set(start, start);
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    if (current === goal) break;
+    for (const neighbor of hexNeighbors(parseHexKey(current))) {
+      const key = hexKey(neighbor);
+      if (prev.has(key) || !map.has(key)) continue;
+      prev.set(key, current);
+      queue.push(key);
     }
   }
-  return best;
+  if (!prev.has(goal)) return from;
+  let cursor = goal;
+  while (prev.get(cursor) !== start) cursor = prev.get(cursor)!;
+  return parseHexKey(cursor);
 }
 
 export function syncVillagers(map: TileMap, existing: Villager[]): Villager[] {
   const homes = tilesOf(map, HOME_IDS);
-  const work = tilesOf(map, WORK_IDS);
   const next: Villager[] = [];
 
   homes.forEach((home, index) => {
     const previous = existing[index];
-    const target = work.length === 0 ? home : work[index % work.length]!;
+    const stillValid = previous && map.has(hexKey(previous.from)) && map.has(hexKey(previous.to));
     next.push({
       id: index,
-      from: previous?.from ?? home,
-      to: previous?.to ?? target,
-      t: previous?.t ?? 0,
+      from: stillValid ? previous.from : home,
+      to: stillValid ? previous.to : home,
+      t: stillValid ? previous.t : 0,
       speed: 0.55 + (index % 3) * 0.08,
       wait: previous?.wait ?? index * 0.4,
+      goal: stillValid ? previous.goal : null,
     });
   });
 
   return next;
 }
 
-export function stepVillagers(villagers: Villager[], map: TileMap, dt: number): Villager[] {
+export function stepVillagers(villagers: Villager[], map: TileMap, dt: number, rng: () => number): Villager[] {
   const work = tilesOf(map, WORK_IDS);
   const homes = tilesOf(map, HOME_IDS);
 
@@ -81,16 +92,21 @@ export function stepVillagers(villagers: Villager[], map: TileMap, dt: number): 
       return copy;
     }
     copy.t += dt * copy.speed;
-    if (copy.t >= 1) {
-      copy.from = copy.to;
-      copy.t = 0;
+    if (copy.t < 1) return copy;
+
+    copy.from = copy.to;
+    copy.t = 0;
+    const arrived = copy.goal && copy.goal.q === copy.from.q && copy.goal.r === copy.from.r;
+    if (!copy.goal || arrived) {
       const pool = index % 2 === 0 ? work : homes;
-      const destination = pool.length === 0 ? copy.from : pool[Math.floor(Math.random() * pool.length)]!;
-      copy.to = greedyStep(copy.from, destination);
-      if (copy.to.q === copy.from.q && copy.to.r === copy.from.r && pool.length > 0) {
-        copy.to = pool[index % pool.length]!;
-      }
-      copy.wait = 0.2 + (index % 4) * 0.15;
+      const alt = pool.length > 0 ? pool : homes;
+      copy.goal = alt.length > 0 ? alt[Math.floor(rng() * alt.length)]! : null;
+      copy.wait = 0.4 + (index % 4) * 0.2;
+    }
+    copy.to = copy.goal ? nextStepOnMap(map, copy.from, copy.goal) : copy.from;
+    if (copy.to.q === copy.from.q && copy.to.r === copy.from.r) {
+      copy.goal = null;
+      copy.wait = 0.3;
     }
     return copy;
   });

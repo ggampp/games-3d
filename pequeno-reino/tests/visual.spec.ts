@@ -47,10 +47,16 @@ async function sampleCanvas(page: import('@playwright/test').Page): Promise<Canv
 test('tela inicial em português com canvas 3D visível', async ({ page }, testInfo) => {
   const consoleErrors: string[] = [];
   const pageErrors: string[] = [];
+  // Fontes do Google podem responder 400 ao UA headless do WebKit; o jogo tem fallback de fonte.
   page.on('console', (message) => {
-    if (message.type() === 'error') consoleErrors.push(message.text());
+    if (message.type() === 'error' && !/Failed to load resource/.test(message.text())) consoleErrors.push(message.text());
   });
   page.on('pageerror', (error) => pageErrors.push(error.message));
+  page.on('response', (response) => {
+    if (response.status() >= 400 && response.url().startsWith('http://127.0.0.1')) {
+      consoleErrors.push(`HTTP ${response.status()} ${response.url()}`);
+    }
+  });
 
   await page.goto('/');
   await expect(page.locator('#game-canvas')).toBeVisible();

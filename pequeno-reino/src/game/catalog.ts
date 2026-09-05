@@ -17,6 +17,10 @@ export function getTile(id: string): TileDef {
   return tile;
 }
 
+export function hasTile(id: string): boolean {
+  return tilesById.has(id);
+}
+
 export function getPhase(id: number): PhaseDef {
   const phase = phasesById.get(id);
   if (!phase) throw new Error(`Fase desconhecida: ${id}`);
@@ -29,6 +33,24 @@ export function getQuest(id: string): QuestDef {
   return quest;
 }
 
+/** Tiles disponíveis por progresso de campanha (unlockPhase = primeira fase em que aparecem). */
 export function tilesUnlockedAt(maxPhase: number): string[] {
   return TILES.filter((tile) => tile.unlockPhase <= maxPhase).map((tile) => tile.id);
+}
+
+/**
+ * Baralho de uma fase: o baralho base mais os tiles já desbloqueados que ainda não estão nele.
+ * Assim a recompensa de cada fase entra de fato nas fases seguintes. No sandbox entram em dobro.
+ */
+export function buildDeck(phase: PhaseDef, unlockedTiles: Iterable<string>): string[] {
+  const deck = [...phase.deck];
+  const base = new Set(deck);
+  const copies = phase.sandbox ? 2 : 1;
+  for (const id of new Set(unlockedTiles)) {
+    if (!hasTile(id) || base.has(id)) continue;
+    const tile = getTile(id);
+    if (tile.unlockPhase > phase.id) continue;
+    for (let i = 0; i < copies; i += 1) deck.push(id);
+  }
+  return deck;
 }

@@ -25,6 +25,22 @@ interface ThreeGameDiagnostics {
   };
 }
 
+interface PequenoReinoDebug {
+  validScreenPoints: () => Array<{ q: number; r: number; x: number; y: number }>;
+  state: () => {
+    phaseId: number;
+    status: string;
+    hand: string[];
+    deck: number;
+    mapSize: number;
+    questsDone: boolean;
+    score: number;
+    coins: number;
+  } | null;
+  screen: () => string;
+}
+
 interface Window {
   __THREE_GAME_DIAGNOSTICS__?: ThreeGameDiagnostics;
+  __PR_DEBUG__?: PequenoReinoDebug;
 }

@@ -13,8 +13,26 @@ type Extra = {
   metalness?: number;
 };
 
-function hexCylinder(radius: number, height: number): THREE.CylinderGeometry {
-  return new THREE.CylinderGeometry(radius, radius, height, 6);
+/**
+ * Geometrias são compartilhadas por parâmetros: dezenas de tiles reaproveitam as mesmas caixas,
+ * cones e cilindros, e remover um tile da cena não precisa de dispose.
+ */
+const GEO = new Map<string, THREE.BufferGeometry>();
+
+function cached<T extends THREE.BufferGeometry>(key: string, make: () => T): T {
+  const hit = GEO.get(key);
+  if (hit) return hit as T;
+  const geometry = make();
+  GEO.set(key, geometry);
+  return geometry;
+}
+
+export function hexCylinder(radius: number, height: number): THREE.CylinderGeometry {
+  return cached(`hex:${radius}:${height}`, () => new THREE.CylinderGeometry(radius, radius, height, 6));
+}
+
+export function geometryCacheSize(): number {
+  return GEO.size;
 }
 
 function mesh(
@@ -55,15 +73,15 @@ function box(
   z: number,
   extra?: Extra,
 ): THREE.Mesh {
-  return mesh(new THREE.BoxGeometry(w, h, d), color, x, y, z, extra);
+  return mesh(cached(`box:${w}:${h}:${d}`, () => new THREE.BoxGeometry(w, h, d)), color, x, y, z, extra);
 }
 
 function cone(r: number, h: number, color: string, x: number, y: number, z: number, segs = 8): THREE.Mesh {
-  return mesh(new THREE.ConeGeometry(r, h, segs), color, x, y, z);
+  return mesh(cached(`cone:${r}:${h}:${segs}`, () => new THREE.ConeGeometry(r, h, segs)), color, x, y, z);
 }
 
 function sphere(r: number, color: string, x: number, y: number, z: number, extra?: Extra): THREE.Mesh {
-  return mesh(new THREE.SphereGeometry(r, 12, 10), color, x, y, z, extra);
+  return mesh(cached(`sph:${r}`, () => new THREE.SphereGeometry(r, 12, 10)), color, x, y, z, extra);
 }
 
 function cyl(
@@ -76,7 +94,7 @@ function cyl(
   extra?: Extra,
   segs = 12,
 ): THREE.Mesh {
-  return mesh(new THREE.CylinderGeometry(r, r, h, segs), color, x, y, z, extra);
+  return mesh(cached(`cyl:${r}:${h}:${segs}`, () => new THREE.CylinderGeometry(r, r, h, segs)), color, x, y, z, extra);
 }
 
 function taper(
@@ -89,7 +107,7 @@ function taper(
   z: number,
   extra?: Extra,
 ): THREE.Mesh {
-  return mesh(new THREE.CylinderGeometry(rTop, rBot, h, 12), color, x, y, z, extra);
+  return mesh(cached(`taper:${rTop}:${rBot}:${h}`, () => new THREE.CylinderGeometry(rTop, rBot, h, 12)), color, x, y, z, extra);
 }
 
 function attachSpin(root: THREE.Group, spinner: THREE.Object3D, axis: 'x' | 'y' | 'z', speed: number): void {
@@ -110,12 +128,22 @@ function addBase(group: THREE.Group, side: string, top: string, height: number, 
   const rim = mesh(hexCylinder(HEX_SIZE, height), side, 0, height / 2, 0, { specks: '#1a120c', seed });
   const bevel = mesh(hexCylinder(HEX_SIZE * 0.97, 0.04), side, 0, height - 0.01, 0, { specks: '#000000', seed: seed + 1 });
   const cap = mesh(hexCylinder(HEX_SIZE * 0.9, 0.045), top, 0, height + 0.02, 0, { specks: '#ffffff', seed: seed + 3 });
+  for (const part of [rim, bevel, cap]) part.userData.base = true;
   group.add(rim, bevel, cap);
+  group.userData.baseTop = height + 0.04;
   return height + 0.04;
 }
 
 function addShadow(group: THREE.Group): void {
-  group.add(mesh(hexCylinder(HEX_SIZE * 0.98, 0.02), '#3a2a1c', 0, 0.01, 0, { opacity: 0.22 }));
+  const shadow = mesh(hexCylinder(HEX_SIZE * 0.98, 0.02), '#3a2a1c', 0, 0.01, 0, { opacity: 0.22 });
+  shadow.userData.base = true;
+  shadow.userData.shadow = true;
+  group.add(shadow);
+}
+
+/** Tudo que não é base/sombra: o "prédio" procedural, que um GLB gerado pode substituir. */
+export function buildingParts(group: THREE.Group): THREE.Object3D[] {
+  return group.children.filter((child) => !child.userData.base);
 }
 
 function pitchedRoof(
@@ -553,7 +581,7 @@ export function createTileGroup(tileId: string): THREE.Group {
         group.add(taper(0.1 - i * 0.008, 0.13 - i * 0.008, 0.16, color, 0, y + 0.1 + i * 0.16, 0));
       });
       group.add(cyl(0.12, 0.14, '#f4e8d0', 0, y + 0.8, 0));
-      const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.075, 12, 10), glow('#f5d76e'));
+      const lamp = new THREE.Mesh(cached('sph:0.075', () => new THREE.SphereGeometry(0.075, 12, 10)), glow('#f5d76e'));
       lamp.position.set(0, y + 0.9, 0);
       lamp.castShadow = false;
       group.add(lamp);
@@ -602,14 +630,17 @@ export function createTileGroup(tileId: string): THREE.Group {
 export function createGhostGroup(): THREE.Mesh {
   const item = new THREE.Mesh(
     hexCylinder(HEX_SIZE, 0.12),
-    std('#f4e8d0', { transparent: true, opacity: 0.45 }),
+    new THREE.MeshStandardMaterial({ color: '#f4e8d0', transparent: true, opacity: 0.45, roughness: 0.8 }),
   );
   item.position.y = 0.08;
   return item;
 }
 
+/** Marcadores de hex válido compartilham geometria e material: são só instâncias posicionadas. */
+const MARKER_MATERIAL = std('#f4e8d0', { transparent: true, opacity: 0.42 });
+
 export function createValidMarker(): THREE.Mesh {
-  const item = new THREE.Mesh(hexCylinder(HEX_SIZE, 0.05), std('#f4e8d0', { transparent: true, opacity: 0.42 }));
+  const item = new THREE.Mesh(hexCylinder(HEX_SIZE, 0.05), MARKER_MATERIAL);
   item.position.y = 0.025;
   return item;
 }

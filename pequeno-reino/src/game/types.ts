@@ -73,8 +73,20 @@ export type PlaceFloat = {
 
 export type SessionStatus = 'playing' | 'phaseComplete' | 'asleep';
 
+/** Pontuação de uma fase: soma das cores + bônus de equilíbrio + povo. */
+export type Score = {
+  total: number;
+  harmonia: number;
+  equilibrio: number;
+  povo: number;
+  stars: 0 | 1 | 2 | 3;
+  nextStarAt: number | null;
+};
+
 export type SerializedSession = {
+  version: 2;
   phaseId: number;
+  seed: number;
   map: Array<[string, string]>;
   hand: string[];
   deck: string[];
@@ -83,5 +95,8 @@ export type SerializedSession = {
   turns: number;
   status: SessionStatus;
   rngState: number;
-  spentPao: number;
+  spentCoins: number;
+  discardsLeft: number;
+  undo: SerializedSession | null;
+  questsCelebrated: boolean;
 };

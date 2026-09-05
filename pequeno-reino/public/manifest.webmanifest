@@ -1,0 +1,15 @@
+{
+  "name": "Pequeno Reino",
+  "short_name": "Pequeno Reino",
+  "description": "Um jogo calmo de cartas e hexágonos. Pose um reino de papel, cadeia por cadeia.",
+  "lang": "pt-BR",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#e8d5b7",
+  "theme_color": "#3a2a1c",
+  "icons": [
+    { "src": "/images/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/images/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
