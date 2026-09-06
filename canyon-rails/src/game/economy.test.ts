@@ -102,6 +102,7 @@ describe('objetivos', () => {
       contractsAccepted: 0,
       contractsCompleted: 0,
       buildingsPlaced: 0,
+      rocksBlasted: 0,
     };
     expect(tracker.check(progress)).toBeNull();
     expect(tracker.fraction(progress)).toBe(0);

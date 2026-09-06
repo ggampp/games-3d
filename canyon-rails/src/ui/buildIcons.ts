@@ -114,6 +114,15 @@ const BUILDING: Record<BuildingKind, string> = {
     <rect x="28" y="44" width="10" height="12" fill="#6b4a2f"/>
     <rect x="14" y="46" width="6" height="6" fill="#c9a26a" stroke="#3a2a18" stroke-width="1"/>
   `),
+  station: render('building:station', `
+    <rect x="10" y="40" width="44" height="16" fill="#e6d3ae" stroke="#3a2a18" stroke-width="1.4"/>
+    <polygon points="8,40 32,26 56,40" fill="#b5432f" stroke="#3a2a18" stroke-width="1.4"/>
+    <rect x="16" y="44" width="5" height="12" fill="#6b4a2f"/>
+    <rect x="43" y="44" width="5" height="12" fill="#6b4a2f"/>
+    <rect x="28" y="44" width="8" height="7" fill="#8fc6e8" stroke="#3a2a18" stroke-width="1"/>
+    <circle cx="32" cy="34" r="3" fill="#fff6d6" stroke="#3a2a18" stroke-width="1"/>
+    <rect x="6" y="56" width="52" height="3" fill="#8a8073"/>
+  `),
   lamp: render('building:lamp', `
     <rect x="30" y="22" width="4" height="30" fill="#3a3a42"/>
     <rect x="24" y="50" width="16" height="4" fill="#3a3a42"/>

@@ -130,7 +130,7 @@ export function heightAt(x: number, z: number): number {
   const half = profile.river.halfWidth;
   const mesa = profile.mesaLevel;
 
-  let h = mesa + (fbm(x * 0.012 + 9, z * 0.012 + 9) - 0.5) * 2.4;
+  let h = mesa + (fbm(x * 0.012 + 9, z * 0.012 + 9) - 0.5) * (profile.hillAmp ?? 2.4);
 
   const edge = Math.max(Math.abs(x), Math.abs(z));
   if (edge > 190) h += (edge - 190) * 0.06 + fbm(x * 0.05, z * 0.05) * 2;

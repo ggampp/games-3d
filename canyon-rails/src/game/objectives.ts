@@ -9,6 +9,7 @@ export interface ObjectiveProgress {
   contractsAccepted: number;
   contractsCompleted: number;
   buildingsPlaced: number;
+  rocksBlasted: number;
 }
 
 export interface ObjectiveDef {
@@ -33,6 +34,10 @@ function compileGoal(goal: ObjectiveDefData['goal']): (p: ObjectiveProgress) => 
       return (p) => Math.min(1, p.contractsCompleted / goal.count);
     case 'buildings':
       return (p) => p.buildingsPlaced / goal.count;
+    case 'connectAll':
+      return (p) => goal.townIds.filter((id) => p.connectedTowns.includes(id)).length / goal.townIds.length;
+    case 'rocksBlasted':
+      return (p) => Math.min(1, p.rocksBlasted / goal.count);
   }
 }
 
@@ -58,6 +63,15 @@ export class ObjectiveTracker {
 
   get current(): ObjectiveDef | null {
     return OBJECTIVES[this.index] ?? null;
+  }
+
+  get total(): number {
+    return OBJECTIVES.length;
+  }
+
+  /** Todos os objetivos do mapa foram cumpridos. */
+  get allDone(): boolean {
+    return OBJECTIVES.length > 0 && this.index >= OBJECTIVES.length;
   }
 
   check(progress: ObjectiveProgress): ObjectiveDef | null {

@@ -54,12 +54,17 @@ describe('modelLoader', () => {
   it('createBuilding falls back to procedural when no GLB is cached', () => {
     expect(hasBuildingModel('watertower')).toBe(false);
     const built = createBuilding('watertower');
-    // Procedural tower has several meshes (legs + tank + cap).
+    // Procedural tower is merged into a single low-poly mesh (legs + tank + cap).
     let meshes = 0;
+    let vertices = 0;
     built.traverse((o) => {
-      if (o instanceof THREE.Mesh) meshes += 1;
+      if (o instanceof THREE.Mesh) {
+        meshes += 1;
+        vertices += o.geometry.attributes.position.count;
+      }
     });
-    expect(meshes).toBeGreaterThanOrEqual(5);
+    expect(meshes).toBeGreaterThanOrEqual(1);
+    expect(vertices).toBeGreaterThanOrEqual(5 * 24);
   });
 
   it('createBuilding prefers house GLB when cached', () => {

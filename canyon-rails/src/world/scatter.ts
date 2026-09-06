@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { WATER_LEVEL, fbm, heightAt, slopeAt } from './heightfield.ts';
+import { WATER_LEVEL, fbm, heightAt, slopeAt, getTerrainProfile } from './heightfield.ts';
 
 /** RNG determinístico (mulberry32). */
 function makeRng(seed: number): () => number {
@@ -26,6 +26,8 @@ const FOREST_THRESHOLD = 0.58;
 
 /** Pedras acima deste raio são obstáculos rastreados (dinamitáveis). */
 const BOULDER_MIN_SCALE = 1.5;
+/** Slots extras na malha de pedras para aglomerados fixos e desmoronamentos. */
+const ROCK_SPARE_SLOTS = 160;
 
 interface Boulder {
   x: number;
@@ -43,13 +45,56 @@ export class RockField {
   private mesh: THREE.InstancedMesh;
   private boulders: Boulder[] = [];
   private zeroMatrix = new THREE.Matrix4().makeScale(0, 0, 0);
+  /** Próximo slot livre da InstancedMesh para pedras criadas em jogo. */
+  private nextIndex: number;
+  private colors: readonly string[];
 
-  constructor(mesh: THREE.InstancedMesh) {
+  constructor(mesh: THREE.InstancedMesh, firstFreeIndex: number, colors: readonly string[]) {
     this.mesh = mesh;
+    this.nextIndex = firstFreeIndex;
+    this.colors = colors;
   }
 
   add(x: number, z: number, radius: number, index: number): void {
     this.boulders.push({ x, z, radius, index, alive: true });
+  }
+
+  /** Slots ainda disponíveis para pedras novas (desmoronamentos). */
+  get spareSlots(): number {
+    return Math.max(0, this.mesh.instanceMatrix.count - this.nextIndex);
+  }
+
+  /**
+   * Cria uma pedra nova em jogo (desmoronamento). Devolve false se a malha
+   * não tem mais slots — o chamador pode simplesmente não desmoronar.
+   */
+  spawn(x: number, z: number, scale: number, seed = 0): boolean {
+    if (this.spareSlots <= 0) return false;
+    const index = this.nextIndex++;
+    const y = heightAt(x, z);
+    const matrix = new THREE.Matrix4();
+    const quat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), seed * 2.39996);
+    matrix.compose(
+      new THREE.Vector3(x, y - 0.15, z),
+      quat,
+      new THREE.Vector3(scale, scale * 0.95, scale),
+    );
+    this.mesh.setMatrixAt(index, matrix);
+    this.mesh.setColorAt(index, new THREE.Color(this.colors[index % this.colors.length]));
+    this.mesh.count = Math.max(this.mesh.count, index + 1);
+    this.mesh.instanceMatrix.needsUpdate = true;
+    if (this.mesh.instanceColor) this.mesh.instanceColor.needsUpdate = true;
+    this.add(x, z, scale * 0.9, index);
+    return true;
+  }
+
+  /** Índices de todos os pontos de um caminho encostados numa pedra viva. */
+  blockedIndices(points: ReadonlyArray<{ x: number; z: number }>, pad: number): number[] {
+    const out: number[] = [];
+    for (let i = 0; i < points.length; i++) {
+      if (this.blocks(points[i].x, points[i].z, pad)) out.push(i);
+    }
+    return out;
   }
 
   get aliveCount(): number {
@@ -138,14 +183,23 @@ export function buildScatter(keepOut: KeepOutCircle[] = []): ScatterWorld {
   const flowerGeo = new THREE.IcosahedronGeometry(0.32, 1);
   flowerGeo.translate(0, 0.22, 0);
 
+  const profile = getTerrainProfile();
+  const snow = profile.palette === 'snow';
+  const rockColors = snow
+    ? ['#7c8b98', '#5f6e7c', '#98a7b3', '#6a7a88']
+    : ['#c05038', '#d97e4a', '#a63c2e', '#b5573c'];
+  const bushColors = snow
+    ? ['#7f9a86', '#94aa9a', '#6c8a74']
+    : ['#5da95a', '#7bbf67', '#4c9a52'];
+
   const specs: ScatterSpec[] = [
-    { count: 760, geometry: rockGeo, colors: ['#c05038', '#d97e4a', '#a63c2e', '#b5573c'],
+    { count: 760, geometry: rockGeo, colors: rockColors,
       minScale: 0.5, maxScale: 2.6, maxSlope: 1.2, yOffset: -0.15, forest: 'any' },
-    { count: 420, geometry: cactusGeo, colors: ['#3f9b4f', '#2f8040', '#4dae5c'],
+    { count: snow ? 0 : 420, geometry: cactusGeo, colors: ['#3f9b4f', '#2f8040', '#4dae5c'],
       minScale: 0.5, maxScale: 1.25, maxSlope: 0.35, yOffset: -0.1, forest: 'outside' },
-    { count: 460, geometry: bushGeo, colors: ['#5da95a', '#7bbf67', '#4c9a52'],
+    { count: 460, geometry: bushGeo, colors: bushColors,
       minScale: 0.6, maxScale: 1.4, maxSlope: 0.4, yOffset: -0.1, forest: 'any' },
-    { count: 280, geometry: flowerGeo, colors: ['#d977a8', '#c95f92', '#e08fba'],
+    { count: snow ? 0 : 280, geometry: flowerGeo, colors: ['#d977a8', '#c95f92', '#e08fba'],
       minScale: 0.6, maxScale: 1.2, maxSlope: 0.35, yOffset: -0.05, forest: 'outside' },
   ];
 
@@ -155,15 +209,17 @@ export function buildScatter(keepOut: KeepOutCircle[] = []): ScatterWorld {
   const color = new THREE.Color();
   const axis = new THREE.Vector3(0, 1, 0);
   let rocks: RockField | null = null;
+  const rockList: { x: number; z: number; radius: number; index: number }[] = [];
 
   for (const spec of specs) {
+    if (spec.count === 0) continue;
+    const isRock = spec.geometry === rockGeo;
+    const capacity = spec.count + (isRock ? ROCK_SPARE_SLOTS : 0);
     const mesh = new THREE.InstancedMesh(
       spec.geometry,
       new THREE.MeshLambertMaterial({ flatShading: true }),
-      spec.count,
+      capacity,
     );
-    const isRock = spec.geometry === rockGeo;
-    const field = isRock ? new RockField(mesh) : null;
     let placed = 0;
     let guard = 0;
     while (placed < spec.count && guard < spec.count * 30) {
@@ -182,13 +238,28 @@ export function buildScatter(keepOut: KeepOutCircle[] = []): ScatterWorld {
       mesh.setMatrixAt(placed, matrix);
       color.set(spec.colors[Math.floor(rng() * spec.colors.length)]);
       mesh.setColorAt(placed, color);
-      if (field && s >= BOULDER_MIN_SCALE) field.add(x, z, s * 0.9, placed);
+      if (isRock && s >= BOULDER_MIN_SCALE) rockList.push({ x, z, radius: s * 0.9, index: placed });
       placed++;
     }
     mesh.count = placed;
     mesh.castShadow = true;
     group.add(mesh);
-    if (field) rocks = field;
+    if (isRock) {
+      const field = new RockField(mesh, placed, spec.colors);
+      for (const b of rockList) field.add(b.x, b.z, b.radius, b.index);
+      // Aglomerados fixos do mapa (a garganta de Boulder Pass, por exemplo).
+      for (const fall of profile.rockfalls ?? []) {
+        for (let i = 0; i < fall.count; i++) {
+          const a = rng() * Math.PI * 2;
+          const d = Math.sqrt(rng()) * fall.r;
+          const fx = fall.x + Math.cos(a) * d;
+          const fz = fall.z + Math.sin(a) * d;
+          if (heightAt(fx, fz) < WATER_LEVEL + 0.6) continue;
+          field.spawn(fx, fz, 1.7 + rng() * 0.9, i);
+        }
+      }
+      rocks = field;
+    }
   }
 
   group.add(buildPineForest(rng, blocked));
@@ -219,7 +290,11 @@ function buildPineForest(
   const tops = new THREE.InstancedMesh(
     topGeo, new THREE.MeshLambertMaterial({ flatShading: true }), target);
 
-  const greens = ['#2f7a3c', '#3f9b4f', '#276b34', '#48a557'];
+  const snow = getTerrainProfile().palette === 'snow';
+  const greens = snow
+    ? ['#3d6b55', '#4f7d63', '#2f5a46', '#5d8a70']
+    : ['#2f7a3c', '#3f9b4f', '#276b34', '#48a557'];
+  const threshold = snow ? FOREST_THRESHOLD - 0.08 : FOREST_THRESHOLD;
   const matrix = new THREE.Matrix4();
   const quat = new THREE.Quaternion();
   const scale = new THREE.Vector3();
@@ -233,9 +308,9 @@ function buildPineForest(
     const x = (rng() - 0.5) * 400;
     const z = (rng() - 0.5) * 400;
     const density = forestDensity(x, z);
-    if (density < FOREST_THRESHOLD) continue;
+    if (density < threshold) continue;
     // Mais denso no miolo do bosque, ralo nas bordas.
-    if (rng() > (density - FOREST_THRESHOLD) * 7) continue;
+    if (rng() > (density - threshold) * 7) continue;
     const y = heightAt(x, z);
     if (y < WATER_LEVEL + 1.5) continue;
     if (slopeAt(x, z) > 0.42) continue;

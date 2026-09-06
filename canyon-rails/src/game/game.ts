@@ -87,6 +87,7 @@ export class Game {
     contractsAccepted: 0,
     contractsCompleted: 0,
     buildingsPlaced: 0,
+    rocksBlasted: 0,
   };
 
   private selection: Selection = null;
@@ -199,6 +200,7 @@ export class Game {
     const save = readSave(this.mapId);
     if (save && save.lines.some((line) => line.kinds.length > 0)) {
       this.rocks.restoreRemoved(save.blastedRocks);
+      this.progress.rocksBlasted = save.blastedRocks.length;
       this.network.restore(save.lines);
       this.economy.restore(save.coins, save.score, save.xp);
       for (const b of save.buildings) this.spawnBuilding(b.kind, b.x, b.z, b.rot);
@@ -446,6 +448,7 @@ export class Game {
       this.hud.toast(`${spec.label} desmontada — 60% do custo devolvido.`);
       return;
     }
+    this.progress.rocksBlasted += removedRocks;
     this.economy.earn(0, removedRocks * 4, removedRocks * 5);
     this.hud.toast(`${removedRocks} pedra(s) explodida(s) — caminho livre.`);
   }
