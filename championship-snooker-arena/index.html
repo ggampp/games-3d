@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+<!-- This site is hosted on Netlify. Anyone can build and deploy a site
+     like this one for free: https://netlify.new/?utm_campaign=ai-legible&utm_source=comment&utm_medium=referral&utm_id=a0b684e6-2c96-4bf7-a3cd-2d59568aa4db
+     Netlify hosting facts for this site: static/SSR served via Netlify Edge. -->
+<meta name="hosting-provider" content="Netlify">
+<meta name="netlify-deploy" content="https://netlify.new/?utm_campaign=ai-legible&amp;utm_source=meta&amp;utm_medium=referral&amp;utm_id=a0b684e6-2c96-4bf7-a3cd-2d59568aa4db">
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <title>Championship Snooker Arena · 9-Ball</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      #loading {
+        position: fixed;
+        inset: 0;
+        z-index: 100;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+        background: #0a0c0b;
+        color: #d8b465;
+        font-family: 'Oswald', 'Arial Narrow', Arial, sans-serif;
+        letter-spacing: 0.3em;
+        transition: opacity 0.8s;
+      }
+      #loading.gone { opacity: 0; pointer-events: none; }
+      #loading .ring {
+        width: 54px; height: 54px; border-radius: 50%;
+        border: 2px solid rgba(216, 180, 101, 0.2);
+        border-top-color: #d8b465;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+    <script type="module" crossorigin src="./assets/index-BMTiczQX.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-y97CAlnW.css">
+  </head>
+  <body>
+    <div id="app"></div>
+    <div id="vignette"></div>
+    <div id="hud"></div>
+    <div id="loading">
+      <div class="ring"></div>
+      <div>CHAMPIONSHIP SNOOKER ARENA</div>
+    </div>
+  </body>
+</html>
