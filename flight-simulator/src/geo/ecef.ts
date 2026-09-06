@@ -100,3 +100,25 @@ export function haversineM(lat1: number, lon1: number, lat2: number, lon2: numbe
   const a = Math.sin(Δφ / 2) ** 2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
   return 2 * EARTH_RADIUS_M * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
+
+/** Ponto de destino (lat/lon em graus) a `distanceM` metros seguindo `bearingDeg` a partir de lat/lon. */
+export function destinationPoint(
+  latDeg: number,
+  lonDeg: number,
+  bearingDeg: number,
+  distanceM: number,
+): { lat: number; lon: number } {
+  const δ = distanceM / EARTH_RADIUS_M;
+  const θ = bearingDeg * DEG;
+  const φ1 = latDeg * DEG;
+  const λ1 = lonDeg * DEG;
+  const sinφ2 = Math.sin(φ1) * Math.cos(δ) + Math.cos(φ1) * Math.sin(δ) * Math.cos(θ);
+  const φ2 = Math.asin(Math.max(-1, Math.min(1, sinφ2)));
+  const y = Math.sin(θ) * Math.sin(δ) * Math.cos(φ1);
+  const x = Math.cos(δ) - Math.sin(φ1) * sinφ2;
+  const λ2 = λ1 + Math.atan2(y, x);
+  let lon = λ2 / DEG;
+  if (lon > 180) lon -= 360;
+  if (lon < -180) lon += 360;
+  return { lat: φ2 / DEG, lon };
+}

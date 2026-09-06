@@ -6,6 +6,10 @@ interface ThreeGameDiagnostics {
   score: number;
   targetScore: number;
   complete: boolean;
+  mode?: 'watch' | 'pilot';
+  mission?: string | null;
+  rings?: { passed: number; next: number; total: number } | null;
+  flightState?: Record<string, number> | null;
   player: {
     position: { x: number; y: number; z: number };
     speed: number;

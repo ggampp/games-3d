@@ -18,6 +18,10 @@
 
       <header class="topbar">
         <p class="mark">Skywatch</p>
+        <div class="modes" role="tablist" aria-label="Modo">
+          <button type="button" data-mode="watch" class="is-active" role="tab">Assistir</button>
+          <button type="button" data-mode="pilot" role="tab">Pilotar</button>
+        </div>
         <form id="flight-search">
           <label for="flight-query">Voo</label>
           <input
@@ -34,6 +38,70 @@
       </header>
 
       <section id="featured-flights" aria-label="Voos em destaque"></section>
+
+      <section id="mission-panel" class="panel" hidden aria-label="Campanha">
+        <header>
+          <h2>Campanha</h2>
+          <p id="campaign-summary">0 de 15 estrelas</p>
+        </header>
+        <div class="aircraft-pick" aria-label="Aeronave">
+          <button type="button" data-aircraft="a350" class="is-active">A350-1000</button>
+          <button type="button" data-aircraft="a320">A320neo</button>
+        </div>
+        <ol id="mission-list"></ol>
+        <footer>
+          <button type="button" id="free-flight-btn">Voo livre</button>
+          <p class="hint">W/S pitch · A/D rolagem · Q/E leme · Shift/Ctrl manete · arraste o mouse para pilotar</p>
+        </footer>
+      </section>
+
+      <section id="pilot-hud" hidden aria-label="HUD do piloto">
+        <div class="objective">
+          <span id="hud-mission">Voo livre</span>
+          <strong id="hud-objective">Voe à vontade.</strong>
+        </div>
+        <div class="mission-stats">
+          <div><span>Anéis</span><strong id="hud-rings">—</strong></div>
+          <div><span>Tempo</span><strong id="hud-time">0:00</strong></div>
+          <div><span>Pontos</span><strong id="hud-score">0</strong></div>
+        </div>
+        <div class="next-ring" id="hud-next">
+          <span id="hud-next-arrow">▲</span>
+          <strong id="hud-next-dist">—</strong>
+          <em id="hud-next-alt"></em>
+        </div>
+        <div class="throttle" aria-label="Manete">
+          <span>Manete</span>
+          <div class="throttle-bar"><i id="hud-throttle-fill"></i></div>
+          <strong id="hud-throttle">70%</strong>
+        </div>
+        <div class="attitude">
+          <div><span>Pitch</span><strong id="hud-pitch">+0°</strong></div>
+          <div><span>Banco</span><strong id="hud-bank">0°</strong></div>
+          <div><span>Trem</span><strong id="hud-gear">Recolhido</strong></div>
+        </div>
+        <p id="hud-toast" class="toast" hidden></p>
+      </section>
+
+      <div id="ring-marker" hidden><span></span></div>
+
+      <section id="debrief" class="panel" hidden aria-label="Debrief">
+        <header>
+          <h2 id="debrief-title">Missão concluída</h2>
+          <p id="debrief-stars" class="stars">★★★</p>
+        </header>
+        <dl>
+          <div><dt>Anéis</dt><dd id="debrief-rings">6/6</dd></div>
+          <div><dt>Tempo</dt><dd id="debrief-time">2:10</dd></div>
+          <div><dt>Pontos</dt><dd id="debrief-score">1200</dd></div>
+        </dl>
+        <p id="debrief-note"></p>
+        <footer>
+          <button type="button" id="debrief-retry">Repetir</button>
+          <button type="button" id="debrief-next">Próxima</button>
+          <button type="button" id="debrief-menu">Campanha</button>
+        </footer>
+      </section>
 
       <aside class="cameras" aria-label="Câmeras">
         <button type="button" data-camera="chase" class="is-active">1 Perseguição</button>

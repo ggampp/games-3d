@@ -7,9 +7,16 @@ import { catalogToActive, poseFromSample, sampleReplay } from '../flight/replay'
 import type { ActiveFlight, CatalogFlight, FlightSample } from '../flight/types';
 import { latLonAltToVector } from '../geo/ecef';
 import { sunDirection, sunPosition } from '../geo/sun';
-import { createA350Model, updateAircraftEffects, type AircraftRuntime } from '../models/createA350Model';
+import type { AircraftKind } from '../flight/FlightModel';
+import { AIRCRAFT_SPECS } from '../flight/FlightModel';
+import { MISSIONS } from '../missions/missions';
+import type { MissionEvent } from '../missions/types';
+import { createA320Model } from '../models/createA320Model';
+import { createA350Model, setGear, updateAircraftEffects, type AircraftRuntime } from '../models/createA350Model';
 import { FlightCamera, type CameraMode } from '../systems/FlightCamera';
 import { Hud } from '../systems/Hud';
+import { PilotHud, type GameMode } from '../systems/PilotHud';
+import { PilotMode } from './PilotMode';
 import { createAtmosphere } from '../world/atmosphere';
 import { createCloudLayer } from '../world/clouds';
 import { Contrail } from '../world/contrail';
@@ -46,7 +53,11 @@ export class Game {
   private readonly loop: Loop;
   private readonly hud: Hud;
   private readonly flightCamera: FlightCamera;
-  private readonly aircraft: AircraftRuntime;
+  private readonly models: Record<AircraftKind, AircraftRuntime>;
+  private aircraft: AircraftRuntime;
+  private readonly pilot: PilotMode;
+  private readonly pilotHud: PilotHud;
+  private mode: GameMode = 'watch';
   private readonly earth: THREE.Mesh;
   private readonly clouds: THREE.Mesh;
   private readonly sun: THREE.DirectionalLight;
@@ -80,7 +91,9 @@ export class Game {
   constructor(private readonly canvas: HTMLCanvasElement) {
     this.renderer = createRenderer(canvas);
     this.flightCamera = new FlightCamera(this.camera, canvas);
-    this.aircraft = createA350Model();
+    this.models = { a350: createA350Model(), a320: createA320Model() };
+    this.aircraft = this.models.a350;
+    this.pilot = new PilotMode(canvas, MISSIONS);
     this.earth = createEarth();
     this.clouds = createCloudLayer();
     this.sun = new THREE.DirectionalLight('#fff6d6', 3.1);
@@ -101,6 +114,17 @@ export class Game {
       () => this.togglePause(),
       (id) => this.loadCatalogId(id),
     );
+
+    this.pilotHud = new PilotHud(MISSIONS, {
+      onMode: (mode) => this.setMode(mode),
+      onAircraft: (kind) => this.setAircraft(kind),
+      onMission: (index) => this.startMission(index),
+      onFreeFlight: () => this.startFreeFlight(),
+      onRetry: () => this.startMission(this.pilot.missionIndex),
+      onNext: () => this.startMission(this.pilot.missionIndex + 1),
+      onMenu: () => this.openCampaign(),
+    });
+    this.setAircraft(this.pilot.aircraft, false);
 
     this.loop = new Loop(
       (delta, elapsed) => this.update(delta, elapsed),
@@ -127,6 +151,7 @@ export class Game {
   dispose(): void {
     this.loop.stop();
     this.flightCamera.dispose();
+    this.pilot.dispose();
     window.removeEventListener('keydown', this.onKey);
     this.renderer.dispose();
     window.__THREE_GAME_DIAGNOSTICS__ = undefined;
@@ -135,19 +160,21 @@ export class Game {
   private createScene(): void {
     this.scene.background = new THREE.Color('#02040a');
     this.scene.add(this.earth, this.clouds, createAtmosphere(), createStarfield());
-    this.scene.add(this.aircraft.root, this.contrail.line);
+    this.scene.add(this.models.a350.root, this.models.a320.root, this.contrail.line, this.pilot.rings.group);
     this.sunTarget.position.set(0, 0, 0);
     this.scene.add(this.sunTarget);
     this.sun.target = this.sunTarget;
     this.scene.add(this.sun, this.ambient, this.hemi);
-    const key = new THREE.DirectionalLight('#fff7ea', 2.6);
-    key.position.set(-35, 55, 40);
-    key.target.position.set(0, 0, 0);
-    this.aircraft.root.add(key, key.target);
-    const rim = new THREE.DirectionalLight('#8cb7ff', 1.1);
-    rim.position.set(40, 12, -50);
-    rim.target.position.set(0, 0, 0);
-    this.aircraft.root.add(rim, rim.target);
+    for (const model of Object.values(this.models)) {
+      const key = new THREE.DirectionalLight('#fff7ea', 2.6);
+      key.position.set(-35, 55, 40);
+      key.target.position.set(0, 0, 0);
+      model.root.add(key, key.target);
+      const rim = new THREE.DirectionalLight('#8cb7ff', 1.1);
+      rim.position.set(40, 12, -50);
+      rim.target.position.set(0, 0, 0);
+      model.root.add(rim, rim.target);
+    }
     this.globeIcon.visible = false;
     this.route.group.visible = false;
     this.scene.add(this.globeIcon, this.route.group);
@@ -220,6 +247,148 @@ export class Game {
     this.hud.update(this.flight, this.sample, this.replayT);
   }
 
+  // ── Modo piloto ────────────────────────────────────────────────────
+
+  private setMode(mode: GameMode): void {
+    if (mode === this.mode) {
+      if (mode === 'pilot' && !this.pilotHud.campaignOpen) this.openCampaign();
+      return;
+    }
+    this.mode = mode;
+    this.pilotHud.setMode(mode);
+    if (mode === 'pilot') {
+      this.pilot.enter();
+      this.paused = false;
+      this.hud.setPaused(false);
+      this.openCampaign();
+      return;
+    }
+    this.pilot.exit();
+    this.setAircraft('a350', false);
+    this.contrail.reset();
+    if (this.catalog) this.loadCatalog(this.catalog, this.replayT);
+    else this.applySample(this.sample, true);
+  }
+
+  private setAircraft(kind: AircraftKind, persist = true): void {
+    const next = this.models[kind];
+    if (persist) this.pilot.setAircraft(kind);
+    this.pilotHud.setAircraft(kind);
+    if (next === this.aircraft) return;
+    next.root.position.copy(this.aircraft.root.position);
+    next.root.quaternion.copy(this.aircraft.root.quaternion);
+    this.aircraft.root.visible = false;
+    this.aircraft = next;
+    this.aircraft.root.visible = this.flightCamera.mode !== 'globe';
+    this.flightCamera.snap(this.aircraft.root);
+  }
+
+  private openCampaign(): void {
+    this.pilotHud.hideFlightHud();
+    this.pilotHud.showCampaign(this.pilot.progress);
+  }
+
+  private startMission(index: number): void {
+    if (index < 0 || index >= MISSIONS.length) {
+      this.openCampaign();
+      return;
+    }
+    this.setAircraft(this.pilot.aircraft, false);
+    this.pilot.startMission(index);
+    this.beginPilotFlight();
+    const mission = MISSIONS[index];
+    this.flight = {
+      callsign: `SKY${index + 1}`,
+      flightNumber: mission.title,
+      airline: 'Skywatch',
+      aircraft: AIRCRAFT_SPECS[this.pilot.aircraft].name,
+      origin: mission.legs[0]?.origin ?? null,
+      destination: mission.legs[0]?.destination ?? null,
+      source: 'replay',
+      durationSec: 0,
+      cruiseAltM: this.pilot.state.altM,
+    };
+    this.replaceRoute(this.flight);
+    this.hud.setStatus(`Fase ${index + 1}: ${mission.title} — ${mission.objective}`);
+  }
+
+  private startFreeFlight(): void {
+    this.setAircraft(this.pilot.aircraft, false);
+    const start = sampleReplay(CATALOG[0], 0.3);
+    this.pilot.startFreeFlight({ lat: start.lat, lon: start.lon, altM: start.altM, headingDeg: start.heading });
+    this.beginPilotFlight();
+    this.flight = { ...catalogToActive(CATALOG[0]), callsign: 'SKYFREE', airline: 'Skywatch', aircraft: AIRCRAFT_SPECS[this.pilot.aircraft].name };
+    this.hud.setStatus('Voo livre sobre o Atlântico Sul.');
+  }
+
+  private beginPilotFlight(): void {
+    this.pilotHud.hideCampaign();
+    this.pilotHud.hideDebrief();
+    this.pilotHud.showFlightHud();
+    this.paused = false;
+    this.hud.setPaused(false);
+    this.contrail.reset();
+    this.pilot.pose(this.aircraft.root.position, this.aircraft.root.quaternion);
+    this.pilot.sample(this.sample);
+    this.syncGlobeFrame();
+    if (this.flightCamera.mode === 'globe') this.setCamera('chase');
+    this.flightCamera.snap(this.aircraft.root);
+  }
+
+  private handleMissionEvents(events: MissionEvent[]): void {
+    for (const event of events) {
+      switch (event.type) {
+        case 'ring-pass':
+          this.pilot.audio.ringPass(event.index, event.precision01);
+          this.pilotHud.flash(`Anel ${event.index + 1} · +${event.points}`, 'good');
+          break;
+        case 'ring-miss': {
+          this.pilot.audio.ringMiss();
+          const why = event.reason === 'heading' ? 'proa errada' : event.reason === 'speed' ? 'rápido demais' : 'fora do anel';
+          this.pilotHud.flash(`Anel ${event.index + 1} perdido · ${why}`, 'bad');
+          break;
+        }
+        case 'storm-enter':
+          this.pilot.audio.turbulenceHit();
+          this.pilotHud.flash('Turbulência!', 'bad');
+          break;
+        case 'leg-change': {
+          const leg = this.pilot.mission?.legs[event.leg];
+          if (leg) {
+            this.pilotHud.flash(leg.label, 'info');
+            this.flight = { ...this.flight, origin: leg.origin, destination: leg.destination };
+            this.replaceRoute(this.flight);
+            this.contrail.reset();
+            this.pilot.pose(this.aircraft.root.position, this.aircraft.root.quaternion);
+            this.flightCamera.snap(this.aircraft.root);
+          }
+          break;
+        }
+        case 'complete': {
+          this.pilot.audio.missionEnd(event.result.success);
+          const mission = this.pilot.mission;
+          if (mission) this.pilotHud.showDebrief(mission, event.result, this.pilot.hasNextMission);
+          break;
+        }
+      }
+    }
+  }
+
+  private updatePilot(delta: number): void {
+    const { events, gust } = this.pilot.update(delta, this.paused || this.pilotHud.campaignOpen);
+    if (events.length) this.handleMissionEvents(events);
+    this.pilot.pose(this.aircraft.root.position, this.aircraft.root.quaternion);
+    this.aircraft.root.scale.setScalar(1);
+    this.pilot.sample(this.sample);
+    setGear(this.aircraft, this.pilot.gearDown ? 1 : 0, delta);
+    this.pilot.rings.update(this.pilot.runner?.status ?? [], this.elapsed);
+    this.pilotHud.update(this.pilot.hudFrame());
+    if (gust > 0.05) {
+      this.camera.position.x += (Math.random() - 0.5) * gust * 1.6;
+      this.camera.position.y += (Math.random() - 0.5) * gust * 1.6;
+    }
+  }
+
   private setCamera(mode: CameraMode): void {
     this.syncGlobeFrame();
     this.flightCamera.setMode(mode);
@@ -261,6 +430,14 @@ export class Game {
       event.preventDefault();
       this.togglePause();
     }
+    if (this.mode === 'pilot') {
+      if (event.code === 'Escape') {
+        if (this.pilotHud.campaignOpen && this.pilot.runner) this.pilotHud.hideCampaign();
+        else this.openCampaign();
+      }
+      if (event.code === 'KeyR' && this.pilot.missionIndex >= 0) this.startMission(this.pilot.missionIndex);
+      return;
+    }
     if (event.code === 'KeyR') this.loadCatalog(this.catalog ?? CATALOG[0], 0);
   };
 
@@ -277,13 +454,14 @@ export class Game {
     this.elapsed = elapsed;
     resizeRenderer(this.renderer, this.camera, 2);
 
-    if (!this.paused && this.flight.source === 'replay' && this.catalog) {
+    const piloting = this.mode === 'pilot';
+    if (!piloting && !this.paused && this.flight.source === 'replay' && this.catalog) {
       this.replayT += (delta * this.replaySpeed) / this.catalog.durationSec;
       if (this.replayT > 1) this.replayT = 0;
       this.sample = sampleReplay(this.catalog, this.replayT);
     }
 
-    if (this.flight.source === 'live' && this.liveIcao) {
+    if (!piloting && this.flight.source === 'live' && this.liveIcao) {
       this.liveTimer += delta;
       if (this.liveTimer > 10) {
         this.liveTimer = 0;
@@ -291,7 +469,8 @@ export class Game {
       }
     }
 
-    this.applySample(this.sample, false);
+    if (piloting) this.updatePilot(delta);
+    else this.applySample(this.sample, false);
     sunDirection(new Date(), this.sunDir);
     sunPosition(new Date(), this.sunPos);
     this.sun.position.copy(this.sunPos);
@@ -299,7 +478,7 @@ export class Game {
     updateAircraftEffects(this.aircraft, elapsed, this.sample.speedMps);
     this.syncGlobeFrame();
     placeGlobeAircraftIcon(this.globeIcon, this.sample.lat, this.sample.lon, this.sample.heading);
-    this.route.setProgress(this.flight.source === 'replay' ? this.replayT : 0.5);
+    this.route.setProgress(piloting ? 0.5 : this.flight.source === 'replay' ? this.replayT : 0.5);
 
     this.trailAcc += delta;
     if (this.trailAcc > 0.08) {
@@ -309,6 +488,7 @@ export class Game {
 
     this.flightCamera.update(this.aircraft.root);
     this.projectGlobeTags();
+    if (piloting) this.projectRingMarker();
     this.hud.update(this.flight, this.sample, this.flight.source === 'replay' ? this.replayT : 0.5);
     this.publishDiagnostics();
   }
@@ -335,6 +515,17 @@ export class Game {
     this.placeTag(this.globeTag, this.sample.lat, this.sample.lon, 180_000);
     if (this.flight.origin) this.placeTag(this.originTag, this.flight.origin.lat, this.flight.origin.lon, 80_000);
     if (this.flight.destination) this.placeTag(this.destTag, this.flight.destination.lat, this.flight.destination.lon, 80_000);
+  }
+
+  private projectRingMarker(): void {
+    const screen = this.pilotHud.campaignOpen || this.flightCamera.mode === 'globe' ? null : this.pilot.nextRingScreen(this.camera);
+    if (!screen) {
+      this.pilotHud.placeMarker(0, 0, true, '', 0, 0);
+      return;
+    }
+    const runner = this.pilot.runner;
+    const label = runner ? `${runner.nextIndex + 1}/${runner.total}` : '';
+    this.pilotHud.placeMarker(screen.x, screen.y, screen.behind, label, this.canvas.clientWidth, this.canvas.clientHeight);
   }
 
   private placeTag(tag: HTMLDivElement, lat: number, lon: number, altM: number): void {
@@ -368,9 +559,13 @@ export class Game {
     window.__THREE_GAME_DIAGNOSTICS__ = {
       frame: this.frame,
       elapsed: this.elapsed,
-      score: Math.round(this.replayT * 1000),
+      score: this.mode === 'pilot' ? (this.pilot.runner?.score ?? 0) : Math.round(this.replayT * 1000),
       targetScore: 1000,
-      complete: false,
+      complete: this.pilot.runner?.done ?? false,
+      mode: this.mode,
+      mission: this.pilot.mission?.id ?? null,
+      rings: this.pilot.runner ? { passed: this.pilot.runner.passed, next: this.pilot.runner.nextIndex, total: this.pilot.runner.total } : null,
+      flightState: this.mode === 'pilot' ? { ...this.pilot.state } : null,
       player: {
         position: {
           x: this.aircraft.root.position.x,
