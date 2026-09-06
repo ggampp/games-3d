@@ -1,7 +1,24 @@
 import { hexKey, hexNeighbors, parseHexKey, type Hex } from './hex';
-import type { Evaluation, Harmony, PlaceFloat, Resources } from './types';
+import type { ChainDef, Evaluation, Harmony, KingdomModifiers, PlaceFloat, Resources } from './types';
 
 export type TileMap = Map<string, string>;
+
+export const HOME_IDS = ['casa', 'sobrado', 'casa_pedra'] as const;
+/** População base de cada moradia (a estrada dobra isso quando liga ao mercado). */
+const HOME_POP: Record<string, number> = { casa: 1, sobrado: 2, casa_pedra: 2 };
+
+/** Cadeias de produção que fecham um combo quando ficam completas por vizinhança. */
+export const CHAINS: ChainDef[] = [
+  { id: 'pao', nome: 'Pão quente', links: [['roca', 'trigo'], ['engenho', 'moinho_vento'], ['padaria']] },
+  { id: 'peixe', nome: 'Peixe fresco', links: [['rio', 'lago'], ['cais'], ['pescador']] },
+  { id: 'pedra', nome: 'Casa de pedra', links: [['monte'], ['pedreira', 'olaria'], ['casa_pedra']] },
+  { id: 'madeira', nome: 'Telhado novo', links: [['mata'], ['serraria'], ['casa', 'sobrado']] },
+  { id: 'feira', nome: 'Dia de feira', links: [['casa', 'sobrado', 'casa_pedra'], ['estrada'], ['mercado']] },
+];
+
+export function emptyModifiers(): KingdomModifiers {
+  return { rain: false, blighted: [] };
+}
 
 export function emptyHarmony(): Harmony {
   return { natureza: 0, povo: 0, agua: 0 };
@@ -51,9 +68,101 @@ export function largestConnected(map: TileMap, tileId: string): number {
   return best;
 }
 
-export function evaluateKingdom(map: TileMap): Evaluation {
+/**
+ * Conta quantos tiles do último elo fecham a cadeia inteira: cada elo precisa ser vizinho
+ * de um tile do elo anterior, até chegar ao primeiro.
+ */
+export function completedChains(map: TileMap, links: string[][]): number {
+  if (links.length === 0) return 0;
+  const reaches = (key: string, link: number): boolean => {
+    if (link === 0) return true;
+    const wanted = links[link - 1]!;
+    for (const neighbor of hexNeighbors(parseHexKey(key))) {
+      const id = map.get(hexKey(neighbor));
+      if (id && wanted.includes(id) && reaches(hexKey(neighbor), link - 1)) return true;
+    }
+    return false;
+  };
+  const last = links[links.length - 1]!;
+  let count = 0;
+  for (const [key, id] of map) {
+    if (last.includes(id) && reaches(key, links.length - 1)) count += 1;
+  }
+  return count;
+}
+
+/** Ids das cadeias completas, repetidos por quantidade (para detectar combos novos). */
+export function chainsClosed(map: TileMap): string[] {
+  const out: string[] = [];
+  for (const chain of CHAINS) {
+    const n = completedChains(map, chain.links);
+    for (let i = 0; i < n; i += 1) out.push(chain.id);
+  }
+  return out;
+}
+
+export type RoadNetwork = { roads: string[]; homes: string[]; markets: string[] };
+
+/** Redes de estrada (componentes conexos) com as casas e mercados encostados nelas. */
+export function roadNetworks(map: TileMap): RoadNetwork[] {
+  const seen = new Set<string>();
+  const networks: RoadNetwork[] = [];
+  for (const [start, id] of map) {
+    if (id !== 'estrada' || seen.has(start)) continue;
+    const roads: string[] = [];
+    const homes = new Set<string>();
+    const markets = new Set<string>();
+    const stack = [start];
+    seen.add(start);
+    while (stack.length > 0) {
+      const current = stack.pop()!;
+      roads.push(current);
+      for (const neighbor of hexNeighbors(parseHexKey(current))) {
+        const key = hexKey(neighbor);
+        const other = map.get(key);
+        if (!other) continue;
+        if (other === 'estrada' && !seen.has(key)) {
+          seen.add(key);
+          stack.push(key);
+        } else if ((HOME_IDS as readonly string[]).includes(other)) homes.add(key);
+        else if (other === 'mercado') markets.add(key);
+      }
+    }
+    networks.push({ roads, homes: [...homes], markets: [...markets] });
+  }
+  return networks;
+}
+
+/** Maior número de casas ligadas por estrada a um mercado. */
+export function roadHomesLinked(map: TileMap): number {
+  let best = 0;
+  for (const net of roadNetworks(map)) {
+    if (net.markets.length > 0) best = Math.max(best, net.homes.length);
+  }
+  return best;
+}
+
+/** Roças com praga que ainda não têm horta vizinha (as outras já se curaram). */
+export function activeBlight(map: TileMap, blighted: readonly string[]): Set<string> {
+  const active = new Set<string>();
+  for (const key of blighted) {
+    if (map.get(key) !== 'roca') continue;
+    if (countNeighbor(map, parseHexKey(key), 'horta') > 0) continue;
+    active.add(key);
+  }
+  return active;
+}
+
+export function evaluateKingdom(map: TileMap, modifiers: KingdomModifiers = emptyModifiers()): Evaluation {
   const harmony = emptyHarmony();
   const resources = emptyResources();
+  const blight = activeBlight(map, modifiers.blighted);
+  /** Roças e trigais que rendem grão (roça com praga não conta). */
+  const grainAround = (hex: Hex): number =>
+    hexNeighbors(hex).filter((n) => {
+      const id = map.get(hexKey(n));
+      return id === 'trigo' || (id === 'roca' && !blight.has(hexKey(n)));
+    }).length;
 
   for (const [key, tileId] of map) {
     const hex = parseHexKey(key);
@@ -66,7 +175,7 @@ export function evaluateKingdom(map: TileMap): Evaluation {
         harmony.natureza += 1;
         break;
       case 'rio':
-        harmony.agua += 1;
+        harmony.agua += modifiers.rain ? 2 : 1;
         break;
       case 'lago':
         harmony.agua += 2;
@@ -75,7 +184,7 @@ export function evaluateKingdom(map: TileMap): Evaluation {
         harmony.natureza += 1;
         break;
       case 'roca':
-        harmony.natureza += 1;
+        if (!blight.has(key)) harmony.natureza += 1;
         break;
       case 'trigo':
         harmony.natureza += 1;
@@ -94,7 +203,7 @@ export function evaluateKingdom(map: TileMap): Evaluation {
         harmony.agua += 2;
         break;
       case 'engenho': {
-        const grain = countNeighborAny(map, hex, ['roca', 'trigo']);
+        const grain = grainAround(hex);
         const rios = countNeighbor(map, hex, 'rio');
         resources.farinha += grain + rios;
         harmony.povo += grain > 0 ? 1 : 0;
@@ -102,7 +211,7 @@ export function evaluateKingdom(map: TileMap): Evaluation {
         break;
       }
       case 'moinho_vento': {
-        const grain = countNeighborAny(map, hex, ['trigo', 'roca']);
+        const grain = grainAround(hex);
         resources.farinha += 1 + grain;
         harmony.povo += 1;
         break;
@@ -202,21 +311,58 @@ export function evaluateKingdom(map: TileMap): Evaluation {
         harmony.agua += countNeighborAny(map, hex, ['rio', 'lago']);
         break;
       }
+      case 'pantano': {
+        // Água parada: rende Água, mas a bruma tira 1 de Natureza de cada vizinho
+        // (menos dos outros pântanos) até um junco encostar nele.
+        harmony.agua += 1;
+        if (countNeighbor(map, hex, 'junco') === 0) {
+          harmony.natureza -= neighborIds(map, hex).filter((id) => id !== 'pantano' && id !== 'junco').length;
+        }
+        break;
+      }
+      case 'junco': {
+        harmony.natureza += 1;
+        harmony.agua += countNeighborAny(map, hex, ['pantano', 'rio', 'lago']);
+        break;
+      }
+      case 'estrada': {
+        harmony.povo += countNeighborAny(map, hex, [...HOME_IDS]) > 0 ? 1 : 0;
+        break;
+      }
       default:
         break;
     }
   }
 
+  // Estrada: uma rede que liga pelo menos 2 casas a um mercado dobra a população dessas casas.
+  for (const net of roadNetworks(map)) {
+    if (net.markets.length === 0 || net.homes.length < 2) continue;
+    for (const home of net.homes) resources.populacao += HOME_POP[map.get(home) ?? ''] ?? 0;
+  }
+
   resources.populacao += Math.floor(resources.pao / 2);
+  harmony.natureza = Math.max(0, harmony.natureza);
+  harmony.povo = Math.max(0, harmony.povo);
+  harmony.agua = Math.max(0, harmony.agua);
 
   return { harmony, resources };
 }
 
-export function placementFloats(map: TileMap, hex: Hex, tileId: string): PlaceFloat[] {
-  const before = evaluateKingdom(map);
+export function placementFloats(
+  map: TileMap,
+  hex: Hex,
+  tileId: string,
+  modifiers: KingdomModifiers = emptyModifiers(),
+): PlaceFloat[] {
+  const before = evaluateKingdom(map, modifiers);
   const next = new Map(map);
   next.set(hexKey(hex), tileId);
-  const after = evaluateKingdom(next);
+  const after = evaluateKingdom(next, modifiers);
+  return harmonyFloats(before, after);
+}
+
+/** Diferença entre duas avaliações, como rótulos flutuantes. */
+export function harmonyFloats(before: Evaluation, after: Evaluation): PlaceFloat[] {
   const floats: PlaceFloat[] = [];
 
   const axes: Array<{ key: keyof Harmony; label: string }> = [

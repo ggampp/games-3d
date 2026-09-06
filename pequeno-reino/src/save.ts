@@ -49,12 +49,12 @@ export function defaultSave(): SaveData {
   };
 }
 
-/** Sessões antigas (v1) não têm os campos novos: descarta a sessão, mantém o progresso. */
+/** Sessões antigas (v1/v2) não têm os campos novos: descarta a sessão, mantém o progresso. */
 function migrate(parsed: Partial<SaveData> & { session?: unknown }): SaveData {
   const base = defaultSave();
   const version = typeof parsed.version === 'number' ? parsed.version : 1;
   const session =
-    parsed.session && (parsed.session as SerializedSession).version === 2 ? (parsed.session as SerializedSession) : null;
+    parsed.session && (parsed.session as SerializedSession).version === 3 ? (parsed.session as SerializedSession) : null;
   const merged: SaveData = {
     ...base,
     ...parsed,

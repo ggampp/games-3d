@@ -1,7 +1,15 @@
 import { getQuest } from './catalog';
 import { parseHexKey } from './hex';
-import { countNeighbor, countNeighborAny, largestConnected, type TileMap } from './production';
-import type { Evaluation, QuestDef } from './types';
+import {
+  completedChains,
+  countNeighbor,
+  countNeighborAny,
+  emptyResources,
+  largestConnected,
+  roadHomesLinked,
+  type TileMap,
+} from './production';
+import type { Evaluation, QuestDef, Resources } from './types';
 
 export type QuestProgress = {
   id: string;
@@ -13,7 +21,21 @@ export type QuestProgress = {
   optional: boolean;
 };
 
-export function evaluateQuest(quest: QuestDef, map: TileMap, evaluation: Evaluation): number {
+/** Contexto extra da fase que algumas missões precisam (produção acumulada). */
+export type QuestContext = {
+  produced: Resources;
+};
+
+export function emptyQuestContext(): QuestContext {
+  return { produced: emptyResources() };
+}
+
+export function evaluateQuest(
+  quest: QuestDef,
+  map: TileMap,
+  evaluation: Evaluation,
+  ctx: QuestContext = emptyQuestContext(),
+): number {
   switch (quest.type) {
     case 'count':
       return [...map.values()].filter((id) => id === quest.tileId).length;
@@ -47,15 +69,26 @@ export function evaluateQuest(quest: QuestDef, map: TileMap, evaluation: Evaluat
       );
     case 'mapSize':
       return map.size;
+    case 'produce':
+      return quest.resource ? ctx.produced[quest.resource] : 0;
+    case 'chain':
+      return quest.chain ? completedChains(map, quest.chain) : 0;
+    case 'roadHomes':
+      return roadHomesLinked(map);
     default:
       return 0;
   }
 }
 
-export function questProgress(questIds: string[], map: TileMap, evaluation: Evaluation): QuestProgress[] {
+export function questProgress(
+  questIds: string[],
+  map: TileMap,
+  evaluation: Evaluation,
+  ctx: QuestContext = emptyQuestContext(),
+): QuestProgress[] {
   return questIds.map((id) => {
     const quest = getQuest(id);
-    const current = evaluateQuest(quest, map, evaluation);
+    const current = evaluateQuest(quest, map, evaluation, ctx);
     return {
       id: quest.id,
       titulo: quest.titulo,
