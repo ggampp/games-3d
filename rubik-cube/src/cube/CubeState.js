@@ -66,6 +66,24 @@ export class CubeState {
   }
 
   /**
+   * Lista as faces (posições físicas U/R/F/D/L/B) cujas 9 facetas estão uniformes.
+   * Usado para o feedback de "face completa".
+   */
+  getSolvedFaces() {
+    const solved = [];
+    for (const face of FACE_NAMES) {
+      const f = this.faces[face];
+      const center = f[4];
+      let uniform = true;
+      for (let i = 0; i < 9; i++) {
+        if (f[i] !== center) { uniform = false; break; }
+      }
+      if (uniform) solved.push(face);
+    }
+    return solved;
+  }
+
+  /**
    * Define o estado a partir de um objeto com as 6 faces
    */
   setFaces(facesObj) {
