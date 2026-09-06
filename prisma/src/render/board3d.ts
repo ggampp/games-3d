@@ -151,6 +151,18 @@ export class Board3D {
         this.markLight(index, x, z, shown, lit ? 1.8 : (wrong ? 0.7 : 0.35));
         piece.scale.setScalar(lit ? 1.08 : 1);
         keep.add(piece);
+      } else if (cell.kind === 'prism') {
+        const piece = this.ensurePiece(index, 'prism', x, z, 'prism');
+        const active = sim.atCell[index] !== 0;
+        this.tintGlass(piece, active ? sim.atCell[index] : 7);
+        this.markLight(index, x, z, active ? sim.atCell[index] : 7, active ? 1.4 : 0.3);
+        keep.add(piece);
+      } else if (cell.kind === 'filter') {
+        const piece = this.ensurePiece(index, `filter:${cell.pass}`, x, z, 'filter');
+        const lit = sim.atCell[index] !== 0;
+        this.tintGlass(piece, cell.pass);
+        this.markLight(index, x, z, cell.pass, lit ? 1.2 : 0.3);
+        keep.add(piece);
       }
       const mirror = placements.get(index);
       if (mirror) {
@@ -174,7 +186,10 @@ export class Board3D {
     }
   }
 
-  private ensurePiece(index: number, key: string, x: number, z: number, kind?: 'wall' | 'emitter' | 'target' | 'mirror'): THREE.Object3D {
+  private ensurePiece(
+    index: number, key: string, x: number, z: number,
+    kind?: 'wall' | 'emitter' | 'target' | 'mirror' | 'prism' | 'filter',
+  ): THREE.Object3D {
     const existing = this.pieces.children.find((c) => c.userData.piece === key && c.userData.index === index);
     if (existing) {
       existing.position.x = x;
@@ -182,11 +197,68 @@ export class Board3D {
       return existing;
     }
     const modelKind = kind ?? (key as 'wall' | 'emitter' | 'target' | 'mirror');
-    const root = this.models.clone(modelKind);
+    const root = modelKind === 'filter'
+      ? this.buildFilter()
+      : modelKind === 'prism'
+        ? this.buildPrism()
+        : this.models.clone(modelKind);
     root.userData.piece = key;
     root.userData.index = index;
     root.position.set(x, 0.08, z);
     this.pieces.add(root);
+    return root;
+  }
+
+  /**
+   * Prisma divisor: pirâmide de vidro sobre um anel de latão. O vidro recebe
+   * a cor do feixe que chega (via tintGlass) e um ponto de luz na célula.
+   */
+  private buildPrism(): THREE.Object3D {
+    const root = new THREE.Group();
+    const glass = this.mats.glass.clone();
+    glass.transmission = 0.35;
+    glass.opacity = 0.92;
+    glass.color.set('#eef4ff');
+    const body = new THREE.Mesh(new THREE.ConeGeometry(0.34, 0.86, 4, 1), glass);
+    body.position.y = 0.43 + 0.06;
+    body.rotation.y = Math.PI / 4;
+    body.castShadow = true;
+    root.add(body);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.035, 8, 24), this.mats.brass);
+    ring.rotation.x = Math.PI / 2;
+    ring.position.y = 0.07;
+    root.add(ring);
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.4, 0.06, 4, 1), this.mats.obsidian);
+    base.rotation.y = Math.PI / 4;
+    base.position.y = 0.03;
+    base.receiveShadow = true;
+    root.add(base);
+    return root;
+  }
+
+  /**
+   * Filtro de cor: uma lâmina de vidro fina e alta entre dois pilares de latão.
+   * Não há GLB para ele; o vidro é tingido pela cor que deixa passar.
+   */
+  private buildFilter(): THREE.Object3D {
+    const root = new THREE.Group();
+    const glass = this.mats.glass.clone();
+    glass.transparent = true;
+    glass.opacity = 0.7;
+    const pane = new THREE.Mesh(new THREE.BoxGeometry(CELL * 0.62, 0.74, 0.08), glass);
+    pane.position.y = 0.37;
+    pane.castShadow = true;
+    root.add(pane);
+    const postGeo = new THREE.CylinderGeometry(0.05, 0.06, 0.82, 10);
+    for (const side of [-1, 1]) {
+      const post = new THREE.Mesh(postGeo, this.mats.brass);
+      post.position.set(side * CELL * 0.34, 0.41, 0);
+      post.castShadow = true;
+      root.add(post);
+    }
+    const base = new THREE.Mesh(new THREE.BoxGeometry(CELL * 0.8, 0.06, 0.24), this.mats.obsidian);
+    base.position.y = 0.03;
+    root.add(base);
     return root;
   }
 

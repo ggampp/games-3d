@@ -1,4 +1,4 @@
-import { BLUE, RED, YELLOW } from './colors.ts';
+import { BLUE, RED, YELLOW, componentsOf } from './colors.ts';
 import type { ColorMask } from './colors.ts';
 import {
   DIRECTIONS, DIR_VECTORS, DOWN, LEFT, RIGHT, UP, indexOf, reflect,
@@ -15,6 +15,12 @@ export interface DifficultySpec {
   /** Quantas curvas cada feixe faz ao ser traçado. */
   turns: [number, number];
   walls: number;
+  /** Prismas divisores fixos que a solução atravessa (0 por padrão). */
+  prisms?: number;
+  /** Filtros de cor fixos que a solução atravessa (0 por padrão). */
+  filters?: number;
+  /** Espelhos mínimos na solução depois da poda (garante a curva da Jornada). */
+  minMirrors?: number;
 }
 
 export const DIFFICULTIES: DifficultySpec[] = [
@@ -59,13 +65,16 @@ interface Draft {
   size: number;
   cells: Cell[];
   mirrors: Map<number, Mirror>;
+  /** Prismas ainda por colocar durante o traçado. */
+  prismsLeft: number;
 }
 
-function emptyDraft(size: number): Draft {
+function emptyDraft(size: number, prisms: number): Draft {
   return {
     size,
     cells: Array.from({ length: size * size }, (): Cell => ({ kind: 'empty' })),
     mirrors: new Map(),
+    prismsLeft: prisms,
   };
 }
 
@@ -75,6 +84,7 @@ function asPuzzle(draft: Draft, seed: number, difficulty: string, budget: number
     height: draft.size,
     cells: draft.cells,
     mirrorBudget: budget,
+    par: budget,
     solution: new Map(draft.mirrors),
     seed,
     difficulty,
@@ -95,12 +105,14 @@ function borderSlots(size: number): { x: number; y: number; dir: Direction }[] {
 
 /**
  * Gera um puzzle **construindo a solução primeiro**: traça o caminho de cada
- * feixe com espelhos, escolhe alvos entre as células que a luz alcança (com
- * preferência por cores misturadas), poda os espelhos que não fazem falta e só
- * então esconde a solução. Assim todo puzzle entregue é resolvível.
+ * feixe com espelhos (e prismas, quando a dificuldade pede), coloca filtros
+ * onde a luz já chega misturada, escolhe alvos entre as células que a luz
+ * alcança (com preferência por cores misturadas), poda os espelhos que não
+ * fazem falta e só então esconde a solução. Assim todo puzzle entregue é
+ * resolvível.
  */
 export function generatePuzzle(seed: number, spec: DifficultySpec): Puzzle {
-  for (let attempt = 0; attempt < 60; attempt++) {
+  for (let attempt = 0; attempt < 120; attempt++) {
     const puzzle = tryGenerate(seed + attempt * 7919, spec);
     if (puzzle) return puzzle;
   }
@@ -112,7 +124,7 @@ export function generatePuzzle(seed: number, spec: DifficultySpec): Puzzle {
 
 function tryGenerate(seed: number, spec: DifficultySpec): Puzzle | null {
   const rng = makeRng(seed);
-  const draft = emptyDraft(spec.size);
+  const draft = emptyDraft(spec.size, spec.prisms ?? 0);
   const colors: ColorMask[] = [RED, YELLOW, BLUE];
   const slots = borderSlots(spec.size);
 
@@ -142,11 +154,18 @@ function tryGenerate(seed: number, spec: DifficultySpec): Puzzle | null {
     };
   }
 
-  // 2) Traça cada feixe com curvas, deixando espelhos pelo caminho.
+  // 2) Traça cada feixe com curvas, deixando espelhos (ou prismas) pelo caminho.
   draft.cells.forEach((cell, index) => {
     if (cell.kind !== 'emitter') return;
     traceBeam(draft, rng, index, cell.dir, spec);
   });
+  if (draft.prismsLeft > 0) return null;
+
+  // 2b) Filtros onde a luz da solução já chega misturada: o filtro separa a
+  // cor de novo, e o alvo depois dele passa a pedir a primária que sobra.
+  for (let i = 0; i < (spec.filters ?? 0); i++) {
+    if (!placeFilter(draft, rng, seed, spec)) return null;
+  }
 
   // 3) Alvos: células iluminadas, priorizando misturas e distância do emissor.
   const sim = simulate(asPuzzle(draft, seed, spec.id, 0), draft.mirrors);
@@ -226,7 +245,18 @@ function tryGenerate(seed: number, spec: DifficultySpec): Puzzle | null {
     const check = simulate(asPuzzle(draft, seed, spec.id, 0), draft.mirrors);
     if (check.lit.size !== chosen.length) draft.mirrors.set(index, saved);
   }
-  if (draft.mirrors.size === 0) return null;
+  if (draft.mirrors.size < Math.max(1, spec.minMirrors ?? 1)) return null;
+
+  // 4b) Prismas e filtros precisam fazer falta: se trocá-los por uma célula
+  // vazia ainda resolvesse, seriam só enfeite.
+  for (let index = 0; index < draft.cells.length; index++) {
+    const cell = draft.cells[index];
+    if (cell.kind !== 'prism' && cell.kind !== 'filter') continue;
+    draft.cells[index] = { kind: 'empty' };
+    const without = simulate(asPuzzle(draft, seed, spec.id, 0), draft.mirrors);
+    draft.cells[index] = cell;
+    if (without.lit.size === chosen.length) return null;
+  }
 
   // 5) Paredes só onde a luz da solução nunca passa — não podem estragá-la.
   const finalSim = simulate(asPuzzle(draft, seed, spec.id, 0), draft.mirrors);
@@ -243,9 +273,14 @@ function tryGenerate(seed: number, spec: DifficultySpec): Puzzle | null {
   }
 
   const puzzle = asPuzzle(draft, seed, spec.id, draft.mirrors.size);
-  // 6) Conferência final: a solução de referência precisa acender tudo.
+  // 6) Conferência final: a solução de referência precisa acender tudo e
+  // atravessar todas as peças fixas especiais.
   const verify = simulate(puzzle, puzzle.solution);
   if (verify.lit.size !== spec.targets) return null;
+  for (let index = 0; index < puzzle.cells.length; index++) {
+    const kind = puzzle.cells[index].kind;
+    if ((kind === 'prism' || kind === 'filter') && verify.atCell[index] === 0) return null;
+  }
   return puzzle;
 }
 
@@ -280,11 +315,61 @@ function traceBeam(
     });
     if (options.length === 0) return;
     const next = pick(rng, options);
+
+    // Um prisma no lugar do espelho: o feixe segue por `next` e o outro ramo
+    // sai pela perpendicular oposta (a simulação cuida dele).
+    if (draft.prismsLeft > 0 && rng() < 0.55) {
+      draft.cells[index] = { kind: 'prism' };
+      draft.prismsLeft -= 1;
+      heading = next;
+      continue;
+    }
+
     const mirror = mirrorFor(heading, next);
     if (!mirror) return;
     draft.mirrors.set(index, mirror);
     heading = next;
   }
+}
+
+/**
+ * Coloca um filtro numa célula reta por onde a solução passa já misturada.
+ * O filtro deixa passar uma das componentes; tudo a jusante fica com essa
+ * primária, e os alvos escolhidos depois refletem isso.
+ */
+function placeFilter(draft: Draft, rng: () => number, seed: number, spec: DifficultySpec): boolean {
+  const sim = simulate(asPuzzle(draft, seed, spec.id, 0), draft.mirrors);
+  const size = draft.size;
+  const straight: { index: number; mask: number }[] = [];
+  const anyMixed: { index: number; mask: number }[] = [];
+  draft.cells.forEach((cell, index) => {
+    if (cell.kind !== 'empty' || draft.mirrors.has(index)) return;
+    const mask = sim.atCell[index];
+    if (popcount(mask) < 2) return;
+    const x = index % size;
+    const y = Math.floor(index / size);
+    if (x === 0 || y === 0 || x === size - 1 || y === size - 1) return;
+    let inDirs = 0;
+    let downstreamOpen = false;
+    for (const d of DIRECTIONS) {
+      if (sim.incoming[index * 4 + d] === 0) continue;
+      inDirs += 1;
+      const v = DIR_VECTORS[d];
+      const nx = x + v.dx;
+      const ny = y + v.dy;
+      const next = draft.cells[indexOf({ width: size }, nx, ny)];
+      if (next && next.kind === 'empty') downstreamOpen = true;
+    }
+    if (!downstreamOpen) return;
+    anyMixed.push({ index, mask });
+    if (inDirs === 1) straight.push({ index, mask });
+  });
+  const pool = straight.length > 0 ? straight : anyMixed;
+  if (pool.length === 0) return false;
+  const chosen = pick(rng, pool);
+  const pass = pick(rng, componentsOf(chosen.mask));
+  draft.cells[chosen.index] = { kind: 'filter', pass };
+  return true;
 }
 
 /** Solução de referência como colocações do jogador (para o botão de dica). */

@@ -23,6 +23,11 @@ export function opposite(dir: Direction): Direction {
   return ((dir + 2) % 4) as Direction;
 }
 
+/** As duas direções perpendiculares a `dir` — é por elas que um prisma divide o feixe. */
+export function perpendiculars(dir: Direction): [Direction, Direction] {
+  return [((dir + 1) % 4) as Direction, ((dir + 3) % 4) as Direction];
+}
+
 /** As duas orientações de espelho: `/` e `\`. */
 export type Mirror = 'slash' | 'backslash';
 
@@ -56,7 +61,24 @@ export interface EmptyCell {
   kind: 'empty';
 }
 
-export type Cell = EmptyCell | WallCell | EmitterCell | TargetCell;
+/**
+ * Prisma divisor: célula fixa que recebe um feixe e o devolve nas duas
+ * direções perpendiculares à de chegada. Nada atravessa reto.
+ */
+export interface PrismCell {
+  kind: 'prism';
+}
+
+/**
+ * Filtro de cor: célula fixa que só deixa passar UMA primária. O feixe segue
+ * reto, mas perde as outras componentes; se não sobrar nada, é absorvido.
+ */
+export interface FilterCell {
+  kind: 'filter';
+  pass: ColorMask;
+}
+
+export type Cell = EmptyCell | WallCell | EmitterCell | TargetCell | PrismCell | FilterCell;
 
 export interface Puzzle {
   width: number;
@@ -65,6 +87,8 @@ export interface Puzzle {
   cells: Cell[];
   /** Quantos espelhos o jogador tem para usar. */
   mirrorBudget: number;
+  /** Quantos espelhos a solução de referência usa (o "par" das estrelas). */
+  par: number;
   /** Espelhos da solução de referência, por índice de célula. */
   solution: Map<number, Mirror>;
   seed: number;
@@ -101,4 +125,9 @@ export function targetIndices(puzzle: Puzzle): number[] {
 /** Onde o jogador pode colocar um espelho. */
 export function isPlaceable(puzzle: Puzzle, index: number): boolean {
   return puzzle.cells[index]?.kind === 'empty';
+}
+
+/** Quantas células de um tipo existem no tabuleiro. */
+export function countKind(puzzle: { cells: Cell[] }, kind: Cell['kind']): number {
+  return puzzle.cells.filter((c) => c.kind === kind).length;
 }

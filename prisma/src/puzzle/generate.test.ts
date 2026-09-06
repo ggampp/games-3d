@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { DIFFICULTIES, generatePuzzle, makeRng } from './generate.ts';
+import type { DifficultySpec } from './generate.ts';
 import { dailyPuzzle, randomPuzzle, seedFor, todayKey } from './daily.ts';
 import { isSolved, simulate } from './simulate.ts';
+import { countKind } from './grid.ts';
 import type { Puzzle } from './grid.ts';
 
 function targetsOf(puzzle: Puzzle): number {
@@ -31,6 +33,7 @@ describe('gerador', () => {
     for (let seed = 1; seed <= 12; seed++) {
       const puzzle = generatePuzzle(seed * 7717, DIFFICULTIES[2]);
       expect(puzzle.mirrorBudget).toBe(puzzle.solution.size);
+      expect(puzzle.par).toBe(puzzle.solution.size);
       expect(puzzle.mirrorBudget).toBeGreaterThan(0);
     }
   });
@@ -61,10 +64,78 @@ describe('gerador', () => {
     });
   });
 
+  it('as dificuldades do diário não têm prisma nem filtro', () => {
+    for (const spec of DIFFICULTIES) {
+      const puzzle = generatePuzzle(2024, spec);
+      expect(countKind(puzzle, 'prism')).toBe(0);
+      expect(countKind(puzzle, 'filter')).toBe(0);
+    }
+  });
+
   it('o RNG é determinístico', () => {
     const a = makeRng(7);
     const b = makeRng(7);
     for (let i = 0; i < 10; i++) expect(a()).toBe(b());
+  });
+});
+
+describe('gerador com prismas e filtros', () => {
+  const withPrism: DifficultySpec = {
+    id: 'teste-prisma', label: 'Prisma', size: 7, emitters: 3, targets: 3, turns: [2, 3], walls: 3, prisms: 1,
+  };
+  const withFilter: DifficultySpec = {
+    id: 'teste-filtro', label: 'Filtro', size: 7, emitters: 3, targets: 3, turns: [2, 3], walls: 3, filters: 1,
+  };
+  const withBoth: DifficultySpec = {
+    id: 'teste-ambos', label: 'Ambos', size: 8, emitters: 3, targets: 3, turns: [3, 4], walls: 4, prisms: 1, filters: 1, minMirrors: 4,
+  };
+
+  it('coloca a quantidade pedida e a solução atravessa todas as peças fixas', () => {
+    for (const spec of [withPrism, withFilter, withBoth]) {
+      for (let seed = 1; seed <= 20; seed++) {
+        const puzzle = generatePuzzle(seed * 65537, spec);
+        expect(puzzle.difficulty, `${spec.id}/${seed} caiu no fallback`).toBe(spec.id);
+        expect(countKind(puzzle, 'prism')).toBe(spec.prisms ?? 0);
+        expect(countKind(puzzle, 'filter')).toBe(spec.filters ?? 0);
+        const sim = simulate(puzzle, puzzle.solution);
+        expect(isSolved(puzzle, sim)).toBe(true);
+        puzzle.cells.forEach((cell, index) => {
+          if (cell.kind === 'prism' || cell.kind === 'filter') {
+            expect(sim.atCell[index], `${spec.id}/${seed} peça fixa apagada`).toBeGreaterThan(0);
+          }
+        });
+      }
+    }
+  });
+
+  it('prisma e filtro fazem falta: sem eles a referência não resolve', () => {
+    for (let seed = 1; seed <= 10; seed++) {
+      for (const spec of [withPrism, withFilter]) {
+        const puzzle = generatePuzzle(seed * 7919, spec);
+        puzzle.cells.forEach((cell, index) => {
+          if (cell.kind !== 'prism' && cell.kind !== 'filter') return;
+          const cells = puzzle.cells.slice();
+          cells[index] = { kind: 'empty' };
+          const stripped: Puzzle = { ...puzzle, cells };
+          expect(isSolved(stripped, simulate(stripped, puzzle.solution)), `${spec.id}/${seed}`).toBe(false);
+        });
+      }
+    }
+  });
+
+  it('o filtro nunca é atravessado por uma cor que ele barra', () => {
+    const puzzle = generatePuzzle(1234, withFilter);
+    const sim = simulate(puzzle, puzzle.solution);
+    puzzle.cells.forEach((cell, index) => {
+      if (cell.kind === 'filter') expect(sim.atCell[index]).toBe(cell.pass);
+    });
+  });
+
+  it('respeita o mínimo de espelhos', () => {
+    for (let seed = 1; seed <= 10; seed++) {
+      const puzzle = generatePuzzle(seed * 31, withBoth);
+      expect(puzzle.par).toBeGreaterThanOrEqual(4);
+    }
   });
 });
 
