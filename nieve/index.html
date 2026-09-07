@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0a151e" />
+  <title>NIEVE — Buenos Aires, zona cero</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Saira+Extra+Condensed:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <canvas id="gl"></canvas>
+
+  <!-- Visor / efeitos de tela -->
+  <div id="visor">
+    <div id="visor-fog"></div>
+    <div id="visor-rim"></div>
+    <div id="hurt"></div>
+    <div id="flash"></div>
+  </div>
+
+  <!-- HUD -->
+  <div id="hud" class="hidden">
+    <div class="crosshair"><i></i></div>
+
+    <div class="topline">
+      <span class="mark">N<span>°</span></span>
+      <span class="sector">NIEVE TÓXICA · EXTERIOR</span>
+      <span class="horde" id="horde-label">EN SILENCIO</span>
+    </div>
+
+    <div id="prompt" class="prompt hidden"><kbd>E</kbd> <span></span></div>
+    <div id="notice" class="notice hidden"></div>
+
+    <div class="vitals">
+      <div class="health-icon">+</div>
+      <div>
+        <div class="stat-line"><span>ESTADO VITAL</span><b><span id="hp">100</span><small> / 100</small></b></div>
+        <div class="health-track" id="health-track"></div>
+        <div class="stamina-track"><i id="stamina-bar"></i></div>
+        <span class="tiny-label effort" id="effort">RESPIRACIÓN ESTABLE</span>
+      </div>
+    </div>
+
+    <div class="ammo">
+      <div class="weapon-label"><span>SAIGA 12</span><i></i> SEMIAUTO</div>
+      <div class="ammo-numbers"><strong id="ammo">08</strong><span>/</span><b id="reserve">64</b></div>
+      <div class="cartridges" id="cartridges"></div>
+      <span class="tiny-label" id="ammo-label">12 GA · CARTUCHOS</span>
+    </div>
+
+    <div class="bottom-controls">
+      <span><kbd>R</kbd> RECARGAR</span>
+      <span><kbd>SHIFT</kbd> CORRER</span>
+      <span><kbd>F</kbd> LINTERNA</span>
+      <span><kbd>ESC</kbd> PAUSA</span>
+    </div>
+  </div>
+
+  <!-- Menu -->
+  <div id="menu" class="overlay">
+    <div class="panel">
+      <span class="kicker">EXPLORACIÓN Y SUPERVIVENCIA</span>
+      <h1>NIEVE</h1>
+      <p class="tagline">La ciudad se detuvo. Algo más sigue moviéndose.</p>
+      <p class="desc">Survival horror en primera persona en una Buenos Aires cubierta por la nieve.
+        Recorré las calles, buscá suministros y mantené distancia de los escarabajos.
+        Correr empaña el visor; recuperá el aliento para despejarlo.</p>
+      <button id="btn-start" class="primary">ENTRAR A LA CIUDAD</button>
+      <div class="row">
+        <button id="btn-how">CÓMO JUGAR</button>
+        <button id="btn-mute">SILENCIAR</button>
+      </div>
+      <div id="how" class="how hidden">
+        <div><kbd>W A S D</kbd> mover · <kbd>MOUSE</kbd> mirar · <kbd>CLIC</kbd> disparar</div>
+        <div><kbd>SHIFT</kbd> correr · <kbd>R</kbd> recargar · <kbd>F</kbd> linterna · <kbd>E</kbd> recoger</div>
+        <div class="hint">No te saqués la máscara. Explorá. Conservá munición. Mejor con auriculares.</div>
+      </div>
+      <span class="foot">ÚLTIMA EDICIÓN · BUENOS AIRES · SOLO ESCRITORIO</span>
+      <span class="foot small">Ciudad ficticia inspirada en la atmósfera de El Eternauta. Reimplementación de estudio.</span>
+    </div>
+  </div>
+
+  <!-- Pausa -->
+  <div id="pause" class="overlay hidden">
+    <div class="panel">
+      <h2>PAUSA</h2>
+      <button id="btn-continue" class="primary">CONTINUAR</button>
+      <button id="btn-restart">REINICIAR PARTIDA</button>
+    </div>
+  </div>
+
+  <!-- Morte -->
+  <div id="dead" class="overlay hidden">
+    <div class="panel">
+      <span class="kicker">DESPUÉS DEL SILENCIO</span>
+      <h2>LA NIEVE MATA</h2>
+      <p class="desc" id="dead-stats"></p>
+      <button id="btn-retry" class="primary">VOLVER A INTENTAR</button>
+    </div>
+  </div>
+
+  <!-- Vitória -->
+  <div id="win" class="overlay hidden">
+    <div class="panel">
+      <span class="kicker">EVACUACIÓN</span>
+      <h2>PLAZA DE LA REPÚBLICA</h2>
+      <p class="desc" id="win-stats"></p>
+      <button id="btn-again" class="primary">VOLVER</button>
+    </div>
+  </div>
+
+  <div id="mobile" class="overlay hidden">
+    <div class="panel"><h2>SOLO ESCRITORIO</h2>
+      <p class="desc">NIEVE todavía no está disponible en celulares. Es una experiencia pensada para PC con mouse y teclado.</p></div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

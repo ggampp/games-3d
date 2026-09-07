@@ -19,6 +19,7 @@ Cada pasta é um projeto independente. Instale e rode **dentro** dela.
 | [`starship-dogfight/`](./starship-dogfight) | Starship Dogfight — dogfight espacial (demo threejs-game-skills) | servir a pasta (`npx serve .`) |
 | [`tide-singer/`](./tide-singer) | Tide Singer — exploração submarina (demo threejs-game-skills) | servir a pasta (`npx serve .`) |
 | [`ripcore/`](./ripcore) | Ripcore — arena battler de piões (demo threejs-game-skills) | servir a pasta (`npx serve .`) |
+| [`nieve/`](./nieve) | NIEVE — survival horror em Buenos Aires nevada (reimplementação de nieve.emaalozada.com) | `npm install && npm run dev` |
 
 Remote previsto: `git@github-pessoal:ggampp/games-3d.git`
 
