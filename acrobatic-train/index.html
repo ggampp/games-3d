@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Acrobatic Train 3D - Trem Acrobático</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="index.css">
+</head>
+<body>
+  <div id="app">
+    <!-- 3D Canvas WebGL Viewport -->
+    <div id="canvas-container">
+      <canvas id="game-canvas"></canvas>
+    </div>
+
+    <!-- Top Floating HUD -->
+    <header id="hud-top">
+      <div class="hud-glass-card score-container">
+        <span class="score-label">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+          </svg>
+          Pontos
+        </span>
+        <div class="score-value" id="score-display">0</div>
+        <div class="high-score" id="best-display">Recorde: 0</div>
+      </div>
+
+      <div class="hud-glass-card stats-container">
+        <!-- Railway Block Signal (Semáforo Ferroviário de Bloco) -->
+        <div class="rail-signal-box" id="rail-signal-box" title="Sinalização Ferroviária de Bloco">
+          <div class="signal-lamp green" id="signal-lamp"></div>
+          <div class="signal-info">
+            <span class="signal-title">SINAL DE VIA</span>
+            <span class="signal-status" id="signal-status">VIA LIVRE</span>
+          </div>
+        </div>
+
+        <!-- Train Series Quick Switch Card -->
+        <div class="skin-selector-card" id="skin-toggle-btn" title="Alternar Série da Locomotiva (Tecla T)">
+          <div class="skin-swatch" id="skin-swatch" style="background:#00f2fe; color:#00f2fe;"></div>
+          <div class="stat-item" style="align-items:flex-start;">
+            <span class="stat-title">[T] SÉRIE DO TREM</span>
+            <span class="stat-val" id="skin-name-display" style="font-size:13px; color:#fff;">CYBER SHINKANSEN</span>
+          </div>
+        </div>
+
+        <div class="stat-item">
+          <span class="stat-title">Velocímetro</span>
+          <span class="stat-val" id="speed-display">100 <small style="font-size:11px;">km/h</small></span>
+        </div>
+        <button id="horn-btn" class="icon-btn" title="Acionar Apito / Corneta de Ar (H / Espaço)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+          </svg>
+        </button>
+        <button id="pause-btn" class="icon-btn" title="Válvula de Freio de Emergência / Parada (P)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="6" y="4" width="4" height="16"></rect>
+            <rect x="14" y="4" width="4" height="16"></rect>
+          </svg>
+        </button>
+        <button id="sound-btn" class="icon-btn active" title="Alternar Áudio Ferroviário (M)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Drift Combo Multiplier (Floating Left) -->
+    <div id="drift-combo-hud">
+      <div class="combo-badge" id="combo-badge">🔥 DRIFT x2.0</div>
+      <div class="combo-bar-wrap">
+        <div class="combo-bar-fill" id="combo-bar-fill"></div>
+      </div>
+    </div>
+
+    <!-- Stunt Notification Banner with AI Stunt Judge -->
+    <div id="stunt-banner">
+      <div class="stunt-badge" id="stunt-text">BARREL ROLL! +50</div>
+      <div class="ai-judge-title" id="ai-judge-label">JEV AI: GRAVITY DEFIER (+50 BONUS)</div>
+    </div>
+
+    <!-- Locomotive Driver Cab Console (Painel de Comando do Maquinista) -->
+    <footer id="keyboard-hud" class="cab-console-panel">
+      <div class="cab-console-badge">
+        <span class="cab-badge-rivet"></span>
+        <span class="cab-badge-text">🚂 CABINE DO MAQUINISTA • COMANDOS FERROVIÁRIOS</span>
+        <span class="cab-badge-rivet"></span>
+      </div>
+
+      <div class="cab-console-content">
+        <!-- Front Bogie / Direction Guide -->
+        <div class="bogie-control-group">
+          <div class="bogie-title">
+            <span class="bogie-name">TRUQUE FRONTAL (AGULHA)</span>
+            <span class="bogie-track-indicator" id="front-track-label">AMV: VIA CENTRAL</span>
+          </div>
+          <div class="key-cluster">
+            <div class="key-cap" id="key-A">A<small>DESVIO ESQ</small></div>
+            <div class="key-cap" id="key-D">D<small>DESVIO DIR</small></div>
+          </div>
+        </div>
+
+        <div class="controls-divider"></div>
+
+        <!-- Cab Levers: Straighten, Whistle/Horn, Brake/Pause -->
+        <div class="bogie-control-group">
+          <div class="bogie-title">
+            <span class="bogie-name">MANOBRA & CORNETA</span>
+            <span class="bogie-track-indicator">VÁLVULAS DE CABINE</span>
+          </div>
+          <div class="key-cluster">
+            <div class="key-cap" id="key-W">W<small>ALINHAR VIA</small></div>
+            <div class="key-cap" id="key-H">H<small>APITO AR</small></div>
+            <div class="key-cap" id="key-P">P<small>FREIO PARADA</small></div>
+          </div>
+        </div>
+
+        <div class="controls-divider"></div>
+
+        <!-- Rear Bogie / Traction Axle -->
+        <div class="bogie-control-group">
+          <div class="bogie-title">
+            <span class="bogie-name">TRUQUE TRASEIRO (TRAÇÃO)</span>
+            <span class="bogie-track-indicator" id="rear-track-label">AMV: VIA CENTRAL</span>
+          </div>
+          <div class="key-cluster">
+            <div class="key-cap" id="key-Left">←<small>DESVIO ESQ</small></div>
+            <div class="key-cap" id="key-Right">→<small>DESVIO DIR</small></div>
+          </div>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Tutorial / Instructions Modal -->
+    <div id="tutorial-modal" class="overlay-modal">
+      <div class="modal-card">
+        <h1 class="modal-title">🚄 MANUAL DE OPERAÇÃO DO MAQUINISTA</h1>
+        <p class="modal-subtitle">Assuma a cabine de comando da composição de alta velocidade! Controle os dois truques (bogies) de forma independente através das alavancas de desvio (AMV) em 3 vias paralelas e execute manobras acrobáticas!</p>
+
+        <div class="tutorial-keys-grid">
+          <div class="tut-key-box">
+            <div class="tut-key-header">🕹️ Truque Frontal (Agulha)</div>
+            <div class="tut-key-desc">Use <strong>A</strong> e <strong>D</strong> para manobrar o truque dianteiro entre as 3 vias paralelas.</div>
+          </div>
+          <div class="tut-key-box">
+            <div class="tut-key-header">🕹️ Truque Traseiro (Tração)</div>
+            <div class="tut-key-desc">Use <strong>←</strong> e <strong>→</strong> (ou <strong>J</strong> e <strong>L</strong>) para mudar o truque traseiro de via.</div>
+          </div>
+          <div class="tut-key-box">
+            <div class="tut-key-header">🤸 Desvio Diagonal & Manobras</div>
+            <div class="tut-key-desc">Rode em vias diferentes para acumular <strong>Drift Contínuo</strong>! Rampa alinhada = Backflip | Rampa diagonal = Barrel Roll!</div>
+          </div>
+          <div class="tut-key-box">
+            <div class="tut-key-header">⌨️ Válvulas e Controles de Cabine</div>
+            <div class="tut-key-desc"><strong>[W]</strong> Alinhar Bitola Reta | <strong>[H / Espaço]</strong> Apito Ferroviário | <strong>[P]</strong> Freio Emergência | <strong>[T]</strong> Série do Trem.</div>
+          </div>
+        </div>
+
+        <button id="start-game-btn" class="action-btn btn-primary">ACELERAR COMPOSIÇÃO (ESPAÇO)</button>
+      </div>
+    </div>
+
+    <!-- Pause Modal -->
+    <div id="pause-modal" class="overlay-modal" hidden>
+      <div class="modal-card">
+        <h2 class="modal-title" style="color: var(--accent-cyan);">🛑 FREIO DE EMERGÊNCIA ACIONADO</h2>
+        <p class="modal-subtitle">A composição ferroviária está parada na via. Pressione <strong>P</strong> ou clique abaixo para liberar os freios e retomar a corrida.</p>
+        <button id="resume-btn" class="action-btn btn-primary">LIBERAR FREIOS E ACELERAR (P)</button>
+      </div>
+    </div>
+
+    <!-- Game Over Modal -->
+    <div id="gameover-modal" class="overlay-modal" hidden>
+      <div class="modal-card">
+        <h2 class="modal-title" style="color: var(--accent-red);">💥 DESCARRILAMENTO FERROVIÁRIO!</h2>
+        <p class="modal-subtitle" id="gameover-reason">A composição perdeu contato com a via em alta velocidade!</p>
+
+        <div class="gameover-score-wrap">
+          <div class="gameover-score" id="final-score">0</div>
+          <div class="gameover-best" id="final-best">Melhor: 0 Pontos</div>
+        </div>
+
+        <button id="retry-btn" class="action-btn btn-primary">NOVA PARTIDA DA ESTAÇÃO (ESPAÇO)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Three.js (r128) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <!-- Game Modules (ESM) -->
+  <script type="module" src="src/core/game.js"></script>
+</body>
+</html>

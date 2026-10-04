@@ -1,0 +1,32 @@
+{
+  "name": "acrobatic-train",
+  "version": "1.0.0",
+  "description": "3D Acrobatic Train game powered by Three.js and enhanced with TypeSafe Jev System One tooling",
+  "type": "module",
+  "scripts": {
+    "start": "node scripts/serve.js",
+    "dev": "node scripts/serve.js",
+    "jev:guardrail": "node scripts/jev/guardrail.js",
+    "jev:review": "node scripts/jev/pr-review-gate.js",
+    "jev:coverage": "node scripts/jev/test-coverage.js",
+    "jev:rerank": "node scripts/jev/rerank-files.js",
+    "jev:skills": "node scripts/jev/skill-selector.js",
+    "jev:browser": "node scripts/jev/browser-action.js",
+    "jev:compact": "node scripts/jev/compact-context.js",
+    "jev:test": "node scripts/jev/test-suite.js"
+  },
+  "keywords": [
+    "threejs",
+    "game-3d",
+    "typesafe",
+    "jev",
+    "system-one",
+    "coding-agent"
+  ],
+  "author": "Guilherme Pimentel",
+  "license": "MIT",
+  "dependencies": {
+    "@typesafe-ai/sdk": "^0.6.0",
+    "three": "^0.186.1"
+  }
+}
