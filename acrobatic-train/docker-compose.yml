@@ -1,0 +1,24 @@
+name: acrobatic-train
+
+services:
+  app:
+    build: .
+    container_name: acrobatic-train
+    restart: unless-stopped
+    networks:
+      - edge
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=edge"
+      - "traefik.http.routers.acrobatic-train.rule=Host(`trem.meusaplicativos.com`)"
+      - "traefik.http.routers.acrobatic-train.entrypoints=websecure"
+      - "traefik.http.routers.acrobatic-train.tls.certresolver=le"
+      - "traefik.http.services.acrobatic-train.loadbalancer.server.port=3000"
+
+networks:
+  edge:
+    name: edge
+    external: true

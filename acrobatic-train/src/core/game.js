@@ -1288,10 +1288,45 @@ import { HudManager } from '../ui/hud.js';
     });
   }
 
-  // Camera positioning
+  // Camera positioning - Perfectly centered chase camera on mobile/portrait
   function placeCamera() {
-    const camTarget = V(...CAM_TARGET);
-    const camOffset = V(...CAM_OFFSET);
+    const isPortrait = window.innerHeight > window.innerWidth;
+    const aspect = window.innerWidth / window.innerHeight;
+
+    let targetX = 4.0;
+    let targetY = 0.8;
+    let distBack = -13.5;
+    let heightUp = 4.3;
+    let lateralOffset = 0;
+
+    if (isPortrait) {
+      // In portrait: zero lateral offset keeps the central track at exact 50% screen width
+      targetX = 5.5;
+      targetY = 0.5;
+      distBack = -18.0;
+      heightUp = 6.0;
+      lateralOffset = 0;
+
+      if (camera.fov !== 62) {
+        camera.fov = 62;
+        camera.updateProjectionMatrix();
+      }
+    } else {
+      // In landscape: centered or subtle balanced perspective
+      targetX = 4.0;
+      targetY = 0.8;
+      distBack = -13.5;
+      heightUp = 4.3;
+      lateralOffset = aspect > 1.6 ? 1.4 : 0;
+
+      if (camera.fov !== 55) {
+        camera.fov = 55;
+        camera.updateProjectionMatrix();
+      }
+    }
+
+    const camTarget = V(targetX, targetY, 0);
+    const camOffset = V(distBack, heightUp, lateralOffset);
     const camLook = V(0, 0, 0);
 
     camLook.set(
@@ -1324,22 +1359,26 @@ import { HudManager } from '../ui/hud.js';
   // ---------- KEYBOARD & CONTROLS SETUP ----------
   const keyboard = new KeyboardController({
     onMoveFront: (dir) => {
+      if (mode === 'ready') startGame();
       if (mode !== 'playing') return;
       const currIdx = TRACKS.indexOf(moves.front.to);
       const nextIdx = Math.max(0, Math.min(TRACKS.length - 1, currIdx + dir));
       setTarget('front', TRACKS[nextIdx]);
     },
     onMoveRear: (dir) => {
+      if (mode === 'ready') startGame();
       if (mode !== 'playing') return;
       const currIdx = TRACKS.indexOf(moves.rear.to);
       const nextIdx = Math.max(0, Math.min(TRACKS.length - 1, currIdx + dir));
       setTarget('rear', TRACKS[nextIdx]);
     },
     onStraighten: () => {
+      if (mode === 'ready') startGame();
       if (mode !== 'playing') return;
       setTarget('rear', moves.front.to);
     },
     onCenter: () => {
+      if (mode === 'ready') startGame();
       if (mode !== 'playing') return;
       setTarget('front', 0);
       setTarget('rear', 0);

@@ -140,6 +140,55 @@
       </div>
     </footer>
 
+    <!-- Mobile On-Screen Touch Controls (2 Botões Esquerda e 2 Botões Direita) -->
+    <nav id="mobile-touch-hud" class="mobile-touch-container" aria-label="Controles Táteis Mobile">
+      <!-- Cluster Esquerdo: 2 botões para a ESQUERDA (Frontal e Traseiro) -->
+      <div class="touch-side touch-left">
+        <button id="touch-front-left" class="touch-action-btn btn-front" type="button" aria-label="Desviar Truque Frontal para a Esquerda">
+          <div class="touch-icon-box">◀</div>
+          <div class="touch-info">
+            <span class="touch-label">FRONTAL</span>
+            <span class="touch-sub">ESQUERDA</span>
+          </div>
+        </button>
+        <button id="touch-rear-left" class="touch-action-btn btn-rear" type="button" aria-label="Desviar Truque Traseiro para a Esquerda">
+          <div class="touch-icon-box">◀</div>
+          <div class="touch-info">
+            <span class="touch-label">TRASEIRO</span>
+            <span class="touch-sub">ESQUERDA</span>
+          </div>
+        </button>
+      </div>
+
+      <!-- Centro: Alinhar Composição na Bitola Reta -->
+      <div class="touch-center">
+        <button id="touch-align" class="touch-center-btn" type="button" aria-label="Alinhar Composição na Mesma Via">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3v18M8 7l4-4 4 4M8 17l4 4 4-4"/>
+          </svg>
+          <span>ALINHAR</span>
+        </button>
+      </div>
+
+      <!-- Cluster Direito: 2 botões para a DIREITA (Frontal e Traseiro) -->
+      <div class="touch-side touch-right">
+        <button id="touch-front-right" class="touch-action-btn btn-front" type="button" aria-label="Desviar Truque Frontal para a Direita">
+          <div class="touch-info text-right">
+            <span class="touch-label">FRONTAL</span>
+            <span class="touch-sub">DIREITA</span>
+          </div>
+          <div class="touch-icon-box">▶</div>
+        </button>
+        <button id="touch-rear-right" class="touch-action-btn btn-rear" type="button" aria-label="Desviar Truque Traseiro para a Direita">
+          <div class="touch-info text-right">
+            <span class="touch-label">TRASEIRO</span>
+            <span class="touch-sub">DIREITA</span>
+          </div>
+          <div class="touch-icon-box">▶</div>
+        </button>
+      </div>
+    </nav>
+
     <!-- Tutorial / Instructions Modal -->
     <div id="tutorial-modal" class="overlay-modal">
       <div class="modal-card">

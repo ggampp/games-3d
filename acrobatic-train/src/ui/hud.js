@@ -109,7 +109,7 @@ export class HudManager {
     }
   }
 
-  update(score, best, speedKmh, frontTrackVal, rearTrackVal, force = false) {
+  update(score, best, speedKmh, frontTrackVal, rearTrackVal, isDiagonal = false, force = false) {
     const now = performance.now();
     if (!force && now - this.lastRenderTime < this.throttleInterval) {
       return;

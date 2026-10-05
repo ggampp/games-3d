@@ -18,6 +18,7 @@ export class KeyboardController {
 
     this.activeKeys = new Set();
     this.initListeners();
+    this.initTouchListeners();
   }
 
   initListeners() {
@@ -123,5 +124,47 @@ export class KeyboardController {
         el.classList.remove('active');
       }
     }
+  }
+
+  initTouchListeners() {
+    const bindControl = (id, action) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+
+      const onPress = (e) => {
+        if (e.cancelable) e.preventDefault();
+        el.classList.add('active');
+        if (typeof navigator !== 'undefined' && navigator.vibrate) {
+          try { navigator.vibrate(20); } catch {}
+        }
+        action();
+      };
+
+      const onRelease = (e) => {
+        if (e.cancelable) e.preventDefault();
+        el.classList.remove('active');
+      };
+
+      el.addEventListener('pointerdown', onPress, { passive: false });
+      el.addEventListener('pointerup', onRelease, { passive: false });
+      el.addEventListener('pointercancel', onRelease, { passive: false });
+      el.addEventListener('pointerleave', onRelease, { passive: false });
+    };
+
+    // Mobile Touch HUD (2 Left buttons & 2 Right buttons + Center Align)
+    bindControl('touch-front-left', () => this.handlers.onMoveFront?.(-1));
+    bindControl('touch-rear-left', () => this.handlers.onMoveRear?.(-1));
+    bindControl('touch-front-right', () => this.handlers.onMoveFront?.(1));
+    bindControl('touch-rear-right', () => this.handlers.onMoveRear?.(1));
+    bindControl('touch-align', () => this.handlers.onStraighten?.());
+
+    // Desktop Cab Console clickable keys
+    bindControl('key-A', () => this.handlers.onMoveFront?.(-1));
+    bindControl('key-D', () => this.handlers.onMoveFront?.(1));
+    bindControl('key-Left', () => this.handlers.onMoveRear?.(-1));
+    bindControl('key-Right', () => this.handlers.onMoveRear?.(1));
+    bindControl('key-W', () => this.handlers.onStraighten?.());
+    bindControl('key-H', () => this.handlers.onHorn?.());
+    bindControl('key-P', () => this.handlers.onPause?.());
   }
 }
