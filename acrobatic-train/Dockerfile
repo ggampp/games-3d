@@ -5,7 +5,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies (only production if needed)
-RUN npm ci --omit=dev
+RUN npm install --omit=dev --no-audit
 
 # Copy web assets and code
 COPY index.html index.css ./
