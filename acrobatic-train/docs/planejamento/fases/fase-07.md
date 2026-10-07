@@ -1,6 +1,6 @@
 # Fase 7 — Sequência acrobática
 
-Status: planejada; sem implementação/testes executados. Entrega: M4. Dependência: Fase 6 e todas as famílias/colisões aprovadas em M3. Referências: [contratos](../CONTRATOS.md), [testes](../TESTES.md), [índice](../README.md).
+Status: implementada na M4 e validada automaticamente em 07/10/2026. [Resultados](../VALIDACAO_M4.md). Playtest humano pendente. Conteúdo e valores efetivos estão em src/levels/level-config.js e nas fixtures/replays. Entrega: M4. Dependência: Fase 6 e todas as famílias/colisões aprovadas em M3. Referências: [contratos](../CONTRATOS.md), [testes](../TESTES.md), [índice](../README.md).
 
 ## Objetivo e experiência
 

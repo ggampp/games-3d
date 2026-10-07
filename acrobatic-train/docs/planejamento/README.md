@@ -2,7 +2,7 @@
 
 Data: 06/10/2026. Origem: [plano geral](../../PLANO_FEATURES_TRANSCRICAO.md) e [transcrição](../../transcricao_audio_trem.md).
 
-**M0/M1 validadas; M2 (06/10/2026) e M3 (07/10/2026) implementadas com validação automatizada aprovada**. [Relatório M3](VALIDACAO_M3.md), [relatório M2](VALIDACAO_M2.md), [histórico M0/M1](VALIDACAO_M0_M1.md). Fases 1–6 disponíveis; M4–M6 permanecem planejados. Os gates humanos da M2 e da M3 continuam pendentes.
+**M0/M1 validadas; M2 (06/10/2026), M3 e M4 (07/10/2026) implementadas com validação automatizada aprovada**. [Relatório M4](VALIDACAO_M4.md), [relatório M3](VALIDACAO_M3.md), [relatório M2](VALIDACAO_M2.md), [histórico M0/M1](VALIDACAO_M0_M1.md). Campanha solo de nove fases e troféu disponíveis; M5–M6 permanecem planejados. Os gates humanos da M2, M3 e M4 continuam pendentes.
 
 ## Como executar o planejamento
 
