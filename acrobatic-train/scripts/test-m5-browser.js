@@ -42,7 +42,9 @@ async function race({ label, levelId, network, routeA, routeB, extra }) {
   const startA = (await online(a.page)).race, startB = (await online(b.page)).race;
   assert.equal(startA.startAt, startB.startAt); assert.equal(startA.runId, startB.runId);
   // Mid-race: opponent ghost rendered; optional local overlays must not touch the room.
-  await waitFor(a.page, () => window.__TRAIN_TEST_HOOKS__.snapshot().dist > 120).catch(async error => {
+  // Wait on a participant that follows a route: the other one may legitimately crash before 120 m.
+  const runner = routeA.length ? a : b;
+  await waitFor(runner.page, () => window.__TRAIN_TEST_HOOKS__.snapshot().dist > 120).catch(async error => {
     for (const p of [a, b]) console.error(p.name, JSON.stringify(await p.page.evaluate(() => { const k = window.__TRAIN_TEST_HOOKS__, s = k.snapshot(), o = k.online(); return { mode: s.mode, tick: s.tick, dist: s.dist, reason: s.reason, levelId: s.levelId, race: o?.race && { ...o.race, result: o.race.result?.reason } }; })), p.errors);
     throw error;
   });
