@@ -1,6 +1,9 @@
 export const PROGRESS_KEY = 'acrobatic_train_campaign_v1';
-export const CONTENT_VERSION = 'm2-v1';
+export const CONTENT_VERSION = 'm4-v1';
+export const TROPHY_ID = 'campaign-9-complete';
 const ids = Array.from({ length: 9 }, (_, i) => `level-0${i + 1}`);
+/** Levels with shipped content. */
+export const PLAYABLE_LEVELS = Object.freeze(ids.slice());
 const empty = () => ({ schemaVersion: 1, contentVersion: CONTENT_VERSION, highestUnlockedLevel: 1, results: {}, achievements: [] });
 const validScore = value => Number.isSafeInteger(value) && value >= 0;
 const validTime = value => Number.isFinite(value) && value > 0 && value <= 3600;
@@ -30,12 +33,13 @@ export class ProgressStore {
     }
     this.data.highestUnlockedLevel = Math.min(9, Object.keys(this.data.results).length + 1);
     if (version === 1 && ((value.highestUnlockedLevel !== undefined && value.highestUnlockedLevel !== this.data.highestUnlockedLevel) || Object.keys(results).some(id => !ids.includes(id) || !this.data.results[id]))) this.warning = 'Progresso inválido parcialmente recuperado. Compras preservadas.';
-    if (Object.keys(this.data.results).length === 9 && Array.isArray(value.achievements) && value.achievements.includes('campaign-9-complete')) this.data.achievements = ['campaign-9-complete'];
+    // The trophy is derived from nine valid official results; a stored flag alone never grants it.
+    this.data.achievements = Object.keys(this.data.results).length === 9 ? [TROPHY_ID] : [];
   }
-  canPlay(id) { return ['level-01', 'level-02', 'level-03'].includes(id) && Number(id.slice(-2)) <= this.data.highestUnlockedLevel; }
+  canPlay(id) { return PLAYABLE_LEVELS.includes(id) && Number(id.slice(-2)) <= this.data.highestUnlockedLevel; }
   continueLevelId() {
-    for (const id of ids.slice(0, 3)) if (this.canPlay(id) && !this.data.results[id]) return id;
-    return `level-0${Math.min(3, this.data.highestUnlockedLevel)}`;
+    for (const id of PLAYABLE_LEVELS) if (this.canPlay(id) && !this.data.results[id]) return id;
+    return `level-0${Math.min(PLAYABLE_LEVELS.length, this.data.highestUnlockedLevel)}`;
   }
   complete({ levelId, score, timeS, eventId, source = 'campaign' }) {
     if (source !== 'campaign' || !this.canPlay(levelId) || !validScore(score) || !validTime(timeS) || typeof eventId !== 'string' || !eventId || this.#seen.has(eventId)) return false;
@@ -43,11 +47,13 @@ export class ProgressStore {
     const previous = this.data.results[levelId];
     this.data.results[levelId] = { completed: true, bestScore: Math.max(previous?.bestScore ?? 0, score), bestTimeS: Math.min(previous?.bestTimeS ?? Infinity, timeS), completions: Math.min(Number.MAX_SAFE_INTEGER, (previous?.completions ?? 0) + 1) };
     this.data.highestUnlockedLevel = Math.max(this.data.highestUnlockedLevel, Math.min(9, Number(levelId.slice(-2)) + 1));
+    if (Object.keys(this.data.results).length === 9 && !this.data.achievements.includes(TROPHY_ID)) this.data.achievements = [TROPHY_ID];
     if (!this.readOnly) {
       try { if (!this.storage) throw Error('unavailable'); this.storage.setItem(PROGRESS_KEY, JSON.stringify(this.data)); }
       catch { this.storageError = true; this.warning = 'Não foi possível salvar. O progresso foi mantido nesta sessão.'; }
     }
     return true;
   }
+  hasTrophy() { return this.data.achievements.includes(TROPHY_ID); }
   snapshot() { return { ...JSON.parse(JSON.stringify(this.data)), warning: this.warning, storageError: this.storageError }; }
 }

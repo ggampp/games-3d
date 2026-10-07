@@ -8,6 +8,9 @@
     "dev": "node scripts/serve.js",
     "test": "node --test tests/*.test.js",
     "test:browser": "node scripts/test-m2-browser.js",
+    "test:browser:m3": "node scripts/test-m3-browser.js",
+    "test:browser:m4": "node scripts/test-m4-browser.js",
+    "test:browser:m5": "node scripts/test-m5-browser.js",
     "jev:guardrail": "node scripts/jev/guardrail.js",
     "jev:review": "node scripts/jev/pr-review-gate.js",
     "jev:coverage": "node scripts/jev/test-coverage.js",
@@ -29,6 +32,7 @@
   "license": "MIT",
   "dependencies": {
     "@typesafe-ai/sdk": "^0.6.0",
-    "three": "^0.186.1"
+    "three": "^0.186.1",
+    "ws": "^8.22.0"
   }
 }

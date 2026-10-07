@@ -1,6 +1,6 @@
 # M5 — Multiplayer online para dois jogadores
 
-Status: planejado, **formato provisório**. Dependência: [M4](m4-campanha-completa.md) e simulação testável de M1. A preferência sobre online/local/cooperativo ainda não foi respondida; escolher outro formato exige revisar este marco antes de implementá-lo, sem afetar a campanha solo.
+Status: implementado em 07/10/2026; validação automatizada aprovada com dois navegadores reais. Pendentes: rede real/móvel, latência visual em hardware e playtest. [Relatório por aceite](../VALIDACAO_M5.md). Dependência: [M4](m4-campanha-completa.md) e simulação testável de M1. **Formato confirmado pelo usuário em 07/10/2026: online para dois jogadores, transporte WebSocket com o pacote `ws`.**
 
 ## Objetivo e regras iniciais
 

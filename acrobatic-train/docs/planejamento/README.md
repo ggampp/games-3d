@@ -2,7 +2,7 @@
 
 Data: 06/10/2026. Origem: [plano geral](../../PLANO_FEATURES_TRANSCRICAO.md) e [transcrição](../../transcricao_audio_trem.md).
 
-**M0/M1 validadas e M2 implementada com validação automatizada aprovada em 06/10/2026**. [Relatório M2](VALIDACAO_M2.md), [histórico M0/M1](VALIDACAO_M0_M1.md). Fases 1–3 disponíveis; M3–M6 permanecem planejados. O gate humano da M2 continua pendente.
+**M0/M1 validadas; M2 (06/10/2026), M3 e M4 (07/10/2026) implementadas com validação automatizada aprovada**. [Relatório M4](VALIDACAO_M4.md), [relatório M3](VALIDACAO_M3.md), [relatório M2](VALIDACAO_M2.md), [histórico M0/M1](VALIDACAO_M0_M1.md). Campanha solo de nove fases e troféu disponíveis. **M5 (multiplayer online, 07/10/2026)** implementada com validação automatizada em dois navegadores: [relatório M5](VALIDACAO_M5.md). M6 permanece planejada. Os gates humanos da M2 a M5 continuam pendentes.
 
 ## Como executar o planejamento
 
@@ -21,7 +21,7 @@ Data: 06/10/2026. Origem: [plano geral](../../PLANO_FEATURES_TRANSCRICAO.md) e [
 | M2 | [Fases fáceis](marcos/m2-fases-faceis.md) | Fases 1–3, save, seleção, HUD e coleta aérea | M1 |
 | M3 | [Fases médias](marcos/m3-fases-medias.md) | Fases 4–6 e obstáculos novos | M2 |
 | M4 | [Campanha completa](marcos/m4-campanha-completa.md) | Fases 7–9, troféu e modo infinito | M3 |
-| M5 | [Multiplayer](marcos/m5-multiplayer.md) | Dois clientes, salas e resultado no servidor | M4; formato ainda provisório |
+| M5 | [Multiplayer](marcos/m5-multiplayer.md) | Dois clientes, salas e resultado no servidor | M4; formato confirmado: online, 2 jogadores |
 | M6 | [Mods](marcos/m6-mods.md) | Pacotes declarativos e catálogo gradual | M4; independente da entrega de M5 |
 
 Preparar dados e testes de módulos puros pode ocorrer antes de M0. Alterações de integração em arquivos da loja aguardam sua entrega. O planejamento não autoriza enviar mensagens ao outro agente nem publicar versões.

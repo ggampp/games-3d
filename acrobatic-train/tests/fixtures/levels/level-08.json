@@ -1,0 +1,617 @@
+{
+  "id": "level-08",
+  "number": 8,
+  "name": "Corredor de precisão",
+  "version": "m4-v1",
+  "seed": "acrobatic-campaign-v1-08",
+  "rngVersion": "fnv1a-mulberry32-v1",
+  "lengthM": 1400,
+  "startSpeedMps": 28,
+  "maxSpeedMps": 39,
+  "accelerationMps2": 0.35,
+  "briefing": "Escolha a via com antecedência. Alinhe antes das aberturas e respeite os avisos dos cruzamentos.",
+  "objective": "Extra opcional: concluir sem nenhuma colisão em pórtico.",
+  "encounters": [
+    {
+      "id": "gate-1",
+      "type": "gate",
+      "s": 150,
+      "length": 0.4,
+      "lanes": [
+        0
+      ],
+      "arrivalCycleS": [
+        6
+      ],
+      "safeLane": 1,
+      "message": "CANCELA NO CENTRO · antecipe a direita"
+    },
+    {
+      "id": "gantry-1",
+      "type": "gantry",
+      "s": 330,
+      "length": 1.2,
+      "lanes": [
+        -1,
+        0
+      ],
+      "safeLane": 1,
+      "message": "PÓRTICO · abertura à direita, alinhe"
+    },
+    {
+      "id": "wagon-1",
+      "type": "wagon",
+      "s": 510,
+      "length": 2.6,
+      "lanes": [
+        1,
+        0
+      ],
+      "safeLane": -1,
+      "message": "VAGÃO ⇠ DA DIREITA · duas trocas até a esquerda"
+    },
+    {
+      "id": "ramp-1",
+      "type": "ramp",
+      "s": 690,
+      "length": 7,
+      "lanes": [
+        -1
+      ],
+      "safeLane": 1,
+      "group": "ramp-gap",
+      "message": "RAMPA À ESQUERDA E TRILHO ROMPIDO NO CENTRO · direita contínua"
+    },
+    {
+      "id": "gap-1",
+      "type": "gap",
+      "s": 705,
+      "length": 10,
+      "lanes": [
+        0
+      ],
+      "safeLane": 1,
+      "group": "ramp-gap",
+      "message": "TRILHO ROMPIDO NO CENTRO · não pouse nele"
+    },
+    {
+      "id": "gate-2",
+      "type": "gate",
+      "s": 890,
+      "length": 0.4,
+      "lanes": [
+        1
+      ],
+      "arrivalCycleS": [
+        6
+      ],
+      "safeLane": -1,
+      "group": "gate-poles",
+      "message": "CANCELA À DIREITA E POSTES · esquerda alinhada"
+    },
+    {
+      "id": "poles-1",
+      "type": "poles",
+      "s": 905,
+      "length": 10.5,
+      "lanes": [],
+      "safeLane": -1,
+      "group": "gate-poles",
+      "message": "POSTES ENTRE VIAS · não troque de via"
+    },
+    {
+      "id": "gantry-2",
+      "type": "gantry",
+      "s": 1070,
+      "length": 1.2,
+      "lanes": [
+        -1,
+        0
+      ],
+      "safeLane": 1,
+      "message": "PÓRTICO · abertura à direita; o próximo abre no centro"
+    },
+    {
+      "id": "gantry-3",
+      "type": "gantry",
+      "s": 1150,
+      "length": 1.2,
+      "lanes": [
+        -1,
+        1
+      ],
+      "safeLane": 0,
+      "message": "PÓRTICO · abertura no centro, alinhe já"
+    },
+    {
+      "id": "gap-2",
+      "type": "gap",
+      "s": 1250,
+      "length": 10,
+      "lanes": [
+        -1,
+        0
+      ],
+      "safeLane": 1,
+      "message": "ÚLTIMO REPARO · esquerda e centro rompidos, use a direita"
+    }
+  ],
+  "content": {
+    "barriers": [],
+    "gaps": [
+      {
+        "id": "gap-1:0",
+        "a": 705,
+        "b": 715,
+        "lane": 0
+      },
+      {
+        "id": "gap-2:-1",
+        "a": 1250,
+        "b": 1260,
+        "lane": -1
+      },
+      {
+        "id": "gap-2:0",
+        "a": 1250,
+        "b": 1260,
+        "lane": 0
+      }
+    ],
+    "poles": [
+      {
+        "id": "poles-1:-1.7:0",
+        "s": 905,
+        "lat": -1.7,
+        "height": 3.2,
+        "radius": 0.16
+      },
+      {
+        "id": "poles-1:-1.7:1",
+        "s": 908.5,
+        "lat": -1.7,
+        "height": 3.2,
+        "radius": 0.16
+      },
+      {
+        "id": "poles-1:-1.7:2",
+        "s": 912,
+        "lat": -1.7,
+        "height": 3.2,
+        "radius": 0.16
+      },
+      {
+        "id": "poles-1:-1.7:3",
+        "s": 915.5,
+        "lat": -1.7,
+        "height": 3.2,
+        "radius": 0.16
+      },
+      {
+        "id": "poles-1:1.7:0",
+        "s": 905,
+        "lat": 1.7,
+        "height": 3.2,
+        "radius": 0.16
+      },
+      {
+        "id": "poles-1:1.7:1",
+        "s": 908.5,
+        "lat": 1.7,
+        "height": 3.2,
+        "radius": 0.16
+      },
+      {
+        "id": "poles-1:1.7:2",
+        "s": 912,
+        "lat": 1.7,
+        "height": 3.2,
+        "radius": 0.16
+      },
+      {
+        "id": "poles-1:1.7:3",
+        "s": 915.5,
+        "lat": 1.7,
+        "height": 3.2,
+        "radius": 0.16
+      }
+    ],
+    "ramps": [
+      {
+        "id": "ramp-1",
+        "s": 690,
+        "lane": -1
+      }
+    ],
+    "items": [
+      {
+        "id": "level-08:gate-1:0",
+        "s": 162.2,
+        "lane": 1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-08:gate-1:1",
+        "s": 165.2,
+        "lane": 1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-08:gate-1:2",
+        "s": 168.2,
+        "lane": 1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-08:gate-1:3",
+        "s": 171.2,
+        "lane": 1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-08:gate-1:4",
+        "s": 174.2,
+        "lane": 1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-08:gantry-1:0",
+        "s": 342.6,
+        "lane": 1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-08:gantry-1:1",
+        "s": 345.6,
+        "lane": 1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-08:gantry-1:2",
+        "s": 348.6,
+        "lane": 1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-08:gantry-1:3",
+        "s": 351.6,
+        "lane": 1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-08:gantry-1:4",
+        "s": 354.6,
+        "lane": 1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-08:wagon-1:0",
+        "s": 523.3,
+        "lane": -1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-08:wagon-1:1",
+        "s": 526.3,
+        "lane": -1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-08:wagon-1:2",
+        "s": 529.3,
+        "lane": -1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-08:wagon-1:3",
+        "s": 532.3,
+        "lane": -1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-08:wagon-1:4",
+        "s": 535.3,
+        "lane": -1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-08:ramp-1:air",
+        "s": 713.3831020490142,
+        "y": 9.6,
+        "lane": -1,
+        "level": 2,
+        "points": 50
+      },
+      {
+        "id": "level-08:gap-1:0",
+        "s": 727,
+        "lane": 1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-08:gap-1:1",
+        "s": 730,
+        "lane": 1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-08:gap-1:2",
+        "s": 733,
+        "lane": 1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-08:gap-1:3",
+        "s": 736,
+        "lane": 1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-08:gap-1:4",
+        "s": 739,
+        "lane": 1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-08:poles-1:0",
+        "s": 927.5,
+        "lane": -1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-08:poles-1:1",
+        "s": 930.5,
+        "lane": -1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-08:poles-1:2",
+        "s": 933.5,
+        "lane": -1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-08:poles-1:3",
+        "s": 936.5,
+        "lane": -1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-08:poles-1:4",
+        "s": 939.5,
+        "lane": -1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-08:gantry-2:0",
+        "s": 1082.6,
+        "lane": 1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-08:gantry-2:1",
+        "s": 1085.6,
+        "lane": 1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-08:gantry-2:2",
+        "s": 1088.6,
+        "lane": 1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-08:gantry-2:3",
+        "s": 1091.6,
+        "lane": 1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-08:gantry-2:4",
+        "s": 1094.6,
+        "lane": 1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-08:gantry-3:0",
+        "s": 1162.6,
+        "lane": 0,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-08:gantry-3:1",
+        "s": 1165.6,
+        "lane": 0,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-08:gantry-3:2",
+        "s": 1168.6,
+        "lane": 0,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-08:gantry-3:3",
+        "s": 1171.6,
+        "lane": 0,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-08:gantry-3:4",
+        "s": 1174.6,
+        "lane": 0,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-08:gap-2:0",
+        "s": 1272,
+        "lane": 1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-08:gap-2:1",
+        "s": 1275,
+        "lane": 1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-08:gap-2:2",
+        "s": 1278,
+        "lane": 1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-08:gap-2:3",
+        "s": 1281,
+        "lane": 1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-08:gap-2:4",
+        "s": 1284,
+        "lane": 1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      }
+    ],
+    "gates": [
+      {
+        "id": "gate-1:0",
+        "encounterId": "gate-1",
+        "s": 150,
+        "lane": 0,
+        "pivotLat": 1.7,
+        "dir": -1,
+        "arrivalCycleS": 6,
+        "phaseOffsetS": 0.8000000000000007
+      },
+      {
+        "id": "gate-2:1",
+        "encounterId": "gate-2",
+        "s": 890,
+        "lane": 1,
+        "pivotLat": 5.1,
+        "dir": -1,
+        "arrivalCycleS": 6,
+        "phaseOffsetS": 2.8166666666666664
+      }
+    ],
+    "gantries": [
+      {
+        "id": "gantry-1",
+        "encounterId": "gantry-1",
+        "s": 330,
+        "openLane": 1,
+        "openLat": 3.4
+      },
+      {
+        "id": "gantry-2",
+        "encounterId": "gantry-2",
+        "s": 1070,
+        "openLane": 1,
+        "openLat": 3.4
+      },
+      {
+        "id": "gantry-3",
+        "encounterId": "gantry-3",
+        "s": 1150,
+        "openLane": 0,
+        "openLat": 0
+      }
+    ],
+    "wagons": [
+      {
+        "id": "wagon-1",
+        "encounterId": "wagon-1",
+        "s": 510,
+        "lanes": [
+          1,
+          0
+        ],
+        "side": 1,
+        "restLat": 9.5,
+        "reachLat": 1,
+        "startTimeS": 13.616666666666665
+      }
+    ]
+  }
+}

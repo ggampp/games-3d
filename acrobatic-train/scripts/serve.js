@@ -1,7 +1,9 @@
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
+import { WebSocketServer } from 'ws';
 import { askJev, choice, score } from './jev/client.js';
+import { RoomManager } from './server/rooms.js';
 
 const PORT = process.env.PORT || 3000;
 const MIME_TYPES = {
@@ -71,6 +73,12 @@ const server = http.createServer(async (req, res) => {
     });
     return;
   }
+  // Room counters for local load/cleanup measurements only (no identities), opt-in via env.
+  if (req.method === 'GET' && req.url === '/api/rooms/stats' && process.env.ROOM_STATS === '1') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ...rooms.stats(), sockets: wss.clients.size }));
+    return;
+  }
   let reqPath = decodeURI(req.url.split('?')[0]);
   if (reqPath === '/') reqPath = '/index.html';
 
@@ -101,6 +109,24 @@ const server = http.createServer(async (req, res) => {
     fs.createReadStream(filePath).pipe(res);
   });
 });
+
+// ---------- M5: two-player rooms over WebSocket, only on /ws ----------
+const rooms = new RoomManager();
+// Frames above 16 KiB close the socket; 4–16 KiB frames get a 'too-large' protocol error.
+const wss = new WebSocketServer({ noServer: true, maxPayload: 16 * 1024 });
+server.on('upgrade', (req, socket, head) => {
+  if (req.url.split('?')[0] !== '/ws') { socket.destroy(); return; }
+  wss.handleUpgrade(req, socket, head, ws => wss.emit('connection', ws, req));
+});
+wss.on('connection', ws => {
+  const conn = { send: text => { if (ws.readyState === ws.OPEN) ws.send(text); }, close: () => ws.close() };
+  rooms.connect(conn);
+  ws.on('message', (data, isBinary) => rooms.message(conn, isBinary ? '' : data.toString()));
+  ws.on('close', () => rooms.disconnect(conn));
+  ws.on('error', () => ws.terminate());
+});
+const shutdown = () => { for (const ws of wss.clients) ws.terminate(); wss.close(); server.close(() => process.exit(0)); };
+process.on('SIGTERM', shutdown); process.on('SIGINT', shutdown);
 
 server.listen(PORT, () => {
   console.log(`\n🚀 Acrobatic Train 3D rodando em: http://localhost:${PORT}`);

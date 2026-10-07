@@ -1,6 +1,6 @@
 # Fase 9 — Desafio final
 
-Status: planejada; sem implementação/testes executados. Entrega: M4. Dependência: Fase 8 e oito conclusões oficiais registradas; conquista de M4. Referências: [contratos](../CONTRATOS.md), [testes](../TESTES.md), [índice](../README.md).
+Status: implementada na M4 e validada automaticamente em 07/10/2026. [Resultados](../VALIDACAO_M4.md). Playtest humano pendente. Conteúdo e valores efetivos estão em src/levels/level-config.js e nas fixtures/replays. Entrega: M4. Dependência: Fase 8 e oito conclusões oficiais registradas; conquista de M4. Referências: [contratos](../CONTRATOS.md), [testes](../TESTES.md), [índice](../README.md).
 
 ## Objetivo e experiência
 

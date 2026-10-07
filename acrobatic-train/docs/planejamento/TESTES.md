@@ -1,6 +1,6 @@
 # Estratégia e catálogo de testes
 
-Status: catálogo de testes planejado originalmente; **testes M0/M1/M2 implementados e executados** em 06/10/2026. Veja o [relatório M2](VALIDACAO_M2.md) e o [histórico M0/M1](VALIDACAO_M0_M1.md). Existem agora testes de loja, estado, simulação, HUD e recursos, além do harness `scripts/test-m1-browser.js`. Os casos de M3–M6 e os nomes ainda não criados abaixo continuam como propostas.
+Status: catálogo de testes planejado originalmente; **testes M0/M1/M2 implementados e executados** em 06/10/2026 e **M3/M4** em 07/10/2026 (`tests/m3-hazards.test.js`, `tests/m4-campaign.test.js`, `scripts/test-m3-browser.js`, `scripts/test-m4-browser.js`). Veja o [relatório M4](VALIDACAO_M4.md), o [relatório M3](VALIDACAO_M3.md), o [relatório M2](VALIDACAO_M2.md) e o [histórico M0/M1](VALIDACAO_M0_M1.md). Existem agora testes de loja, estado, simulação, HUD e recursos, além do harness `scripts/test-m1-browser.js`. Os casos de M5–M6 e os nomes ainda não criados abaixo continuam como propostas.
 
 ## 1. Organização proposta
 

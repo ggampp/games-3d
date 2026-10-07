@@ -14,9 +14,10 @@
   --font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
+/* Kept off the horizon: obstacles 60–100 m ahead appear just below it, at the centre. */
 .campaign-progress {
-  position: absolute; top: 155px; left: 50%; transform: translateX(-50%);
-  width: min(420px, calc(100vw - 32px)); padding: 10px 14px;
+  position: absolute; top: 160px; left: 20px;
+  width: min(340px, calc(100vw - 40px)); padding: 10px 14px;
   background: rgba(9, 18, 29, 0.92); border: 1px solid rgba(255,255,255,0.18);
   border-radius: 12px; color: #fff; font-size: 12px; pointer-events: none;
 }
@@ -39,7 +40,35 @@ button.skin-selector-card { background: transparent; border: 0; color: inherit; 
 @media (max-width: 520px) { .campaign-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .modal-card { max-height: calc(100dvh - 32px); overflow-y: auto; }
 button:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
-@media (max-width: 768px) { .campaign-progress { top: 200px; } }
+@media (max-width: 768px) {
+  .campaign-progress { top: auto; left: 50%; transform: translateX(-50%); bottom: calc(136px + env(safe-area-inset-bottom, 0px)); }
+  #run-objective { display: none; }
+}
+/* M4: campaign trophy and gallery. The global reduced-motion rule below stops the celebration. */
+.campaign-trophy { display: flex; align-items: center; gap: 12px; margin: 8px 0 4px; padding: 10px 14px; border-radius: 12px;
+  background: linear-gradient(135deg, rgba(255, 209, 102, 0.22), rgba(255, 95, 210, 0.16)); border: 1px solid rgba(255, 209, 102, 0.6); }
+.campaign-trophy[hidden] { display: none; }
+.campaign-trophy-icon { font-size: 38px; line-height: 1; }
+.campaign-trophy-text { margin: 0; color: #ffe8a8; font-weight: 700; font-size: 14px; }
+.campaign-trophy.is-new .campaign-trophy-icon { animation: trophy-pop 0.9s ease-out 2; }
+@keyframes trophy-pop { 0% { transform: scale(0.6) rotate(-12deg); } 60% { transform: scale(1.25) rotate(8deg); } 100% { transform: scale(1) rotate(0); } }
+.campaign-gallery { margin: 12px 0; padding: 10px 12px; border-radius: 10px; background: rgba(255,255,255,0.05); text-align: left; }
+.campaign-gallery-title { margin: 0 0 6px; font-size: 13px; letter-spacing: 1px; color: #00f2fe; }
+.campaign-gallery-trophy { margin: 0 0 6px; color: #ffd166; font-weight: 700; font-size: 13px; }
+.campaign-gallery-list { margin: 0; padding-left: 18px; font-size: 12px; color: #d8e2ec; }
+.campaign-gallery-list:empty { display: none; }
+/* M5: online lobby, result and race status. */
+.online-form, .online-lobby { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; text-align: left; }
+.online-form[hidden], .online-lobby[hidden], .campaign-online[hidden] { display: none; }
+.online-field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #c9d6e2; }
+.online-field input, .online-field select { font: inherit; font-size: 15px; padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.25); background: #0e1a27; color: #fff; }
+.online-field input:focus-visible, .online-field select:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+#online-code { text-transform: uppercase; letter-spacing: 4px; }
+.online-room { margin: 0; font-size: 14px; } .online-room strong { letter-spacing: 4px; color: #00f2fe; font-size: 18px; }
+.online-players { margin: 6px 0; padding-left: 18px; font-size: 13px; color: #e2ebf3; text-align: left; }
+.online-status { min-height: 1.2em; color: #ffd166; font-size: 13px; font-weight: 700; }
+.campaign-online { margin: 6px 0 0; font-size: 12px; color: #9fe9ff; }
+.campaign-online.unstable { color: #ff7b7b; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
@@ -1325,7 +1354,8 @@ canvas {
   .score-label, .high-score, .stat-title { font-size: 9px; }
   .skin-selector-card .stat-item, .rail-signal-box .signal-info { display: none; }
   .stats-container { gap: 6px; }
-  .campaign-progress { top: 90px; padding: 6px 10px; }
+  .campaign-progress { top: 90px; bottom: auto; left: 8px; transform: none; width: 250px; padding: 6px 10px; }
+  #run-objective { display: none; }
   #stunt-banner { top: 180px; }
   #drift-combo-hud { top: 230px; }
 }

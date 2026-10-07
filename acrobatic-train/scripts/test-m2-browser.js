@@ -1,76 +1,18 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { createRequire } from 'node:module';
-import { spawn } from 'node:child_process';
-import { ProgressStore, PROGRESS_KEY } from '../src/core/progress-store.js';
+import { ProgressStore } from '../src/core/progress-store.js';
 import { ROUTES, AIR_ROUTE, ZERO_SCORE_ROUTE } from '../tests/helpers/routes.js';
-let playwright;
-try { playwright = await import('playwright'); }
-catch { if (!process.env.PLAYWRIGHT_MODULE_DIR) throw Error('Install Playwright or set PLAYWRIGHT_MODULE_DIR.'); playwright = createRequire(path.join(process.env.PLAYWRIGHT_MODULE_DIR, 'package.json'))('playwright'); }
-const port = process.env.TEST_PORT || '3191', url = `http://127.0.0.1:${port}`;
-const runId = process.env.TEST_RUN_ID || `m2-${Date.now()}`, directory = path.resolve('artifacts/validation', runId);
-await fs.mkdir(directory, { recursive: true });
-const server = spawn(process.execPath, ['scripts/serve.js'], { env: { ...process.env, PORT: port }, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
-let serverError = ''; server.stderr.on('data', data => { serverError += data.toString(); });
-const reports = [], captures = []; let browser;
-const snapshot = page => page.evaluate(() => window.__TRAIN_TEST_HOOKS__.snapshot());
-const step = (page, ticks) => page.evaluate(n => window.__TRAIN_TEST_HOOKS__.step(n), ticks);
-async function ready(page) { await page.goto(url, { waitUntil: 'networkidle' }); await page.waitForFunction(() => Boolean(window.__TRAIN_TEST_HOOKS__)); }
-async function steer(page, end, lane, touch) {
-  const current = Math.round((await snapshot(page)).targets[end] / 3.4), direction = Math.sign(lane - current);
-  for (let i = 0; i < Math.abs(lane - current); i++) {
-    if (touch) await page.locator(`#touch-${end}-${direction > 0 ? 'right' : 'left'}`).tap();
-    else await page.keyboard.press(end === 'front' ? direction > 0 ? 'KeyD' : 'KeyA' : direction > 0 ? 'ArrowRight' : 'ArrowLeft');
-  }
-}
-async function until(page, atM) {
-  for (let i = 0; i < 400; i++) { const s = await snapshot(page); if (s.dist >= atM || s.mode !== 'playing') return s; await step(page, Math.max(1, Math.min(120, Math.floor((atM - s.dist) / s.speed * 60)))); }
-  throw Error('Route did not advance');
-}
-async function replay(page, commands, length, touch = false) {
-  for (const command of commands) {
-    const state = await until(page, command.atM); assert.equal(state.mode, 'playing', state.reason);
-    for (const end of ['front', 'rear']) if (command[end] !== undefined) await steer(page, end, command[end], touch);
-  }
-  await until(page, length + 1);
-  const state = await snapshot(page); assert.equal(state.mode, 'levelComplete', `${state.levelId}: ${state.reason}`);
-  await page.locator('#level-result-modal').waitFor({ state: 'visible' }); return snapshot(page);
-}
-async function capture(page, name) {
-  // A visible modal can still be at opacity zero in its enter animation.
-  await page.evaluate(() => Promise.all(document.getAnimations().filter(animation => animation.effect?.target?.closest?.('.overlay-modal')).map(animation => animation.finished.catch(() => {}))));
-  await page.screenshot({ path: path.join(directory, `${name}.png`) }); captures.push(name);
-}
-async function context(options = {}, fixture = null, broken = false) {
-  const ctx = await browser.newContext(options);
-  await ctx.addInitScript(({ fixture, broken, key }) => {
-    window.__TRAIN_TEST_CONFIG__ = { manualClock: true };
-    if (fixture && location.hostname === '127.0.0.1' && !localStorage.getItem(key)) localStorage.setItem(key, fixture);
-    if (broken && location.hostname === '127.0.0.1') {
-      localStorage.setItem('acrobatic_train_bank_points', '2000');
-      localStorage.setItem('acrobatic_train_unlocked_trains', '["cyber","steam"]'); localStorage.setItem('acrobatic_train_current_train', 'steam');
-      const get = Storage.prototype.getItem, set = Storage.prototype.setItem;
-      Storage.prototype.getItem = function (k) { if (k === key) throw Error('denied'); return get.call(this, k); };
-      Storage.prototype.setItem = function (k, v) { if (k === key) throw Error('quota'); return set.call(this, k, v); };
-    }
-  }, { fixture, broken, key: PROGRESS_KEY });
-  const page = await ctx.newPage(); const errors = [];
-  page.on('pageerror', error => errors.push(error.message)); await page.route('**/api/stunt-judge', route => route.abort());
-  await ready(page); return { ctx, page, errors };
-}
+import { createHarness } from './browser-harness.js';
+const harness = await createHarness({ defaultRunId: `m2-${Date.now()}` });
+const { runId, directory, captures, snapshot, step, until, steer, replay, capture, context } = harness;
+const reports = [];
 const unlocked = new ProgressStore();
 unlocked.complete({ levelId: 'level-01', score: 0, timeS: 40, eventId: 'fixture-1' });
 unlocked.complete({ levelId: 'level-02', score: 0, timeS: 40, eventId: 'fixture-2' });
 const fixture = JSON.stringify(unlocked.data);
 try {
-  let online = false;
-  for (let i = 0; i < 50; i++) {
-    if (server.exitCode !== null) throw Error(`Server exit: ${serverError}`);
-    try { if ((await fetch(url)).ok) { online = true; break; } } catch { /* Startup only. */ }
-    await new Promise(resolve => setTimeout(resolve, 100));
-  }
-  assert.ok(online); browser = await playwright.chromium.launch({ headless: true, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+  await harness.start();
   if (!process.env.TEST_SCOPE || process.env.TEST_SCOPE === 'ui') for (const settings of [
     { label: 'desktop', viewport: { width: 1366, height: 768 }, hasTouch: false },
     { label: 'portrait', viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true },
@@ -106,8 +48,10 @@ try {
     await page.locator('#level-next-btn').click(); assert.match(await page.locator('#briefing-title').textContent(), /FASE 3/);
     await page.locator('#briefing-start-btn').click(); const third = await replay(page, ROUTES['level-03'], 850, settings.hasTouch);
     assert.equal(third.metrics.aerialItems, 0); assert.equal(third.metrics.stuntsLanded, 0); assert.equal(third.progress.highestUnlockedLevel, 4);
-    assert.deepEqual(third.progress.achievements, []); assert.equal(await page.locator('#level-next-btn').isVisible(), false);
-    await page.locator('#level-menu-btn').click(); assert.equal(await page.locator('[data-level-id="level-04"]').isDisabled(), true);
+    // M3 makes phase 4 playable after phase 3; phases 7–9 stay locked.
+    assert.deepEqual(third.progress.achievements, []); assert.equal(await page.locator('#level-next-btn').isVisible(), true);
+    await page.locator('#level-menu-btn').click(); assert.equal(await page.locator('[data-level-id="level-04"]').isDisabled(), false);
+    assert.equal(await page.locator('[data-level-id="level-05"]').isDisabled(), true); assert.equal(await page.locator('[data-level-id="level-07"]').isDisabled(), true);
     await page.keyboard.press('Tab'); assert.ok(await page.evaluate(() => document.activeElement.closest('#campaign-map-modal') !== null));
     assert.deepEqual(errors, []); reports.push({ scenario: settings.label, passed: true, progression: [1, 2, 3], pageErrors: errors }); await ctx.close();
   }
@@ -192,4 +136,4 @@ try {
     captures: captures.map(state => ({ mode: state.startsWith('portrait') ? 'mobile' : state.startsWith('landscape') ? 'mobile-landscape' : 'desktop', state, report: `artifacts/validation/${runId}/browser-results.json` })),
     artifacts: artifactPaths, limitation: 'Functional tests with software GPU and accelerated/manual test clock. Human playtest and hardware FPS unverified.' }, null, 2));
   console.log(JSON.stringify({ directory, reports }, null, 2));
-} finally { await browser?.close(); server.kill(); }
+} finally { await harness.close(); }

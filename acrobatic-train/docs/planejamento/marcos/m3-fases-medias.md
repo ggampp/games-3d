@@ -1,6 +1,6 @@
 # M3 — Fases 4–6 e novas famílias de obstáculos
 
-Status: planejado. Dependência: [M2](m2-fases-faceis.md). Próximo: [M4](m4-campanha-completa.md). Conteúdo: [4](../fases/fase-04.md), [5](../fases/fase-05.md), [6](../fases/fase-06.md).
+Status: implementado em 07/10/2026; validação automatizada aprovada; gate humano M3-A07 pendente. [Relatório por aceite](../VALIDACAO_M3.md). Dependência: [M2](m2-fases-faceis.md). Próximo: [M4](m4-campanha-completa.md). Conteúdo: [4](../fases/fase-04.md), [5](../fases/fase-05.md), [6](../fases/fase-06.md).
 
 ## Objetivo
 

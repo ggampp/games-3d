@@ -1,0 +1,113 @@
+{
+  "runId": "m4-e2e-20261007",
+  "generatedAt": "2026-10-07T01:12:40.524Z",
+  "reports": [
+    {
+      "scenario": "m4-desktop-campaign-1-9",
+      "passed": true,
+      "levels": [
+        {
+          "id": "level-01",
+          "timeS": 34.61666666666667,
+          "score": 250,
+          "unlocked": 2,
+          "oscillators": 89
+        },
+        {
+          "id": "level-02",
+          "timeS": 37.416666666666664,
+          "score": 250,
+          "unlocked": 3,
+          "oscillators": 103
+        },
+        {
+          "id": "level-03",
+          "timeS": 37.56666666666667,
+          "score": 200,
+          "unlocked": 4,
+          "oscillators": 85
+        },
+        {
+          "id": "level-04",
+          "timeS": 37.78333333333333,
+          "score": 250,
+          "unlocked": 5,
+          "oscillators": 115
+        },
+        {
+          "id": "level-05",
+          "timeS": 39.71666666666667,
+          "score": 250,
+          "unlocked": 6,
+          "oscillators": 109
+        },
+        {
+          "id": "level-06",
+          "timeS": 39.88333333333333,
+          "score": 250,
+          "unlocked": 7,
+          "oscillators": 121
+        },
+        {
+          "id": "level-07",
+          "timeS": 40.083333333333336,
+          "score": 240,
+          "unlocked": 8,
+          "oscillators": 131
+        },
+        {
+          "id": "level-08",
+          "timeS": 40.333333333333336,
+          "score": 300,
+          "unlocked": 9,
+          "oscillators": 155
+        },
+        {
+          "id": "level-09",
+          "timeS": 40.61666666666667,
+          "score": 430,
+          "unlocked": 9,
+          "oscillators": 0
+        }
+      ],
+      "retryKeepsOneTrophy": true,
+      "galleryItems": 9,
+      "infiniteLeavesProgress": true,
+      "mutedFinalOscillators": 0,
+      "pageErrors": []
+    },
+    {
+      "scenario": "m4-portrait-final",
+      "passed": true,
+      "pageErrors": []
+    },
+    {
+      "scenario": "m4-long-train-resources",
+      "passed": true,
+      "runs": [
+        {
+          "trainId": "class395",
+          "finalLevel": "levelComplete",
+          "carriages": 11,
+          "softwareFps": 1.4,
+          "memory": {
+            "geometries": 137,
+            "textures": 2
+          }
+        },
+        {
+          "trainId": "steam",
+          "finalLevel": "levelComplete",
+          "carriages": 1,
+          "softwareFps": 1.4,
+          "memory": {
+            "geometries": 156,
+            "textures": 2
+          }
+        }
+      ],
+      "pageErrors": []
+    }
+  ],
+  "limitation": "Software GPU (SwiftShader) and manual test clock: softwareFps documents relative cost only. Hardware frame-time budgets, human playtest and screen readers unverified."
+}

@@ -22,7 +22,11 @@ import { RunSession } from '../levels/campaign.js';
 import { LEVEL_ONE, LEVELS, getLevel, createLevelContent, getWarning } from '../levels/level-config.js';
 import { ProgressStore } from './progress-store.js';
 import { CampaignUi } from '../ui/campaign-ui.js';
-import { createWorkBarrier } from '../entities/obstacles.js';
+import { createWorkBarrier, OBSTACLE_MESHES } from '../entities/obstacles.js';
+import { HazardWorld } from '../physics/hazards.js';
+import { OnlineClient, SnapshotBuffer, TICK_MS } from '../network/online-client.js';
+import { contentHash } from '../network/protocol.js';
+import { OnlineUi } from '../ui/online-ui.js';
 import { stepAcrobatics, TRAIN_GEOMETRY, JUMP_SETTINGS } from '../physics/acrobatics.js';
 import { segAt, trackRetention } from '../entities/track.js';
 import { ease, easeD, moveLift, targetMove, stepMove } from '../physics/train-motion.js';
@@ -141,13 +145,17 @@ import { TransformInterpolation } from '../scene/interpolation.js';
   try { storage = window.localStorage; } catch { /* Play in memory if storage is unavailable. */ }
   const shop = new ShopState(storage);
   const progress = new ProgressStore(storage);
-  const run = new RunSession({ canStartLevel: level => progress.canPlay(level.id) && getLevel(level.id) === level });
+  // Online rooms may pick any shipped phase; it never unlocks or writes the solo campaign.
+  const run = new RunSession({ canStartLevel: level => getLevel(level.id) === level && (selectedMode === 'online' || progress.canPlay(level.id)) });
   const campaignUi = new CampaignUi(hud, progress, LEVELS);
   let selectedLevelId = progress.continueLevelId();
   let selectedMode = 'campaign';
   let activeLevel = LEVEL_ONE;
   let activeProfile = getTrainGameplayProfile(shop.selected, activeLevel);
   const pendingJudges = new Set();
+  let levelContent = null;
+  let online = null, ghost = null; // M5 online race state and opponent ghost (see ONLINE RACE below)
+  let hazardWorld = new HazardWorld({}, TRAIN_GEOMETRY);
   let uiCommands = [];
   let renderedFrames = 0;
   let animationFrame = 0;
@@ -181,6 +189,7 @@ import { TransformInterpolation } from '../scene/interpolation.js';
     if (run.state.mode !== 'playing') return 0;
     const mult = activeProfile.bonusMultiplier;
     const earned = Math.round(pts * mult);
+    if (selectedMode === 'online') { run.addScore(earned, { deterministic }); score = run.score; return earned; }
     if (!shop.awardPoints({ eventId, runId: run.state.runId, amount: earned, source })) return 0;
     run.addScore(earned, { deterministic }); score = run.score;
     syncShop();
@@ -213,9 +222,15 @@ import { TransformInterpolation } from '../scene/interpolation.js';
     return moveLift(moves[end], { hop: HOP, airMax: AIR_MAX, airFade: AIR_FADE });
   };
 
-  function setTarget(end, track) {
+  function setTarget(end, track, { remote = true } = {}) {
     if (!targetMove(moves[end], track, HOP)) return;
     sound.hop();
+    // Online: the move is predicted locally now and sent for the next tick, which the server applies.
+    if (remote && online?.race && !online.race.result && run.state.mode === 'playing') {
+      const seq = online.client.input(online.race.runId, run.tick + 1, { [end]: Math.round(track / TRACK_SPACING) });
+      online.race.pending.push({ seq, tick: run.tick + 1 }); online.race.inputs += 1;
+      online.race.sent.push({ seq, tick: run.tick + 1, end, lane: Math.round(track / TRACK_SPACING) }); if (online.race.sent.length > 32) online.race.sent.shift();
+    }
   }
 
   function stepMoves(dt) {
@@ -463,7 +478,7 @@ import { TransformInterpolation } from '../scene/interpolation.js';
   const railTopMat = std(0xe0e6ed, 0.95, 0.15, { side: THREE.DoubleSide });
   const gapMat = std(0x2d1f14, 0, 1, { polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
 
-  const ramps = [], poles = [], items = [], gaps = [], barriers = [];
+  const ramps = [], poles = [], items = [], gaps = [], barriers = [], hazardMeshes = [];
 
   function railRanges(seg, tz) {
     let ranges = [[0, seg.len]];
@@ -523,11 +538,12 @@ import { TransformInterpolation } from '../scene/interpolation.js';
     drop(seg.items, items);
     drop(seg.gaps, gaps);
     drop(seg.barriers, barriers);
+    drop(seg.hazards, hazardMeshes);
   }
 
   const newSeg = (s0, len, x0, z0, h0, k) => ({
     s0, len, x0, z0, h0, k,
-    ramps: [], poles: [], items: [], gaps: [], barriers: [], meshes: []
+    ramps: [], poles: [], items: [], gaps: [], barriers: [], hazards: [], meshes: []
   });
 
   // Track ties (sleepers) instancing
@@ -738,10 +754,34 @@ import { TransformInterpolation } from '../scene/interpolation.js';
     }
   }
 
+  /** M3 families: the mesh samples the same simulation-time state the HazardWorld collides with. */
+  function addHazard(seg, family, data) {
+    const asset = OBSTACLE_MESHES[family](THREE, data), point = segAt(seg, data.s - seg.s0);
+    asset.group.position.set(point.x, 0, point.z); asset.group.rotation.y = -point.h; scene.add(asset.group);
+    const object = { family, data, s: data.s, mesh: asset.group, movers: asset.movers, update: asset.update, dispose: asset.dispose, phase: asset.update(run.timeS) };
+    hazardMeshes.push(object); seg.hazards.push(object);
+  }
+
+  function updateHazards() {
+    for (const hazard of hazardMeshes) {
+      const phase = hazard.update(run.timeS), near = hazard.s > dist && hazard.s - dist < 160;
+      if (mode === 'playing' && near && phase !== hazard.phase) {
+        if (hazard.family === 'gate' && phase === 'warning') sound.gateBell();
+        if (hazard.family === 'wagon' && phase === 'entering') sound.wagonAlert();
+      }
+      hazard.phase = phase;
+    }
+  }
+
   function initTrack() {
+    levelContent = null; hazardWorld = new HazardWorld({}, TRAIN_GEOMETRY);
     if (activeLevel) {
       const seg = newSeg(-TRACK_BEHIND - 10, TRACK_BEHIND + 10 + activeLevel.lengthM + 100, -TRACK_BEHIND - 10, 0, 0, 0);
       const content = createLevelContent(activeLevel);
+      levelContent = content; hazardWorld = new HazardWorld(content, TRAIN_GEOMETRY);
+      for (const gate of content.gates) addHazard(seg, 'gate', gate);
+      for (const gantry of content.gantries) addHazard(seg, 'gantry', gantry);
+      for (const wagon of content.wagons) addHazard(seg, 'wagon', wagon);
       for (const gap of content.gaps) addGap(seg, gap.lane * TRACK_SPACING, gap.a, gap.b);
       for (const ramp of content.ramps) addRamp(seg, ramp.s, ramp.lane * TRACK_SPACING);
       for (const pole of content.poles) addPole(seg, pole.s, pole.lat);
@@ -865,12 +905,11 @@ import { TransformInterpolation } from '../scene/interpolation.js';
   let carriages = [];
   let bodyPivot = null;
 
+  const TRAIN_CONSTANTS = { CAR_LEN, CAR_W, SIDE_H, BODY_Y, ROOF_Y, BOGIE, GAUGE, RAIL_TOP, WHEEL_R, WC };
   function applyTrainModel(trainId) {
     if (!TRAIN_CATALOG[trainId]) trainId = 'cyber';
     TRACK_BEHIND = trackRetention(TRAIN_CATALOG[trainId].maxCars, CAR_LEN);
-    const constants = {
-      CAR_LEN, CAR_W, SIDE_H, BODY_Y, ROOF_Y, BOGIE, GAUGE, RAIL_TOP, WHEEL_R, WC
-    };
+    const constants = TRAIN_CONSTANTS;
 
     // 1. Clean disposal of previous train body assets (Rule 4 compliant)
     if (currentTrainBodyGroup && bodyPivot) {
@@ -1049,6 +1088,12 @@ import { TransformInterpolation } from '../scene/interpolation.js';
     rb.q.set(rb.q.x + qW.x, rb.q.y + qW.y, rb.q.z + qW.z, rb.q.w + qW.w).normalize();
   }
 
+  const HAZARD_CRASH = {
+    gate: { default: 'A cancela fechada atingiu o trem! Leia o sinal e use a via sem cancela.', post: 'O trem raspou no poste da cancela! Troque de via antes dela.' },
+    gantry: { default: 'O trem bateu na lateral do pórtico! Alinhe frente e traseira na abertura.', roof: 'O trem bateu no teto do pórtico! Não salte dentro da abertura.' },
+    wagon: { default: 'Colisão com o vagão de manutenção! Desvie para o lado oposto ao que ele vem.' },
+  };
+
   // Hit testing & Switches
   function checkHits(half, slant, lf, lr, jy) {
     if (run.state.mode !== 'playing') return;
@@ -1082,6 +1127,9 @@ import { TransformInterpolation } from '../scene/interpolation.js';
         }
       }
     }
+
+    const hazardHit = hazardWorld.check({ ...collisionPose, top: jy + Math.max(lf, lr) + TRAIN_GEOMETRY.bodyHeight, timeS: run.timeS });
+    if (hazardHit) { triggerCrash(HAZARD_CRASH[hazardHit.family][hazardHit.part] || HAZARD_CRASH[hazardHit.family].default); return; }
 
 
     // Collectible Rings & Gems with Drift Multiplier
@@ -1190,6 +1238,7 @@ import { TransformInterpolation } from '../scene/interpolation.js';
     onCycleSkin: cycleSkin,
     onStoreToggle: () => toggleStore(),
     onAction: () => {
+      if (online) return;
       if (mode === 'over' || mode === 'levelComplete') resetGame();
       else if (mode === 'paused') togglePause();
       else if (mode === 'playing') blowHorn();
@@ -1202,6 +1251,7 @@ import { TransformInterpolation } from '../scene/interpolation.js';
   });
 
   function cycleSkin() {
+    if (onlineBlocks()) return;
     const catalogKeys = Object.keys(TRAIN_CATALOG);
     const unlocked = catalogKeys.filter((k) => unlockedTrains.includes(k) || TRAIN_CATALOG[k].price === 0);
     const currIdx = unlocked.indexOf(shop.selected);
@@ -1223,8 +1273,10 @@ import { TransformInterpolation } from '../scene/interpolation.js';
     hud.renderStore(TRAIN_CATALOG, unlockedTrains, shop.selected, bankPoints, equipTrain, buyTrain);
   }
 
+  /** Online races never pause or swap equipment: the room keeps running for both players. */
+  const onlineBlocks = () => { if (!online?.race || online.race.result) return false; hud.showStunt('CORRIDA ONLINE NÃO PAUSA'); return true; };
   function toggleStore(forceState) {
-    if (mode === 'crash') return;
+    if (mode === 'crash' || onlineBlocks()) return;
     const opening = forceState ?? (hud.storeModal?.hidden ?? true);
     if (opening) {
       run.pause('store'); mode = run.state.mode;
@@ -1242,7 +1294,7 @@ import { TransformInterpolation } from '../scene/interpolation.js';
 
   function equipTrain(trainId) {
     if (!shop.equip(trainId)) return;
-    if (mode === 'ready' || mode === 'over' || mode === 'levelComplete') {
+    if (!online?.race && (mode === 'ready' || mode === 'over' || mode === 'levelComplete')) {
       currentTrainId = shop.selected;
       activeProfile = getTrainGameplayProfile(currentTrainId, activeLevel);
       applyTrainModel(currentTrainId);
@@ -1253,6 +1305,7 @@ import { TransformInterpolation } from '../scene/interpolation.js';
   }
 
   function togglePause() {
+    if (onlineBlocks()) return;
     if (!hud.storeModal.hidden) { toggleStore(false); return; }
     if (run.state.pauseReasons.has('manual')) run.resume('manual');
     else run.pause('manual');
@@ -1274,7 +1327,7 @@ import { TransformInterpolation } from '../scene/interpolation.js';
     roll.x = roll.v = 0; shake = 0; jump.on = false; camH = 0; camLift = 0;
     sparks.length = 0; interpolation.clear();
     Object.assign(pose, { x: 0, z: 0, h: 0, yaw: 0, air: 0 });
-    currentTrainId = shop.selected; applyTrainModel(currentTrainId);
+    currentTrainId = selectedMode === 'online' ? 'cyber' : shop.selected; applyTrainModel(currentTrainId);
     trackRandom = createRng(activeLevel?.seed ?? `infinite:${run.state.runId}`);
     initTrack(); hud.hideGameOver(); hud.showLevelResult(false);
     hud.showPause(false); hud.showStore(false); clock.reset();
@@ -1294,7 +1347,9 @@ import { TransformInterpolation } from '../scene/interpolation.js';
   function resetGame() { startGame(selectedMode); }
 
   function returnToMenu() {
+    if (online) leaveOnline();
     run.stop(); mode = run.state.mode;
+    if (selectedMode === 'online') selectedMode = 'campaign';
     activeLevel = selectedMode === 'campaign' ? getLevel(selectedLevelId) : null;
     activeProfile = getTrainGameplayProfile(shop.selected, activeLevel);
     clearAttempt(); campaignUi.hide(); hud.showTutorial(); hud.showRun(null); campaignUi.refreshMenu();
@@ -1309,14 +1364,18 @@ import { TransformInterpolation } from '../scene/interpolation.js';
     selectedLevelId = id; campaignUi.showBriefing(getLevel(id)); hud.hideTutorial(); run.state.showScreen('briefing'); return true;
   }
 
-  campaignUi.bind({ chooseLevel, openMap, menu: returnToMenu, start: () => startGame('campaign', selectedLevelId), next: () => chooseLevel(`level-0${Number(selectedLevelId.slice(-2)) + 1}`) });
+  campaignUi.bind({ chooseLevel, openMap, menu: returnToMenu, start: () => startGame('campaign', selectedLevelId), next: () => chooseLevel(`level-0${Number(selectedLevelId.slice(-2)) + 1}`), infinite: () => startGame('infinite') });
 
   run.events.on('gameOver', snapshot => present(() => {
+    if (online?.race) { if (!online.race.result) hud.showStunt('VOCÊ CAIU · ASSISTINDO O ADVERSÁRIO'); return; }
     shop.saveBest(snapshot.score); syncShop(); hud.showGameOver(snapshot.score, best, snapshot.reason);
   }));
   run.events.on('levelCompleted', snapshot => present(() => {
+    const hadTrophy = progress.hasTrophy();
     progress.complete({ levelId: snapshot.levelId, score: snapshot.score, timeS: snapshot.timeS, eventId: `${snapshot.runId}:${snapshot.levelId}:complete` });
-    shop.saveBest(snapshot.score); syncShop(); campaignUi.showResult(snapshot); sound.stunt();
+    const newTrophy = !hadTrophy && progress.hasTrophy();
+    shop.saveBest(snapshot.score); syncShop(); campaignUi.showResult(snapshot, { newTrophy });
+    if (newTrophy) sound.trophy(); else sound.stunt();
     for (const controller of pendingJudges) controller.abort();
   }));
 
@@ -1338,9 +1397,136 @@ import { TransformInterpolation } from '../scene/interpolation.js';
   hud.storeCloseBtn?.addEventListener('click', () => toggleStore(false));
   hud.storeBackBtn?.addEventListener('click', () => toggleStore(false));
   document.addEventListener('visibilitychange', () => {
+    if (online?.race) { clock.reset(); return; } // The room keeps running; on return we catch up by server time.
     if (document.hidden) { run.pause('manual'); mode = run.state.mode; hud.showPause(mode === 'paused'); }
     clock.reset();
   });
+
+  // ---------- M5: ONLINE RACE (2 players, server-authoritative) ----------
+  const onlineUi = new OnlineUi(hud, LEVELS);
+  const testNetwork = window.__TRAIN_TEST_CONFIG__?.network || null;
+  const onlineUrl = () => `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`;
+
+  function openOnline() { returnToMenu(); hud.hideTutorial(); onlineUi.showSetup(); }
+  async function onlineClient() {
+    if (online) return online.client;
+    const client = new OnlineClient({ url: onlineUrl(), link: testNetwork });
+    online = { client, roomId: null, me: null, levelId: null, ready: false, race: null };
+    client.on('joined', m => Object.assign(online, { roomId: m.roomId, me: m.participantId, levelId: m.levelId, ready: false }));
+    client.on('lobby', m => { if (online && !online.race) onlineUi.showLobby({ ...m, me: online.me, ready: online.ready }); });
+    client.on('error', m => { if (online?.race) online.race.errors.push(m.code); else onlineUi.error(m.code); });
+    client.on('start', startOnlineRace);
+    client.on('snapshot', onlineSnapshot);
+    client.on('result', onlineResult);
+    client.on('close', () => { if (online?.client === client && !online.race?.result) { leaveOnline(); returnToMenu(); hud.hideTutorial(); onlineUi.showSetup(); onlineUi.error('connection'); } });
+    try { await client.connect(); return client; }
+    catch { online = null; onlineUi.error('connection'); return null; }
+  }
+  function leaveOnline() {
+    if (!online) return;
+    const { client, timer } = online; online = null; clearInterval(timer);
+    client.leave(); setTimeout(() => client.close(), 50);
+    disposeGhost(); run.remoteTerminal = false; onlineUi.hide();
+  }
+  onlineUi.bind({
+    create: async (levelId, name) => { const client = await onlineClient(); if (client && !online.roomId) client.createRoom(levelId, name); },
+    join: async (code, name) => { const client = await onlineClient(); if (client && !online.roomId) client.joinRoom(code, name); },
+    ready: () => { if (!online?.roomId || online.race) return; online.ready = !online.ready; online.client.ready(online.ready, contentHash(online.levelId)); },
+    leave: () => { leaveOnline(); returnToMenu(); },
+    again: () => { leaveOnline(); openOnline(); },
+    menu: () => { leaveOnline(); returnToMenu(); },
+  });
+  document.getElementById('start-online-btn')?.addEventListener('click', openOnline);
+
+  function startOnlineRace(m) {
+    const level = getLevel(m.levelId);
+    if (!online || !level || contentHash(level.id) !== m.contentHash) { onlineUi.error('content-mismatch'); return; }
+    run.stop(); selectedMode = 'online'; activeLevel = level; activeProfile = getTrainGameplayProfile('cyber', level);
+    run.remoteTerminal = true;
+    if (!run.start(activeProfile, level)) return;
+    online.race = { runId: m.runId, startAt: m.startAt, lead: online.client.leadTicks(), opponent: m.players.find(p => p.id !== online.me),
+      buffer: new SnapshotBuffer(), history: new Map(), pending: [], sent: [], firstMismatch: null, inputs: 0, errors: [], result: null, countdown: null,
+      corrections: 0, maxCorrection: 0, distDrift: 0, crashMismatch: 0, maxExtrapolatedMs: 0, staleFrames: 0, autopilot: [...(window.__TRAIN_ONLINE_ROUTE__ || [])] };
+    clearAttempt(); mode = run.state.mode; onlineUi.hide(); campaignUi.hide(); hud.hideTutorial(); hud.showRun(level); buildGhost();
+    // Simulation follows the server clock on its own timer; rendering only draws (slow frames must not delay inputs).
+    online.timer = setInterval(() => { if (online?.race && !online.race.result && run.state.mode === 'playing') stepOnline(); }, 10);
+  }
+  /** Local ticks follow the server clock plus a lead, so own inputs arrive before the server reaches their tick. */
+  function stepOnline() {
+    const race = online.race, serverNow = online.client.serverNow();
+    if (serverNow < race.startAt) {
+      const n = Math.ceil((race.startAt - serverNow) / 1000);
+      if (n !== race.countdown) { race.countdown = n; hud.showStunt(`LARGADA EM ${n}`); }
+    }
+    const target = Math.floor((serverNow - race.startAt) / TICK_MS) + race.lead;
+    for (let budget = 240; budget > 0 && run.tick < target && run.state.mode === 'playing'; budget--) {
+      while (race.autopilot.length && race.autopilot[0].atM <= run.travel.dist) {
+        const command = race.autopilot.shift();
+        for (const end of ['front', 'rear']) if (command[end] !== undefined) setTarget(end, command[end] * TRACK_SPACING);
+      }
+      simulationStep(1 / 60);
+      race.history.set(run.tick, { dist: run.travel.dist, front: ends.front, rear: ends.rear });
+      race.history.delete(run.tick - 600);
+    }
+  }
+  function onlineSnapshot(m) {
+    const race = online?.race;
+    if (!race || m.runId !== race.runId || race.result) return;
+    const mine = m.players.find(p => p.id === online.me), other = m.players.find(p => p.id !== online.me);
+    if (other) race.buffer.push(m.tick, other);
+    if (!mine) return;
+    race.serverScore = mine.score; race.lastServerTick = m.tick;
+    const local = race.history.get(m.tick);
+    if (local) {
+      const lateral = Math.max(Math.abs(local.front - mine.front), Math.abs(local.rear - mine.rear));
+      race.distDrift = Math.max(race.distDrift, Math.abs(local.dist - mine.dist));
+      if (lateral > 0.01) {
+        race.corrections += 1; race.maxCorrection = Math.max(race.maxCorrection, lateral);
+        race.firstMismatch ||= { tick: m.tick, local, server: { front: mine.front, rear: mine.rear, targets: mine.targets, lastSeq: mine.lastSeq }, sent: race.sent.slice(-4), trace: Array.from({ length: 9 }, (_, i) => m.tick - 8 + i).map(t => [t, race.history.get(t)?.front]) };
+      }
+    }
+    race.pending = race.pending.filter(p => p.seq > mine.lastSeq);
+    if (!race.pending.length && mine.state === 'running' && run.state.mode === 'playing') for (const end of ['front', 'rear']) {
+      if (Math.abs(moves[end].to / TRACK_SPACING - mine.targets[end]) > 0.01) { setTarget(end, mine.targets[end] * TRACK_SPACING, { remote: false }); race.corrections += 1; }
+    }
+    if (mine.state === 'crashed' && run.state.mode === 'playing') { race.crashMismatch += 1; triggerCrash('O servidor registrou a colisão do seu trem.'); }
+  }
+  function onlineResult(m) {
+    const race = online?.race;
+    if (!race || race.result) return;
+    race.result = m; clearInterval(online.timer);
+    if (['playing', 'paused'].includes(run.state.mode)) run.pause('online-result');
+    mode = run.state.mode; hud.hideGameOver(); onlineUi.showResult(m, online.me);
+  }
+  run.events.on('remoteArrival', () => present(() => { if (online?.race && !online.race.result) hud.showStunt('CHEGADA! AGUARDANDO RESULTADO OFICIAL'); }));
+
+  /** Opponent as a translucent ghost of the room's train; shares no resources with the local car. */
+  function buildGhost() {
+    disposeGhost();
+    const { group, disposables } = buildTrainBody('cyber', TRAIN_CONSTANTS);
+    const material = new THREE.MeshStandardMaterial({ color: 0xff5fd2, emissive: 0xff5fd2, emissiveIntensity: 0.35, transparent: true, opacity: 0.45, depthWrite: false });
+    group.traverse(o => { if (o.isMesh) { o.material = material; o.castShadow = false; } });
+    new Set(disposables.materials).forEach(m => m.dispose());
+    const root = new THREE.Group(); root.add(group); root.visible = false; scene.add(root);
+    ghost = { root, geometries: new Set(disposables.geometries), material };
+  }
+  function disposeGhost() {
+    if (!ghost) return;
+    scene.remove(ghost.root); ghost.geometries.forEach(g => g.dispose()); ghost.material.dispose(); ghost = null;
+  }
+  function renderOpponent() {
+    const race = online?.race;
+    if (!race || !ghost) return;
+    const sample = race.buffer.sample(online.client.serverNow(), race.startAt);
+    if (!sample) { ghost.root.visible = false; return; }
+    if (!race.result) { race.maxExtrapolatedMs = Math.max(race.maxExtrapolatedMs, sample.extrapolatedMs); if (sample.stale) race.staleFrames += 1; }
+    const half = BOGIE, pf = offsetPt(pathAt(sample.dist + half), sample.front), pr = offsetPt(pathAt(sample.dist - half), sample.rear);
+    ghost.root.position.set((pf.x + pr.x) / 2, sample.air || 0, (pf.z + pr.z) / 2);
+    ghost.root.quaternion.setFromAxisAngle(UP, -Math.atan2(pf.z - pr.z, pf.x - pr.x));
+    ghost.root.visible = sample.state !== 'crashed' || sample.dist > dist - 60;
+    const gap = sample.dist - dist, rtt = Math.round(online.client.rtt ?? 0);
+    onlineUi.setRace(`ONLINE · ${race.opponent?.name ?? 'Adversário'} ${gap >= 0 ? 'à frente' : 'atrás'} ${Math.abs(gap).toFixed(0)} m · RTT ${rtt} ms${sample.stale ? ' · CONEXÃO INSTÁVEL' : ''}${sample.state === 'crashed' ? ' · adversário caiu' : ''}`, sample.stale);
+  }
 
   // ---------- MAIN ENGINE LOOP (60 FPS) ----------
   initTrack();
@@ -1392,6 +1578,7 @@ import { TransformInterpolation } from '../scene/interpolation.js';
     }
 
     maintainTrack();
+    updateHazards();
     stepSprings(dt);
     updateSparks(dt);
 
@@ -1481,33 +1668,42 @@ import { TransformInterpolation } from '../scene/interpolation.js';
 
   }
 
+  const interpolated = () => [car, camera, ...carriages.map(c => c.mesh), ...hazardMeshes.flatMap(h => h.movers)];
+
   function simulationStep(dt) {
-    interpolation.capture([car, camera, ...carriages.map(c => c.mesh)]);
+    interpolation.capture(interpolated());
     run.step(dt, stepWorld);
     mode = run.state.mode; speed = run.travel.speed; dist = run.travel.dist; score = run.score;
   }
 
   function renderFrame(now) {
     if (destroyed) return;
-    if (!window.__TRAIN_TEST_CONFIG__?.manualClock) clock.frame(now, simulationStep, () => {
+    if (online?.race && !online.race.result && run.state.mode === 'playing') clock.reset();
+    else if (!window.__TRAIN_TEST_CONFIG__?.manualClock) clock.frame(now, simulationStep, () => {
       run.pause('manual'); mode = run.state.mode; hud.showPause(mode === 'paused');
     });
     if (mode === 'ready') stepWorld(0);
     const commands = uiCommands; uiCommands = [];
     for (const command of commands) if (command.runId === run.state.runId) command.callback();
+    renderOpponent();
     bg.position.set(camera.position.x, 0, camera.position.z);
-    interpolation.render([car, camera, ...carriages.map(c => c.mesh)], window.__TRAIN_TEST_CONFIG__?.manualClock ? 1 : clock.accumulator / clock.stepS, () => renderer.render(scene, camera));
+    interpolation.render(interpolated(), window.__TRAIN_TEST_CONFIG__?.manualClock ? 1 : clock.accumulator / clock.stepS, () => renderer.render(scene, camera));
     renderedFrames += 1;
     hud.renderSnapshot({ score, best, bankPoints, speedKmh: speed * 3.6, front: moves.front.to, rear: moves.rear.to,
       diagonal: Math.abs(ends.front - ends.rear) >= TRACK_SPACING * 0.7,
-      driftCombo, driftFill: driftTime ? (driftTime % 1.5) * 66.6 : 0, dist, lengthM: activeLevel?.lengthM, warning: getWarning(activeLevel, dist), metrics: run.metrics });
+      driftCombo, driftFill: driftTime ? (driftTime % 1.5) * 66.6 : 0, dist, lengthM: activeLevel?.lengthM, warning: getWarning(activeLevel, dist, { timeS: run.timeS, content: levelContent }), metrics: run.metrics });
     animationFrame = requestAnimationFrame(renderFrame);
   }
 
   if (window.__TRAIN_TEST_CONFIG__) window.__TRAIN_TEST_HOOKS__ = {
-    snapshot: () => ({ ...run.snapshot(), air: pose.air, progress: progress.snapshot(), jump: { ...jump }, barriers: barriers.map(b => ({ s: b.s, lat: b.lat, length: b.length, width: b.width, height: b.height })), ramps: ramps.map(r => ({ s: r.s, tz: r.tz })), renderedFrames, clock: { lastMs: clock.lastMs, accumulator: clock.accumulator }, testConfig: { ...window.__TRAIN_TEST_CONFIG__ }, shop: shop.snapshot(), currentTrainId, ends: { ...ends }, targets: { front: moves.front.to, rear: moves.rear.to }, gaps: gaps.map(g => ({ tz: g.tz, a: g.a, b: g.b })), track: segs.map(s => ({ s0: s.s0, len: s.len, k: s.k })), layout: items.map(i => ({ s: i.s, lat: i.lat, id: i.id })), memory: { ...renderer.info.memory }, pendingJudges: pendingJudges.size }),
+    snapshot: () => ({ ...run.snapshot(), air: pose.air, progress: progress.snapshot(), jump: { ...jump }, barriers: barriers.map(b => ({ s: b.s, lat: b.lat, length: b.length, width: b.width, height: b.height })), ramps: ramps.map(r => ({ s: r.s, tz: r.tz })), renderedFrames, clock: { lastMs: clock.lastMs, accumulator: clock.accumulator }, testConfig: { ...window.__TRAIN_TEST_CONFIG__ }, shop: shop.snapshot(), currentTrainId, ends: { ...ends }, targets: { front: moves.front.to, rear: moves.rear.to }, gaps: gaps.map(g => ({ tz: g.tz, a: g.a, b: g.b })), hazards: hazardMeshes.map(h => ({ family: h.family, id: h.data.id, s: h.s, phase: h.phase, movers: h.movers.map(m => ({ z: m.position.z, rx: m.rotation.x })) })), warning: getWarning(activeLevel, dist, { timeS: run.timeS, content: levelContent }), track: segs.map(s => ({ s0: s.s0, len: s.len, k: s.k })), layout: items.map(i => ({ s: i.s, lat: i.lat, id: i.id })), memory: { ...renderer.info.memory }, pendingJudges: pendingJudges.size, soundOn: sound.soundOn, carriages: carriages.length, smokeParticles: smokeEmitter?.particles.length ?? 0 }),
     step: ticks => { for (let i = 0; i < Math.min(10000, ticks); i++) simulationStep(1 / 60); },
     openMap, chooseLevel, startLevel: id => startGame('campaign', id), menu: returnToMenu,
+    online: () => online && ({ roomId: online.roomId, me: online.me, levelId: online.levelId, rtt: online.client.rtt, offset: online.client.offset,
+      race: online.race && { runId: online.race.runId, lead: online.race.lead, startAt: online.race.startAt, inputs: online.race.inputs, pending: online.race.pending.length,
+        corrections: online.race.corrections, maxCorrection: online.race.maxCorrection, distDrift: online.race.distDrift, crashMismatch: online.race.crashMismatch,
+        maxExtrapolatedMs: online.race.maxExtrapolatedMs, firstMismatch: online.race.firstMismatch, staleFrames: online.race.staleFrames, errors: [...online.race.errors], result: online.race.result,
+        serverTick: online.race.lastServerTick, serverScore: online.race.serverScore, ghostVisible: ghost?.root.visible ?? false } }),
     judge: () => evaluateStuntWithJev('TEST STUNT', 1, 4),
     crash: () => triggerCrash('Colisão de teste'),
   };

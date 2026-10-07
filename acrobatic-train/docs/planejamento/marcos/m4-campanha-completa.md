@@ -1,6 +1,6 @@
 # M4 — Campanha completa, desafio final e troféu
 
-Status: planejado. Dependência: [M3](m3-fases-medias.md). Próximos independentes: [M5](m5-multiplayer.md) e [M6](m6-mods.md). Conteúdo: [7](../fases/fase-07.md), [8](../fases/fase-08.md), [9](../fases/fase-09.md).
+Status: implementado em 07/10/2026; validação automatizada aprovada; gate humano M4-A07 e orçamento de frame time em hardware (parte de M4-A06) pendentes. [Relatório por aceite](../VALIDACAO_M4.md). Dependência: [M3](m3-fases-medias.md). Próximos independentes: [M5](m5-multiplayer.md) e [M6](m6-mods.md). Conteúdo: [7](../fases/fase-07.md), [8](../fases/fase-08.md), [9](../fases/fase-09.md).
 
 ## Objetivo
 

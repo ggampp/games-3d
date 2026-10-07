@@ -1,0 +1,128 @@
+{
+  "level-04": [
+    {
+      "geometries": 96,
+      "textures": 2
+    },
+    {
+      "geometries": 96,
+      "textures": 2
+    },
+    {
+      "geometries": 96,
+      "textures": 2
+    },
+    {
+      "geometries": 96,
+      "textures": 2
+    },
+    {
+      "geometries": 96,
+      "textures": 2
+    },
+    {
+      "geometries": 96,
+      "textures": 2
+    },
+    {
+      "geometries": 96,
+      "textures": 2
+    },
+    {
+      "geometries": 96,
+      "textures": 2
+    },
+    {
+      "geometries": 96,
+      "textures": 2
+    },
+    {
+      "geometries": 96,
+      "textures": 2
+    }
+  ],
+  "level-05": [
+    {
+      "geometries": 63,
+      "textures": 2
+    },
+    {
+      "geometries": 63,
+      "textures": 2
+    },
+    {
+      "geometries": 63,
+      "textures": 2
+    },
+    {
+      "geometries": 63,
+      "textures": 2
+    },
+    {
+      "geometries": 63,
+      "textures": 2
+    },
+    {
+      "geometries": 63,
+      "textures": 2
+    },
+    {
+      "geometries": 63,
+      "textures": 2
+    },
+    {
+      "geometries": 63,
+      "textures": 2
+    },
+    {
+      "geometries": 63,
+      "textures": 2
+    },
+    {
+      "geometries": 63,
+      "textures": 2
+    }
+  ],
+  "level-06": [
+    {
+      "geometries": 83,
+      "textures": 2
+    },
+    {
+      "geometries": 83,
+      "textures": 2
+    },
+    {
+      "geometries": 83,
+      "textures": 2
+    },
+    {
+      "geometries": 83,
+      "textures": 2
+    },
+    {
+      "geometries": 83,
+      "textures": 2
+    },
+    {
+      "geometries": 83,
+      "textures": 2
+    },
+    {
+      "geometries": 83,
+      "textures": 2
+    },
+    {
+      "geometries": 83,
+      "textures": 2
+    },
+    {
+      "geometries": 83,
+      "textures": 2
+    },
+    {
+      "geometries": 83,
+      "textures": 2
+    }
+  ]
+}

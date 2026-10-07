@@ -12,6 +12,7 @@ export class CampaignUi {
     document.getElementById('briefing-map-btn').addEventListener('click', actions.openMap);
     document.getElementById('map-menu-btn').addEventListener('click', actions.menu);
     document.getElementById('level-next-btn').addEventListener('click', actions.next);
+    document.getElementById('level-infinite-btn').addEventListener('click', actions.infinite);
     this.refreshMenu();
   }
   status() {
@@ -34,7 +35,21 @@ export class CampaignUi {
       button.textContent = `FASE ${number} · ${level?.name ?? 'Novos desafios'} · ${state}`;
       button.addEventListener('click', () => this.actions.chooseLevel(id)); this.grid.append(button);
     }
+    this.renderGallery(saved);
     this.map.hidden = false; this.status(); this.hud.dialogs.sync();
+  }
+  /** Simple gallery: official trophy plus best time/score of each completed phase. */
+  renderGallery(saved = this.progress.snapshot()) {
+    const done = Object.keys(saved.results).length;
+    document.getElementById('campaign-gallery-trophy').textContent = this.progress.hasTrophy()
+      ? '🏆 Troféu da campanha conquistado.' : `Troféu da campanha: ${done}/9 fases vencidas.`;
+    const list = document.getElementById('campaign-gallery-list'); list.replaceChildren();
+    for (const level of this.levels) {
+      const result = saved.results[level.id]; if (!result) continue;
+      const item = document.createElement('li');
+      item.textContent = `Fase ${level.number} · ${level.name}: ${result.bestTimeS === null ? 'tempo não registrado' : `${result.bestTimeS.toFixed(1)} s`} · ${result.bestScore} pts · ${result.completions}×`;
+      list.append(item);
+    }
   }
   showBriefing(level) {
     this.hide(); this.hud.hideGameOver(); this.hud.showLevelResult(false);
@@ -43,10 +58,15 @@ export class CampaignUi {
     document.getElementById('briefing-objective').textContent = `${level.lengthM} metros até a chegada. ${level.objective} Nenhuma pontuação mínima.`;
     this.briefing.hidden = false; this.status(); this.hud.dialogs.sync();
   }
-  showResult(snapshot) {
+  showResult(snapshot, { newTrophy = false } = {}) {
     this.hide();
-    const next = `level-0${snapshot.levelNumber + 1}`;
+    const next = `level-0${snapshot.levelNumber + 1}`, final = snapshot.levelNumber === 9 && this.progress.hasTrophy();
     document.getElementById('level-next-btn').hidden = !this.progress.canPlay(next);
-    this.hud.showLevelResult(true, snapshot); this.status(); this.refreshMenu();
+    document.getElementById('level-infinite-btn').hidden = !final;
+    const trophy = document.getElementById('campaign-trophy');
+    trophy.hidden = !final; trophy.classList.toggle('is-new', newTrophy);
+    document.getElementById('campaign-trophy-text').textContent = newTrophy
+      ? 'Troféu da campanha conquistado: as nove fases foram vencidas.' : 'Troféu da campanha já conquistado. Repetir a final não gera outro.';
+    this.hud.showLevelResult(true, { ...snapshot, campaignComplete: final }); this.status(); this.refreshMenu();
   }
 }

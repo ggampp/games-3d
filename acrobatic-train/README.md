@@ -2,7 +2,7 @@
 
 Jogo 3D de trem acrobático em Three.js integrado com a suíte de ferramentas de decisão ultrarrápidas **TypeSafe Jev (System One)** para agentes de codificação e automação E2E.
 
-M2 disponível: três fases, mapa/briefing, desbloqueio e progresso salvo, barreiras/trilhos rompidos/rampas, mais modo infinito. A loja preserva compras; seleção durante a corrida equipa na próxima tentativa. Execute `npm start`, `npm test` e `npm run test:browser` (Playwright instalado ou `PLAYWRIGHT_MODULE_DIR` configurado). Veja o [relatório M2](docs/planejamento/VALIDACAO_M2.md) e o [histórico M0/M1](docs/planejamento/VALIDACAO_M0_M1.md).
+M4 disponível: campanha solo completa de nove fases, com mapa/briefing, desbloqueio e progresso salvo. Fases 1–3 têm barreiras, trilhos rompidos e rampas; fases 4–6 trazem cancelas temporizadas, pórticos de alinhamento e vagões de manutenção cruzando a via; fases 7–9 combinam até duas dessas famílias por encontro, e vencer a 9 concede o troféu da campanha (galeria no mapa). Modo infinito separado, sem efeito no progresso oficial. A loja preserva compras; seleção durante a corrida equipa na próxima tentativa. Execute `npm start`, `npm test`, `npm run test:browser`, `npm run test:browser:m3` e `npm run test:browser:m4` (Playwright instalado ou `PLAYWRIGHT_MODULE_DIR` configurado). Veja o [relatório M4](docs/planejamento/VALIDACAO_M4.md), o [relatório M3](docs/planejamento/VALIDACAO_M3.md), o [relatório M2](docs/planejamento/VALIDACAO_M2.md) e o [histórico M0/M1](docs/planejamento/VALIDACAO_M0_M1.md).
 
 ---
 
@@ -35,7 +35,7 @@ O projeto conta com ferramentas automatizadas alimentadas pelo modelo de decisã
 ---
 
 ## 🏗️ Diretrizes de Arquitetura (`AGENTS.md`)
-O arquivo [`AGENTS.md`](file:///d:/claude_projects/dev-games/games-3d/acrobatic-train/AGENTS.md) serve como fonte de verdade para o Guardrail do Jev e para o agente de codificação:
+O arquivo [`AGENTS.md`](./AGENTS.md) serve como fonte de verdade para o Guardrail do Jev e para o agente de codificação:
 - Separação modular de Three.js (`src/core/`, `src/scene/`, `src/entities/`, `src/physics/`, `src/audio/`, `src/ui/`).
 - Proibição de mutações diretas no DOM dentro de loops de render/física (60 FPS).
 - Descarte limpo de geometrias e materiais WebGL ao descarregar cenas.
