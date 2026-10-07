@@ -1,0 +1,186 @@
+{
+  "runId": "m3-regression-m4-20261007",
+  "generatedAt": "2026-10-07T01:17:14.931Z",
+  "reports": [
+    {
+      "scenario": "m3-desktop",
+      "passed": true,
+      "progression": [
+        4,
+        5,
+        6
+      ],
+      "pauseFrozeHazards": true,
+      "pageErrors": []
+    },
+    {
+      "scenario": "m3-portrait",
+      "passed": true,
+      "progression": [
+        4,
+        5,
+        6
+      ],
+      "pauseFrozeHazards": true,
+      "pageErrors": []
+    },
+    {
+      "scenario": "m3-crash-and-open-gates",
+      "passed": true,
+      "crashes": [
+        {
+          "levelId": "level-04",
+          "dist": 125.21279166666483,
+          "reason": "A cancela fechada atingiu o trem! Leia o sinal e use a via sem cancela."
+        },
+        {
+          "levelId": "level-05",
+          "dist": 314.7280138888802,
+          "reason": "O trem bateu na lateral do pórtico! Alinhe frente e traseira na abertura."
+        },
+        {
+          "levelId": "level-06",
+          "dist": 144.23634722222045,
+          "reason": "Colisão com o vagão de manutenção! Desvie para o lado oposto ao que ele vem."
+        }
+      ],
+      "openGateRoute": "levelComplete",
+      "pageErrors": []
+    },
+    {
+      "scenario": "m3-resource-transitions",
+      "passed": true,
+      "transitions": 30,
+      "samples": {
+        "level-04": [
+          {
+            "geometries": 96,
+            "textures": 2
+          },
+          {
+            "geometries": 96,
+            "textures": 2
+          },
+          {
+            "geometries": 96,
+            "textures": 2
+          },
+          {
+            "geometries": 96,
+            "textures": 2
+          },
+          {
+            "geometries": 96,
+            "textures": 2
+          },
+          {
+            "geometries": 96,
+            "textures": 2
+          },
+          {
+            "geometries": 96,
+            "textures": 2
+          },
+          {
+            "geometries": 96,
+            "textures": 2
+          },
+          {
+            "geometries": 96,
+            "textures": 2
+          },
+          {
+            "geometries": 96,
+            "textures": 2
+          }
+        ],
+        "level-05": [
+          {
+            "geometries": 63,
+            "textures": 2
+          },
+          {
+            "geometries": 63,
+            "textures": 2
+          },
+          {
+            "geometries": 63,
+            "textures": 2
+          },
+          {
+            "geometries": 63,
+            "textures": 2
+          },
+          {
+            "geometries": 63,
+            "textures": 2
+          },
+          {
+            "geometries": 63,
+            "textures": 2
+          },
+          {
+            "geometries": 63,
+            "textures": 2
+          },
+          {
+            "geometries": 63,
+            "textures": 2
+          },
+          {
+            "geometries": 63,
+            "textures": 2
+          },
+          {
+            "geometries": 63,
+            "textures": 2
+          }
+        ],
+        "level-06": [
+          {
+            "geometries": 83,
+            "textures": 2
+          },
+          {
+            "geometries": 83,
+            "textures": 2
+          },
+          {
+            "geometries": 83,
+            "textures": 2
+          },
+          {
+            "geometries": 83,
+            "textures": 2
+          },
+          {
+            "geometries": 83,
+            "textures": 2
+          },
+          {
+            "geometries": 83,
+            "textures": 2
+          },
+          {
+            "geometries": 83,
+            "textures": 2
+          },
+          {
+            "geometries": 83,
+            "textures": 2
+          },
+          {
+            "geometries": 83,
+            "textures": 2
+          },
+          {
+            "geometries": 83,
+            "textures": 2
+          }
+        ]
+      },
+      "pageErrors": []
+    }
+  ],
+  "limitation": "Software GPU (SwiftShader) and manual test clock. Human playtest, hardware FPS and screen readers unverified."
+}
