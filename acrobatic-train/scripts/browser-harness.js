@@ -45,11 +45,12 @@ export async function createHarness({ defaultRunId, port = '3191' }) {
     await page.evaluate(() => Promise.all(document.getAnimations().filter(animation => animation.effect?.target?.closest?.('.overlay-modal')).map(animation => animation.finished.catch(() => {}))));
     await page.screenshot({ path: path.join(directory, `${name}.png`) }); captures.push(name);
   };
-  h.context = async (options = {}, fixture = null, broken = false) => {
+  h.context = async (options = {}, fixture = null, broken = false, shop = null) => {
     const ctx = await h.browser.newContext(options);
-    await ctx.addInitScript(({ fixture, broken, key }) => {
+    await ctx.addInitScript(({ fixture, broken, key, shop }) => {
       window.__TRAIN_TEST_CONFIG__ = { manualClock: true };
       if (fixture && location.hostname === '127.0.0.1' && !localStorage.getItem(key)) localStorage.setItem(key, fixture);
+      if (shop && location.hostname === '127.0.0.1') for (const [k, v] of Object.entries(shop)) if (localStorage.getItem(k) === null) localStorage.setItem(k, v);
       if (broken && location.hostname === '127.0.0.1') {
         localStorage.setItem('acrobatic_train_bank_points', '2000');
         localStorage.setItem('acrobatic_train_unlocked_trains', '["cyber","steam"]'); localStorage.setItem('acrobatic_train_current_train', 'steam');
@@ -57,7 +58,7 @@ export async function createHarness({ defaultRunId, port = '3191' }) {
         Storage.prototype.getItem = function (k) { if (k === key) throw Error('denied'); return get.call(this, k); };
         Storage.prototype.setItem = function (k, v) { if (k === key) throw Error('quota'); return set.call(this, k, v); };
       }
-    }, { fixture, broken, key: PROGRESS_KEY });
+    }, { fixture, broken, key: PROGRESS_KEY, shop });
     const page = await ctx.newPage(); const errors = [];
     page.on('pageerror', error => errors.push(error.message)); await page.route('**/api/stunt-judge', route => route.abort());
     await h.ready(page); return { ctx, page, errors };

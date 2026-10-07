@@ -227,7 +227,7 @@
           </div>
         </div>
 
-        <p class="modal-subtitle">Campanha: seis fases com obras, trilhos rompidos, saltos, cancelas, pórticos e vagões cruzando. Chegar vivo libera a próxima fase. Itens e pontos são opcionais.</p>
+        <p class="modal-subtitle">Campanha: nove fases com obras, trilhos rompidos, saltos, cancelas, pórticos e vagões cruzando, até o desafio final e o troféu. Chegar vivo libera a próxima fase. Itens e pontos são opcionais.</p>
         <p class="campaign-save-status" role="status"></p>
         <button id="continue-campaign-btn" class="action-btn btn-primary">CONTINUAR CAMPANHA</button>
         <button id="start-game-btn" class="action-btn btn-secondary">ESCOLHER FASE</button>
@@ -243,6 +243,11 @@
         <p class="modal-subtitle">Complete uma fase para liberar a próxima. Compras e progresso ficam salvos separadamente.</p>
         <p class="campaign-save-status" role="status"></p>
         <div id="campaign-grid" class="campaign-grid"></div>
+        <section id="campaign-gallery" class="campaign-gallery" aria-label="Galeria da campanha">
+          <h3 class="campaign-gallery-title">GALERIA</h3>
+          <p id="campaign-gallery-trophy" class="campaign-gallery-trophy"></p>
+          <ol id="campaign-gallery-list" class="campaign-gallery-list"></ol>
+        </section>
         <button id="map-menu-btn" class="action-btn btn-secondary">VOLTAR AO MENU</button>
       </div>
     </section>
@@ -285,9 +290,14 @@
     <section id="level-result-modal" class="overlay-modal" role="dialog" aria-modal="true" aria-labelledby="level-result-title" hidden>
       <div class="modal-card">
         <h2 id="level-result-title" class="modal-title">FASE 1 CONCLUÍDA!</h2>
+        <div id="campaign-trophy" class="campaign-trophy" hidden>
+          <span class="campaign-trophy-icon" aria-hidden="true">🏆</span>
+          <p id="campaign-trophy-text" class="campaign-trophy-text">Troféu da campanha conquistado: as nove fases foram vencidas.</p>
+        </div>
         <p id="level-result-summary" class="modal-subtitle"></p>
         <p class="campaign-save-status" role="status"></p>
         <button id="level-next-btn" class="action-btn btn-primary">PRÓXIMA FASE</button>
+        <button id="level-infinite-btn" class="action-btn btn-primary" hidden>JOGAR MODO INFINITO</button>
         <button id="level-retry-btn" class="action-btn btn-secondary">REPETIR FASE</button>
         <button id="level-menu-btn" class="action-btn btn-secondary">ESCOLHER FASE</button>
       </div>

@@ -61,7 +61,59 @@ export const LEVEL_SIX = config(6, 'Cruzamento em movimento', 1200, 24, 33,
     { id: 'gap-1', type: 'gap', s: 1000, length: 10, lanes: [0], safeLane: 1, group: 'final', message: 'TRILHO ROMPIDO NO CENTRO E VAGÃO ⇢ À ESQUERDA · use a direita' },
     { id: 'wagon-4', type: 'wagon', s: 1030, length: 2.6, lanes: [-1], safeLane: 1, group: 'final', message: 'VAGÃO ⇢ À ESQUERDA · fique na direita' },
   ], 'm3-v1');
-export const LEVELS = Object.freeze([LEVEL_ONE, LEVEL_TWO, LEVEL_THREE, LEVEL_FOUR, LEVEL_FIVE, LEVEL_SIX]);
+export const LEVEL_SEVEN = config(7, 'Sequência acrobática', 1300, 26, 36,
+  'Combine salto, desvio e alinhamento. Leia o próximo encontro antes de escolher a saída; todo salto é opcional.',
+  'Extra opcional: pousar uma manobra e cruzar um pórtico alinhado na mesma tentativa.', [
+    { id: 'ramp-1', type: 'ramp', s: 125, length: 7, lanes: [0], safeLane: -1, group: 'ramp-gap-1', message: 'RAMPA E TRILHO ROMPIDO NO CENTRO · salte ou use a esquerda' },
+    { id: 'gap-1', type: 'gap', s: 140, length: 8, lanes: [0], safeLane: -1, group: 'ramp-gap-1', message: 'TRILHO ROMPIDO NO CENTRO · só passa pelo ar' },
+    { id: 'gate-1', type: 'gate', s: 320, length: 0.4, lanes: [1], arrivalCycleS: [6], safeLane: 0, group: 'gate-poles', message: 'CANCELA À DIREITA E POSTES · centro alinhado' },
+    { id: 'poles-1', type: 'poles', s: 335, length: 10.5, lanes: [], safeLane: 0, group: 'gate-poles', message: 'POSTES ENTRE VIAS · não troque de via' },
+    { id: 'gap-2', type: 'gap', s: 505, length: 8, lanes: [1], safeLane: -1, group: 'gap-gantry', message: 'TRILHO ROMPIDO À DIREITA E PÓRTICO · abertura à esquerda' },
+    { id: 'gantry-1', type: 'gantry', s: 530, length: 1.2, lanes: [0, 1], safeLane: -1, group: 'gap-gantry', message: 'PÓRTICO · abertura à esquerda, alinhe' },
+    { id: 'wagon-1', type: 'wagon', s: 700, length: 2.6, lanes: [-1, 0], safeLane: 1, group: 'wagon-gap', message: 'VAGÃO ⇢ DA ESQUERDA E TRILHO ROMPIDO NO CENTRO · use a direita' },
+    { id: 'gap-3', type: 'gap', s: 720, length: 10, lanes: [0], safeLane: 1, group: 'wagon-gap', message: 'TRILHO ROMPIDO NO CENTRO · fique na direita' },
+    { id: 'ramp-2', type: 'ramp', s: 905, length: 7, lanes: [1], safeLane: 0, group: 'ramp-gap-2', message: 'RAMPA E TRILHO ROMPIDO À DIREITA · salte ou volte ao centro' },
+    { id: 'gap-4', type: 'gap', s: 920, length: 8, lanes: [1], safeLane: 0, group: 'ramp-gap-2', message: 'TRILHO ROMPIDO À DIREITA · só passa pelo ar' },
+    { id: 'gate-2', type: 'gate', s: 1100, length: 0.4, lanes: [-1], arrivalCycleS: [6], safeLane: 0, group: 'gate-gantry', message: 'CANCELA À ESQUERDA E PÓRTICO NO CENTRO · fique no centro' },
+    { id: 'gantry-2', type: 'gantry', s: 1130, length: 1.2, lanes: [-1, 1], safeLane: 0, group: 'gate-gantry', message: 'PÓRTICO NO CENTRO · mantenha alinhado' },
+  ], 'm4-v1');
+export const LEVEL_EIGHT = config(8, 'Corredor de precisão', 1400, 28, 39,
+  'Escolha a via com antecedência. Alinhe antes das aberturas e respeite os avisos dos cruzamentos.',
+  'Extra opcional: concluir sem nenhuma colisão em pórtico.', [
+    { id: 'gate-1', type: 'gate', s: 150, length: 0.4, lanes: [0], arrivalCycleS: [6], safeLane: 1, message: 'CANCELA NO CENTRO · antecipe a direita' },
+    { id: 'gantry-1', type: 'gantry', s: 330, length: 1.2, lanes: [-1, 0], safeLane: 1, message: 'PÓRTICO · abertura à direita, alinhe' },
+    { id: 'wagon-1', type: 'wagon', s: 510, length: 2.6, lanes: [1, 0], safeLane: -1, message: 'VAGÃO ⇠ DA DIREITA · duas trocas até a esquerda' },
+    { id: 'ramp-1', type: 'ramp', s: 690, length: 7, lanes: [-1], safeLane: 1, group: 'ramp-gap', message: 'RAMPA À ESQUERDA E TRILHO ROMPIDO NO CENTRO · direita contínua' },
+    { id: 'gap-1', type: 'gap', s: 705, length: 10, lanes: [0], safeLane: 1, group: 'ramp-gap', message: 'TRILHO ROMPIDO NO CENTRO · não pouse nele' },
+    { id: 'gate-2', type: 'gate', s: 890, length: 0.4, lanes: [1], arrivalCycleS: [6], safeLane: -1, group: 'gate-poles', message: 'CANCELA À DIREITA E POSTES · esquerda alinhada' },
+    { id: 'poles-1', type: 'poles', s: 905, length: 10.5, lanes: [], safeLane: -1, group: 'gate-poles', message: 'POSTES ENTRE VIAS · não troque de via' },
+    { id: 'gantry-2', type: 'gantry', s: 1070, length: 1.2, lanes: [-1, 0], safeLane: 1, message: 'PÓRTICO · abertura à direita; o próximo abre no centro' },
+    { id: 'gantry-3', type: 'gantry', s: 1150, length: 1.2, lanes: [-1, 1], safeLane: 0, message: 'PÓRTICO · abertura no centro, alinhe já' },
+    { id: 'gap-2', type: 'gap', s: 1250, length: 10, lanes: [-1, 0], safeLane: 1, message: 'ÚLTIMO REPARO · esquerda e centro rompidos, use a direita' },
+  ], 'm4-v1');
+export const LEVEL_NINE = config(9, 'Desafio final', 1500, 30, 42,
+  'Este é o desafio final. Use tudo o que aprendeu: desvie, alinhe, observe o tempo e escolha sua rota. A sequência é sempre a mesma.',
+  'Vencer concede o troféu da campanha.', [
+    { id: 'work-1', type: 'barrier', s: 120, length: 1.6, lanes: [0], safeLane: 1, group: 'works-gap', message: 'OBRAS NO CENTRO E TRILHO ROMPIDO À ESQUERDA · use a direita' },
+    { id: 'gap-1', type: 'gap', s: 130, length: 10, lanes: [-1], safeLane: 1, group: 'works-gap', message: 'TRILHO ROMPIDO À ESQUERDA · fique na direita' },
+    { id: 'gate-1', type: 'gate', s: 255, length: 0.4, lanes: [1], arrivalCycleS: [6], safeLane: -1, group: 'gate-gap', message: 'CANCELA À DIREITA E TRILHO ROMPIDO NO CENTRO · vá para a esquerda' },
+    { id: 'gap-2', type: 'gap', s: 265, length: 10, lanes: [0], safeLane: -1, group: 'gate-gap', message: 'TRILHO ROMPIDO NO CENTRO · fique na esquerda' },
+    { id: 'gantry-1', type: 'gantry', s: 385, length: 1.2, lanes: [-1, 1], safeLane: 0, group: 'gantry-poles', message: 'PÓRTICO NO CENTRO E POSTES · alinhe e não troque de via' },
+    { id: 'poles-1', type: 'poles', s: 400, length: 10.5, lanes: [], safeLane: 0, group: 'gantry-poles', message: 'POSTES ENTRE VIAS · mantenha o centro' },
+    { id: 'ramp-1', type: 'ramp', s: 515, length: 7, lanes: [1], safeLane: 0, group: 'ramp-gap', message: 'RAMPA À DIREITA E TRILHO ROMPIDO À ESQUERDA · centro contínuo' },
+    { id: 'gap-3', type: 'gap', s: 530, length: 10, lanes: [-1], safeLane: 0, group: 'ramp-gap', message: 'TRILHO ROMPIDO À ESQUERDA · centro ou salto à direita' },
+    { id: 'wagon-1', type: 'wagon', s: 650, length: 2.6, lanes: [-1, 0], safeLane: 1, message: 'VAGÃO ⇢ DA ESQUERDA · use a direita' },
+    { id: 'gate-2', type: 'gate', s: 780, length: 0.4, lanes: [-1], arrivalCycleS: [6], safeLane: 1, group: 'gate-gap-2', message: 'CANCELA À ESQUERDA E TRILHO ROMPIDO NO CENTRO · fique na direita' },
+    { id: 'gap-4', type: 'gap', s: 790, length: 10, lanes: [0], safeLane: 1, group: 'gate-gap-2', message: 'TRILHO ROMPIDO NO CENTRO · fique na direita' },
+    { id: 'gantry-2', type: 'gantry', s: 910, length: 1.2, lanes: [0, 1], safeLane: -1, message: 'PÓRTICO · abertura à esquerda, duas trocas' },
+    { id: 'ramp-2', type: 'ramp', s: 1040, length: 7, lanes: [0], safeLane: -1, group: 'ramp-gap-2', message: 'RAMPA NO CENTRO E TRILHO ROMPIDO À DIREITA · esquerda contínua' },
+    { id: 'gap-5', type: 'gap', s: 1055, length: 10, lanes: [1], safeLane: -1, group: 'ramp-gap-2', message: 'TRILHO ROMPIDO À DIREITA · esquerda ou salto no centro' },
+    { id: 'wagon-2', type: 'wagon', s: 1170, length: 2.6, lanes: [1, 0], safeLane: -1, message: 'VAGÃO ⇠ DA DIREITA · fique na esquerda' },
+    { id: 'gantry-3', type: 'gantry', s: 1300, length: 1.2, lanes: [-1, 1], safeLane: 0, message: 'ÚLTIMO PÓRTICO NO CENTRO · alinhe e chegue' },
+  ], 'm4-v1');
+export const LEVELS = Object.freeze([LEVEL_ONE, LEVEL_TWO, LEVEL_THREE, LEVEL_FOUR, LEVEL_FIVE, LEVEL_SIX, LEVEL_SEVEN, LEVEL_EIGHT, LEVEL_NINE]);
+/** F07-A01: one envelope (lone encounter or group) combines at most this many hazard families. */
+export const MAX_FAMILIES_PER_ENCOUNTER = 2;
 /** Contract budget per difficulty group (CONTRATOS.md §2), in seconds at max speed. */
 export function budgetFor(level) {
   if (level.number <= 3) return { reactionS: 1.4, warningS: 2.5, restS: 2.5 };
@@ -127,13 +179,15 @@ export function validateLevel(level) {
   if (!level || !/^level-0[1-9]$/.test(level.id)) return ['Invalid level ID'];
   if (!Number.isFinite(level.lengthM) || level.lengthM < 300 || !Number.isFinite(level.startSpeedMps) || !Number.isFinite(level.maxSpeedMps) || level.startSpeedMps <= 0 || level.maxSpeedMps < level.startSpeedMps || level.maxSpeedMps > 42 || !Number.isFinite(level.accelerationMps2) || level.accelerationMps2 < 0 || typeof level.seed !== 'string' || !level.seed) errors.push('Invalid dimensions/speed/seed');
   if (!Array.isArray(level.encounters)) return [...errors, 'Invalid encounters'];
-  let previous = null;
+  let previous = null, families = new Set();
   for (const e of level.encounters) {
     if (!e || !['barrier', 'gap', 'poles', 'ramp', 'gate', 'gantry', 'wagon'].includes(e.type) || !Number.isFinite(e.s) || !Number.isFinite(e.length) || e.length <= 0 || !Array.isArray(e.lanes) || !e.lanes.every(l => [-1, 0, 1].includes(l))) { errors.push('Invalid encounter'); continue; }
     if (encounterStart(e) < 80 || encounterEnd(e) > level.lengthM - 80) errors.push('Unsafe start/finish');
     if (e.lanes.length >= 3 || ![-1, 0, 1].includes(e.safeLane) || (e.type !== 'poles' && e.lanes.includes(e.safeLane))) errors.push('No terrestrial route');
     if (isHazardFamily(e.type)) errors.push(...HAZARD_FAMILIES[e.type].validate(e, level));
     const grouped = previous && e.group && e.group === previous.group;
+    families = grouped ? families.add(e.type) : new Set([e.type]);
+    if (families.size > MAX_FAMILIES_PER_ENCOUNTER) errors.push('Too many hazard families in one encounter');
     if (grouped && (e.safeLane !== previous.safeLane || encounterStart(e) <= encounterEnd(previous))) errors.push('Grouped encounters must share a lane and stay ordered');
     if (previous && !grouped && encounterStart(e) - encounterEnd(previous) < level.maxSpeedMps * budgetFor(level).restS) errors.push('Insufficient recovery');
     previous = e;

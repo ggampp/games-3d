@@ -1,0 +1,577 @@
+{
+  "id": "level-07",
+  "number": 7,
+  "name": "Sequência acrobática",
+  "version": "m4-v1",
+  "seed": "acrobatic-campaign-v1-07",
+  "rngVersion": "fnv1a-mulberry32-v1",
+  "lengthM": 1300,
+  "startSpeedMps": 26,
+  "maxSpeedMps": 36,
+  "accelerationMps2": 0.35,
+  "briefing": "Combine salto, desvio e alinhamento. Leia o próximo encontro antes de escolher a saída; todo salto é opcional.",
+  "objective": "Extra opcional: pousar uma manobra e cruzar um pórtico alinhado na mesma tentativa.",
+  "encounters": [
+    {
+      "id": "ramp-1",
+      "type": "ramp",
+      "s": 125,
+      "length": 7,
+      "lanes": [
+        0
+      ],
+      "safeLane": -1,
+      "group": "ramp-gap-1",
+      "message": "RAMPA E TRILHO ROMPIDO NO CENTRO · salte ou use a esquerda"
+    },
+    {
+      "id": "gap-1",
+      "type": "gap",
+      "s": 140,
+      "length": 8,
+      "lanes": [
+        0
+      ],
+      "safeLane": -1,
+      "group": "ramp-gap-1",
+      "message": "TRILHO ROMPIDO NO CENTRO · só passa pelo ar"
+    },
+    {
+      "id": "gate-1",
+      "type": "gate",
+      "s": 320,
+      "length": 0.4,
+      "lanes": [
+        1
+      ],
+      "arrivalCycleS": [
+        6
+      ],
+      "safeLane": 0,
+      "group": "gate-poles",
+      "message": "CANCELA À DIREITA E POSTES · centro alinhado"
+    },
+    {
+      "id": "poles-1",
+      "type": "poles",
+      "s": 335,
+      "length": 10.5,
+      "lanes": [],
+      "safeLane": 0,
+      "group": "gate-poles",
+      "message": "POSTES ENTRE VIAS · não troque de via"
+    },
+    {
+      "id": "gap-2",
+      "type": "gap",
+      "s": 505,
+      "length": 8,
+      "lanes": [
+        1
+      ],
+      "safeLane": -1,
+      "group": "gap-gantry",
+      "message": "TRILHO ROMPIDO À DIREITA E PÓRTICO · abertura à esquerda"
+    },
+    {
+      "id": "gantry-1",
+      "type": "gantry",
+      "s": 530,
+      "length": 1.2,
+      "lanes": [
+        0,
+        1
+      ],
+      "safeLane": -1,
+      "group": "gap-gantry",
+      "message": "PÓRTICO · abertura à esquerda, alinhe"
+    },
+    {
+      "id": "wagon-1",
+      "type": "wagon",
+      "s": 700,
+      "length": 2.6,
+      "lanes": [
+        -1,
+        0
+      ],
+      "safeLane": 1,
+      "group": "wagon-gap",
+      "message": "VAGÃO ⇢ DA ESQUERDA E TRILHO ROMPIDO NO CENTRO · use a direita"
+    },
+    {
+      "id": "gap-3",
+      "type": "gap",
+      "s": 720,
+      "length": 10,
+      "lanes": [
+        0
+      ],
+      "safeLane": 1,
+      "group": "wagon-gap",
+      "message": "TRILHO ROMPIDO NO CENTRO · fique na direita"
+    },
+    {
+      "id": "ramp-2",
+      "type": "ramp",
+      "s": 905,
+      "length": 7,
+      "lanes": [
+        1
+      ],
+      "safeLane": 0,
+      "group": "ramp-gap-2",
+      "message": "RAMPA E TRILHO ROMPIDO À DIREITA · salte ou volte ao centro"
+    },
+    {
+      "id": "gap-4",
+      "type": "gap",
+      "s": 920,
+      "length": 8,
+      "lanes": [
+        1
+      ],
+      "safeLane": 0,
+      "group": "ramp-gap-2",
+      "message": "TRILHO ROMPIDO À DIREITA · só passa pelo ar"
+    },
+    {
+      "id": "gate-2",
+      "type": "gate",
+      "s": 1100,
+      "length": 0.4,
+      "lanes": [
+        -1
+      ],
+      "arrivalCycleS": [
+        6
+      ],
+      "safeLane": 0,
+      "group": "gate-gantry",
+      "message": "CANCELA À ESQUERDA E PÓRTICO NO CENTRO · fique no centro"
+    },
+    {
+      "id": "gantry-2",
+      "type": "gantry",
+      "s": 1130,
+      "length": 1.2,
+      "lanes": [
+        -1,
+        1
+      ],
+      "safeLane": 0,
+      "group": "gate-gantry",
+      "message": "PÓRTICO NO CENTRO · mantenha alinhado"
+    }
+  ],
+  "content": {
+    "barriers": [],
+    "gaps": [
+      {
+        "id": "gap-1:0",
+        "a": 140,
+        "b": 148,
+        "lane": 0
+      },
+      {
+        "id": "gap-2:1",
+        "a": 505,
+        "b": 513,
+        "lane": 1
+      },
+      {
+        "id": "gap-3:0",
+        "a": 720,
+        "b": 730,
+        "lane": 0
+      },
+      {
+        "id": "gap-4:1",
+        "a": 920,
+        "b": 928,
+        "lane": 1
+      }
+    ],
+    "poles": [
+      {
+        "id": "poles-1:-1.7:0",
+        "s": 335,
+        "lat": -1.7,
+        "height": 3.2,
+        "radius": 0.16
+      },
+      {
+        "id": "poles-1:-1.7:1",
+        "s": 338.5,
+        "lat": -1.7,
+        "height": 3.2,
+        "radius": 0.16
+      },
+      {
+        "id": "poles-1:-1.7:2",
+        "s": 342,
+        "lat": -1.7,
+        "height": 3.2,
+        "radius": 0.16
+      },
+      {
+        "id": "poles-1:-1.7:3",
+        "s": 345.5,
+        "lat": -1.7,
+        "height": 3.2,
+        "radius": 0.16
+      },
+      {
+        "id": "poles-1:1.7:0",
+        "s": 335,
+        "lat": 1.7,
+        "height": 3.2,
+        "radius": 0.16
+      },
+      {
+        "id": "poles-1:1.7:1",
+        "s": 338.5,
+        "lat": 1.7,
+        "height": 3.2,
+        "radius": 0.16
+      },
+      {
+        "id": "poles-1:1.7:2",
+        "s": 342,
+        "lat": 1.7,
+        "height": 3.2,
+        "radius": 0.16
+      },
+      {
+        "id": "poles-1:1.7:3",
+        "s": 345.5,
+        "lat": 1.7,
+        "height": 3.2,
+        "radius": 0.16
+      }
+    ],
+    "ramps": [
+      {
+        "id": "ramp-1",
+        "s": 125,
+        "lane": 0
+      },
+      {
+        "id": "ramp-2",
+        "s": 905,
+        "lane": 1
+      }
+    ],
+    "items": [
+      {
+        "id": "level-07:ramp-1:air",
+        "s": 146.83045454049392,
+        "y": 9.6,
+        "lane": 0,
+        "level": 2,
+        "points": 50
+      },
+      {
+        "id": "level-07:gap-1:0",
+        "s": 160,
+        "lane": -1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-07:gap-1:1",
+        "s": 163,
+        "lane": -1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-07:gap-1:2",
+        "s": 166,
+        "lane": -1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-07:gap-1:3",
+        "s": 169,
+        "lane": -1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-07:gap-1:4",
+        "s": 172,
+        "lane": -1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-07:poles-1:0",
+        "s": 357.5,
+        "lane": 0,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-07:poles-1:1",
+        "s": 360.5,
+        "lane": 0,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-07:poles-1:2",
+        "s": 363.5,
+        "lane": 0,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-07:poles-1:3",
+        "s": 366.5,
+        "lane": 0,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-07:poles-1:4",
+        "s": 369.5,
+        "lane": 0,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-07:gantry-1:0",
+        "s": 542.6,
+        "lane": -1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-07:gantry-1:1",
+        "s": 545.6,
+        "lane": -1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-07:gantry-1:2",
+        "s": 548.6,
+        "lane": -1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-07:gantry-1:3",
+        "s": 551.6,
+        "lane": -1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-07:gantry-1:4",
+        "s": 554.6,
+        "lane": -1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-07:gap-3:0",
+        "s": 742,
+        "lane": 1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-07:gap-3:1",
+        "s": 745,
+        "lane": 1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-07:gap-3:2",
+        "s": 748,
+        "lane": 1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-07:gap-3:3",
+        "s": 751,
+        "lane": 1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-07:gap-3:4",
+        "s": 754,
+        "lane": 1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-07:ramp-2:air",
+        "s": 926.8304545404939,
+        "y": 9.6,
+        "lane": 1,
+        "level": 2,
+        "points": 50
+      },
+      {
+        "id": "level-07:gap-4:0",
+        "s": 940,
+        "lane": 0,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-07:gap-4:1",
+        "s": 943,
+        "lane": 0,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-07:gap-4:2",
+        "s": 946,
+        "lane": 0,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-07:gap-4:3",
+        "s": 949,
+        "lane": 0,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-07:gap-4:4",
+        "s": 952,
+        "lane": 0,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-07:gantry-2:0",
+        "s": 1142.6,
+        "lane": 0,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-07:gantry-2:1",
+        "s": 1145.6,
+        "lane": 0,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-07:gantry-2:2",
+        "s": 1148.6,
+        "lane": 0,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-07:gantry-2:3",
+        "s": 1151.6,
+        "lane": 0,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-07:gantry-2:4",
+        "s": 1154.6,
+        "lane": 0,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      }
+    ],
+    "gates": [
+      {
+        "id": "gate-1:1",
+        "encounterId": "gate-1",
+        "s": 320,
+        "lane": 1,
+        "pivotLat": 5.1,
+        "dir": -1,
+        "arrivalCycleS": 6,
+        "phaseOffsetS": 2.5666666666666664
+      },
+      {
+        "id": "gate-2:-1",
+        "encounterId": "gate-2",
+        "s": 1100,
+        "lane": -1,
+        "pivotLat": -5.1,
+        "dir": 1,
+        "arrivalCycleS": 6,
+        "phaseOffsetS": 3.4666666666666686
+      }
+    ],
+    "gantries": [
+      {
+        "id": "gantry-1",
+        "encounterId": "gantry-1",
+        "s": 530,
+        "openLane": -1,
+        "openLat": -3.4
+      },
+      {
+        "id": "gantry-2",
+        "encounterId": "gantry-2",
+        "s": 1130,
+        "openLane": 0,
+        "openLat": 0
+      }
+    ],
+    "wagons": [
+      {
+        "id": "wagon-1",
+        "encounterId": "wagon-1",
+        "s": 700,
+        "lanes": [
+          -1,
+          0
+        ],
+        "side": -1,
+        "restLat": -9.5,
+        "reachLat": -1,
+        "startTimeS": 20.383333333333336
+      }
+    ]
+  }
+}

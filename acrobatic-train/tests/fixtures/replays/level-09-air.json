@@ -1,0 +1,53 @@
+{
+  "version": "m4-v1",
+  "seed": "acrobatic-campaign-v1-09",
+  "profile": "cyber",
+  "stepS": 0.016666666666666666,
+  "maxTicks": 4200,
+  "commands": [
+    {
+      "atM": 50,
+      "front": 1,
+      "rear": 1
+    },
+    {
+      "atM": 152,
+      "front": -1,
+      "rear": -1
+    },
+    {
+      "atM": 287,
+      "front": 0,
+      "rear": 0
+    },
+    {
+      "atM": 430,
+      "front": 1,
+      "rear": 1
+    },
+    {
+      "atM": 812,
+      "front": -1,
+      "rear": -1
+    },
+    {
+      "atM": 960,
+      "front": 0,
+      "rear": 0
+    },
+    {
+      "atM": 1100,
+      "front": -1,
+      "rear": -1
+    },
+    {
+      "atM": 1183,
+      "front": 0,
+      "rear": 0
+    }
+  ],
+  "expected": {
+    "mode": "levelComplete",
+    "minLandings": 1
+  }
+}

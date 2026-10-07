@@ -11,6 +11,7 @@ import { TRAIN_CATALOG } from '../src/entities/train-factory.js';
 import { ProgressStore } from '../src/core/progress-store.js';
 import { traverse } from './helpers/traversal.js';
 import { ROUTES, OPEN_GATE_ROUTE, L6_AIR_ROUTE } from './helpers/routes.js';
+import { lateReactionRoute } from './helpers/late-route.js';
 
 const M3 = [LEVEL_FOUR, LEVEL_FIVE, LEVEL_SIX];
 const aligned = (s, lane) => ({ dist: s, front: lane * 3.4, rear: lane * 3.4, slant: 0, bottom: 0 });
@@ -87,17 +88,6 @@ test('F04-T01/F05-T04/C-07: every warning lasts the group budget and the k-lane-
   assert.ok(effectiveWarningS(LEVEL_FIVE, r2l) >= 1 + 2 * 0.28 + 0.15);
 });
 
-/** Late player: every lane change happens only after the reaction time has elapsed since the warning appeared. */
-function lateReactionRoute(level) {
-  const commands = []; let lane = 0;
-  level.encounters.forEach((e, i) => {
-    if (e.safeLane === lane || (i > 0 && e.group && e.group === level.encounters[i - 1].group)) return;
-    const previous = level.encounters[i - 1];
-    const shownAt = Math.max(warningStart(level, e), previous ? encounterEnd(previous) + TRAIN_GEOMETRY.carLength / 2 : 0, 0);
-    commands.push({ atM: shownAt + budgetFor(level).reactionS * level.maxSpeedMps, front: e.safeLane, rear: e.safeLane }); lane = e.safeLane;
-  });
-  return commands;
-}
 test('C-03/M3-T04: late-reaction routes still finish with every normalized train', () => {
   for (const level of M3) for (const trainId of Object.keys(TRAIN_CATALOG)) {
     const result = traverse(level, lateReactionRoute(level), { trainId, collect: false });
@@ -218,7 +208,7 @@ test('F04-T06/F05-T06/F06-T06: zero-score arrival unlocks the next phase; repeat
     assert.equal(run.score, 0);
     assert.equal(progress.complete({ levelId: level.id, score: run.score, timeS: run.timeS, eventId: `${level.id}:complete` }), true);
   }
-  assert.equal(progress.snapshot().highestUnlockedLevel, 7); assert.equal(progress.canPlay('level-07'), false);
+  assert.equal(progress.snapshot().highestUnlockedLevel, 7); assert.equal(progress.canPlay('level-07'), true);
   let created = 0, disposed = 0;
   for (let cycle = 0; cycle < 30; cycle++) for (const level of M3) {
     const content = createLevelContent(level);

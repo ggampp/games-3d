@@ -44,6 +44,19 @@ button:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
   .campaign-progress { top: auto; left: 50%; transform: translateX(-50%); bottom: calc(136px + env(safe-area-inset-bottom, 0px)); }
   #run-objective { display: none; }
 }
+/* M4: campaign trophy and gallery. The global reduced-motion rule below stops the celebration. */
+.campaign-trophy { display: flex; align-items: center; gap: 12px; margin: 8px 0 4px; padding: 10px 14px; border-radius: 12px;
+  background: linear-gradient(135deg, rgba(255, 209, 102, 0.22), rgba(255, 95, 210, 0.16)); border: 1px solid rgba(255, 209, 102, 0.6); }
+.campaign-trophy[hidden] { display: none; }
+.campaign-trophy-icon { font-size: 38px; line-height: 1; }
+.campaign-trophy-text { margin: 0; color: #ffe8a8; font-weight: 700; font-size: 14px; }
+.campaign-trophy.is-new .campaign-trophy-icon { animation: trophy-pop 0.9s ease-out 2; }
+@keyframes trophy-pop { 0% { transform: scale(0.6) rotate(-12deg); } 60% { transform: scale(1.25) rotate(8deg); } 100% { transform: scale(1) rotate(0); } }
+.campaign-gallery { margin: 12px 0; padding: 10px 12px; border-radius: 10px; background: rgba(255,255,255,0.05); text-align: left; }
+.campaign-gallery-title { margin: 0 0 6px; font-size: 13px; letter-spacing: 1px; color: #00f2fe; }
+.campaign-gallery-trophy { margin: 0 0 6px; color: #ffd166; font-weight: 700; font-size: 13px; }
+.campaign-gallery-list { margin: 0; padding-left: 18px; font-size: 12px; color: #d8e2ec; }
+.campaign-gallery-list:empty { display: none; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }

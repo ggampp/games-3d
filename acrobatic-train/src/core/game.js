@@ -1346,14 +1346,17 @@ import { TransformInterpolation } from '../scene/interpolation.js';
     selectedLevelId = id; campaignUi.showBriefing(getLevel(id)); hud.hideTutorial(); run.state.showScreen('briefing'); return true;
   }
 
-  campaignUi.bind({ chooseLevel, openMap, menu: returnToMenu, start: () => startGame('campaign', selectedLevelId), next: () => chooseLevel(`level-0${Number(selectedLevelId.slice(-2)) + 1}`) });
+  campaignUi.bind({ chooseLevel, openMap, menu: returnToMenu, start: () => startGame('campaign', selectedLevelId), next: () => chooseLevel(`level-0${Number(selectedLevelId.slice(-2)) + 1}`), infinite: () => startGame('infinite') });
 
   run.events.on('gameOver', snapshot => present(() => {
     shop.saveBest(snapshot.score); syncShop(); hud.showGameOver(snapshot.score, best, snapshot.reason);
   }));
   run.events.on('levelCompleted', snapshot => present(() => {
+    const hadTrophy = progress.hasTrophy();
     progress.complete({ levelId: snapshot.levelId, score: snapshot.score, timeS: snapshot.timeS, eventId: `${snapshot.runId}:${snapshot.levelId}:complete` });
-    shop.saveBest(snapshot.score); syncShop(); campaignUi.showResult(snapshot); sound.stunt();
+    const newTrophy = !hadTrophy && progress.hasTrophy();
+    shop.saveBest(snapshot.score); syncShop(); campaignUi.showResult(snapshot, { newTrophy });
+    if (newTrophy) sound.trophy(); else sound.stunt();
     for (const controller of pendingJudges) controller.abort();
   }));
 
@@ -1545,7 +1548,7 @@ import { TransformInterpolation } from '../scene/interpolation.js';
   }
 
   if (window.__TRAIN_TEST_CONFIG__) window.__TRAIN_TEST_HOOKS__ = {
-    snapshot: () => ({ ...run.snapshot(), air: pose.air, progress: progress.snapshot(), jump: { ...jump }, barriers: barriers.map(b => ({ s: b.s, lat: b.lat, length: b.length, width: b.width, height: b.height })), ramps: ramps.map(r => ({ s: r.s, tz: r.tz })), renderedFrames, clock: { lastMs: clock.lastMs, accumulator: clock.accumulator }, testConfig: { ...window.__TRAIN_TEST_CONFIG__ }, shop: shop.snapshot(), currentTrainId, ends: { ...ends }, targets: { front: moves.front.to, rear: moves.rear.to }, gaps: gaps.map(g => ({ tz: g.tz, a: g.a, b: g.b })), hazards: hazardMeshes.map(h => ({ family: h.family, id: h.data.id, s: h.s, phase: h.phase, movers: h.movers.map(m => ({ z: m.position.z, rx: m.rotation.x })) })), warning: getWarning(activeLevel, dist, { timeS: run.timeS, content: levelContent }), track: segs.map(s => ({ s0: s.s0, len: s.len, k: s.k })), layout: items.map(i => ({ s: i.s, lat: i.lat, id: i.id })), memory: { ...renderer.info.memory }, pendingJudges: pendingJudges.size }),
+    snapshot: () => ({ ...run.snapshot(), air: pose.air, progress: progress.snapshot(), jump: { ...jump }, barriers: barriers.map(b => ({ s: b.s, lat: b.lat, length: b.length, width: b.width, height: b.height })), ramps: ramps.map(r => ({ s: r.s, tz: r.tz })), renderedFrames, clock: { lastMs: clock.lastMs, accumulator: clock.accumulator }, testConfig: { ...window.__TRAIN_TEST_CONFIG__ }, shop: shop.snapshot(), currentTrainId, ends: { ...ends }, targets: { front: moves.front.to, rear: moves.rear.to }, gaps: gaps.map(g => ({ tz: g.tz, a: g.a, b: g.b })), hazards: hazardMeshes.map(h => ({ family: h.family, id: h.data.id, s: h.s, phase: h.phase, movers: h.movers.map(m => ({ z: m.position.z, rx: m.rotation.x })) })), warning: getWarning(activeLevel, dist, { timeS: run.timeS, content: levelContent }), track: segs.map(s => ({ s0: s.s0, len: s.len, k: s.k })), layout: items.map(i => ({ s: i.s, lat: i.lat, id: i.id })), memory: { ...renderer.info.memory }, pendingJudges: pendingJudges.size, soundOn: sound.soundOn, carriages: carriages.length }),
     step: ticks => { for (let i = 0; i < Math.min(10000, ticks); i++) simulationStep(1 / 60); },
     openMap, chooseLevel, startLevel: id => startGame('campaign', id), menu: returnToMenu,
     judge: () => evaluateStuntWithJev('TEST STUNT', 1, 4),

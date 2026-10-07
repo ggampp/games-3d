@@ -7,7 +7,7 @@ import { getTrainGameplayProfile } from '../src/core/shop-state.js';
 const storage = raw => { const map = new Map(Object.entries(raw || {})); return { getItem: key => map.get(key) ?? null, setItem: (key, value) => map.set(key, value), map }; };
 const result = (id, eventId = id, score = 0, timeS = 40) => ({ levelId: id, eventId, score, timeS });
 
-test('M2-T01/T06, M3: sequential completion, zero score, reload, repeat and future phases', () => {
+test('M2-T01/T06, M3, M4: sequential completion, zero score, reload, repeat and future phases', () => {
   const store = storage({ acrobatic_train_bank_points: '2000' }), progress = new ProgressStore(store);
   assert.equal(progress.canPlay('level-01'), true); assert.equal(progress.canPlay('level-03'), false);
   assert.equal(progress.complete(result('level-02')), false);
@@ -17,13 +17,13 @@ test('M2-T01/T06, M3: sequential completion, zero score, reload, repeat and futu
   assert.equal(progress.snapshot().highestUnlockedLevel, 4); assert.equal(progress.canPlay('level-04'), true);
   assert.equal(progress.canPlay('level-05'), false); assert.equal(progress.continueLevelId(), 'level-04');
   for (const id of ['level-04', 'level-05', 'level-06']) assert.equal(progress.complete(result(id)), true);
-  assert.equal(progress.snapshot().highestUnlockedLevel, 7); assert.equal(progress.canPlay('level-07'), false);
-  assert.equal(progress.complete(result('level-07')), false);
-  assert.deepEqual(progress.snapshot().achievements, []); assert.equal(progress.continueLevelId(), 'level-06');
+  assert.equal(progress.snapshot().highestUnlockedLevel, 7); assert.equal(progress.canPlay('level-07'), true);
+  assert.equal(progress.canPlay('level-08'), false); assert.equal(progress.complete(result('level-08')), false);
+  assert.deepEqual(progress.snapshot().achievements, []); assert.equal(progress.continueLevelId(), 'level-07');
   progress.complete(result('level-01', 'retry', 500, 50)); progress.complete(result('level-01', 'retry2', 1, 30));
   const reloaded = new ProgressStore(store);
   assert.equal(reloaded.snapshot().results['level-01'].bestScore, 500); assert.equal(reloaded.snapshot().results['level-01'].bestTimeS, 30);
-  assert.equal(reloaded.snapshot().highestUnlockedLevel, 7); assert.equal(reloaded.canPlay('level-06'), true); assert.equal(store.map.get('acrobatic_train_bank_points'), '2000');
+  assert.equal(reloaded.snapshot().highestUnlockedLevel, 7); assert.equal(reloaded.canPlay('level-07'), true); assert.equal(store.map.get('acrobatic_train_bank_points'), '2000');
 });
 test('M2-T02: corrupt saves, invalid fields, unsupported version and storage failure', () => {
   for (const raw of ['{', 'null', '[]', '{"schemaVersion":1,"highestUnlockedLevel":9,"results":{"level-03":{"completed":true,"bestScore":0,"bestTimeS":40}}}', '{"schemaVersion":1,"results":{"level-01":{"completed":true,"bestScore":-1,"bestTimeS":40}}}']) {

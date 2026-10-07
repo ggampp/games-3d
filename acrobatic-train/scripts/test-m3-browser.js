@@ -59,8 +59,10 @@ try {
     await page.waitForFunction(() => /VAGÃO ⇢/.test(document.getElementById('run-warning').textContent), null, { timeout: 180000 }); await capture(page, `${settings.label}-wagon-crossing`);
     const sixth = await replay(page, ROUTES['level-06'].slice(1), LENGTHS['level-06'], touch);
     assert.equal(sixth.progress.highestUnlockedLevel, 7); assert.deepEqual(sixth.progress.achievements, []);
-    assert.equal(await page.locator('#level-next-btn').isVisible(), false); await capture(page, `${settings.label}-result-6`);
-    await page.locator('#level-menu-btn').click(); assert.equal(await page.locator('[data-level-id="level-07"]').isDisabled(), true);
+    // M4: phase 7 follows phase 6; phase 8 stays locked.
+    assert.equal(await page.locator('#level-next-btn').isVisible(), true); await capture(page, `${settings.label}-result-6`);
+    await page.locator('#level-menu-btn').click(); assert.equal(await page.locator('[data-level-id="level-07"]').isDisabled(), false);
+    assert.equal(await page.locator('[data-level-id="level-08"]').isDisabled(), true);
     assert.deepEqual(errors, []);
     reports.push({ scenario: settings.label, passed: true, progression: [4, 5, 6], pauseFrozeHazards: true, pageErrors: errors }); await ctx.close();
   }
