@@ -7,6 +7,8 @@ import { createHarness } from './browser-harness.js';
 
 /** M5 E2E: two real browser clients against the real room server (real time, simulated RTT/jitter in the client link). */
 process.env.ROOM_STATS = '1';
+// Software GPU compiles shaders for seconds on the first frame; a longer countdown keeps that freeze out of the race.
+process.env.ROOM_COUNTDOWN_MS = '10000';
 const harness = await createHarness({ defaultRunId: `m5-${Date.now()}`, port: '3194' });
 const { url, runId, directory, captures, snapshot, capture, context } = harness;
 const reports = [], scope = process.env.TEST_SCOPE;
@@ -18,7 +20,7 @@ const SOLO = { campaign: '{"schemaVersion":1}', bank: '777' };
 async function player(name, network, route) {
   const { ctx, page, errors } = await context(SMALL);
   await ctx.addInitScript(({ network, route, solo }) => {
-    window.__TRAIN_TEST_CONFIG__.network = network; window.__TRAIN_ONLINE_ROUTE__ = route;
+    window.__TRAIN_TEST_CONFIG__.network = network; window.__TRAIN_TEST_CONFIG__.renderIntervalMs = 400; window.__TRAIN_ONLINE_ROUTE__ = route;
     localStorage.setItem('acrobatic_train_campaign_v1', solo.campaign); localStorage.setItem('acrobatic_train_bank_points', solo.bank);
   }, { network, route, solo: SOLO });
   await page.reload({ waitUntil: 'networkidle' }); await page.waitForFunction(() => Boolean(window.__TRAIN_TEST_HOOKS__), null, { timeout: 120000 });
@@ -42,7 +44,9 @@ async function race({ label, levelId, network, routeA, routeB, extra }) {
   const startA = (await online(a.page)).race, startB = (await online(b.page)).race;
   assert.equal(startA.startAt, startB.startAt); assert.equal(startA.runId, startB.runId);
   // Mid-race: opponent ghost rendered; optional local overlays must not touch the room.
-  await waitFor(a.page, () => window.__TRAIN_TEST_HOOKS__.snapshot().dist > 120).catch(async error => {
+  // Wait on a participant that follows a route: the other one may legitimately crash before 120 m.
+  const runner = routeA.length ? a : b;
+  await waitFor(runner.page, () => window.__TRAIN_TEST_HOOKS__.snapshot().dist > 120).catch(async error => {
     for (const p of [a, b]) console.error(p.name, JSON.stringify(await p.page.evaluate(() => { const k = window.__TRAIN_TEST_HOOKS__, s = k.snapshot(), o = k.online(); return { mode: s.mode, tick: s.tick, dist: s.dist, reason: s.reason, levelId: s.levelId, race: o?.race && { ...o.race, result: o.race.result?.reason } }; })), p.errors);
     throw error;
   });
@@ -59,7 +63,9 @@ async function race({ label, levelId, network, routeA, routeB, extra }) {
     assert.equal(s.shop.bank, Number(solo.bank), 'online pickups never credit the shop');
     assert.deepEqual(p.errors, []);
   }
-  const metrics = side => ({ lead: side.lead, inputs: side.inputs, corrections: side.corrections, maxCorrection: +side.maxCorrection.toFixed(3), distDrift: +side.distDrift.toFixed(4), crashMismatch: side.crashMismatch, maxExtrapolatedMs: Math.round(side.maxExtrapolatedMs), staleFrames: side.staleFrames, errors: side.errors });
+  const metrics = side => ({ lead: side.lead, inputs: side.inputs, corrections: side.corrections, maxCorrection: +side.maxCorrection.toFixed(3), distDrift: +side.distDrift.toFixed(4), crashMismatch: side.crashMismatch, maxExtrapolatedMs: Math.round(side.maxExtrapolatedMs), staleFrames: side.staleFrames, errors: side.errors,
+    // Ticks the local prediction led the server's clock by when each input left (target ≈ lead).
+    leadAtInput: (side.sent || []).map(s => s.tick - s.serverTickEstimate) });
   const result = { label, levelId, network, result: { reason: ra.result.reason, winner: ra.result.winner === (await online(a.page)).me ? 'Ana' : ra.result.winner ? 'Bia' : null, draw: ra.result.draw, players: ra.result.players.map(p => ({ name: p.name, state: p.state, endTick: p.endTick, dist: +p.dist.toFixed(2) })) },
     clients: { Ana: metrics(ra), Bia: metrics(rb) }, ghostSeen, third, mid };
   await a.page.locator('#online-menu-btn').click(); await b.page.locator('#online-menu-btn').click();
@@ -75,7 +81,7 @@ try {
       { label: 'm5-rtt150', levelId: 'level-06', network: { rttMs: 150, jitterMs: 25 }, routeA: ROUTES['level-06'], routeB: [], expect: { reason: 'finish', winner: 'Ana' } },
       { label: 'm5-rtt300', levelId: 'level-09', network: { rttMs: 300, jitterMs: 50 }, routeA: [], routeB: ROUTES['level-09'], expect: { reason: 'finish', winner: 'Bia' } },
     ];
-    for (const profile of profiles) {
+    for (const profile of profiles.filter(p => !process.env.PROFILES || process.env.PROFILES.split(',').includes(p.label))) {
       const extra = profile.label === 'm5-rtt50' ? {
         // M5-T01: a third browser and an outdated client are refused.
         beforeReady: async code => {
@@ -103,7 +109,7 @@ try {
         },
       } : undefined;
       const r = await race({ ...profile, extra });
-      assert.equal(r.result.reason, profile.expect.reason, JSON.stringify(r.result)); assert.equal(r.result.winner, profile.expect.winner);
+      assert.equal(r.result.reason, profile.expect.reason, JSON.stringify({ result: r.result, clients: r.clients })); assert.equal(r.result.winner, profile.expect.winner);
       for (const side of Object.values(r.clients)) { assert.equal(side.distDrift, 0, 'distance prediction is exact'); assert.equal(side.crashMismatch, 0); }
       reports.push({ scenario: profile.label, passed: true, ...r });
     }

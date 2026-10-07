@@ -4,7 +4,8 @@ import { createLevelContent, getLevel } from '../levels/level-config.js';
 export const PROTOCOL_VERSION = 1;
 export const LIMITS = Object.freeze({
   maxMessageBytes: 4096, maxInputsPerSecond: 120, maxNameLength: 16,
-  inputAheadTicks: 30, inputLateTicks: 30, tickHz: 60, snapshotEveryTicks: 3,
+  // Late inputs (stalled client main thread) are applied on the next tick instead of dropped, up to 1 s.
+  inputAheadTicks: 30, inputLateTicks: 60, tickHz: 60, snapshotEveryTicks: 3,
   countdownMs: 3000, disconnectGraceMs: 5000, lobbyIdleMs: 5 * 60 * 1000, resultTtlMs: 2 * 60 * 1000,
   maxCatchUpTicks: 600,
 });

@@ -23,7 +23,7 @@ Data: 07/10/2026. **Formato confirmado pelo usuário: corrida online para dois j
 
 ## Execuções
 
-`npm test`: **71 testes passaram**, zero falhas. Nove estão em `tests/multiplayer.test.js` e cobrem:
+`npm test`: **72 testes passaram**, zero falhas. Dez estão em `tests/multiplayer.test.js` e cobrem:
 
 - protocolo (whitelist, versão, tamanho, JSON);
 - entrada de dois jogadores com terceiro, versão e conteúdo recusados;
@@ -33,9 +33,50 @@ Data: 07/10/2026. **Formato confirmado pelo usuário: corrida online para dois j
 - quedas por distância e empate;
 - abandono, carência, abandono duplo e expiração;
 - progresso solo intacto;
-- 100 salas voltando à linha de base.
+- 100 salas voltando à linha de base;
+- buffer do adversário (interpolação, extrapolação limitada a 250 ms e adversário caído).
 
-E2E com dois navegadores (`npm run test:browser:m5`): ver a seção abaixo, preenchida com a execução final.
+### E2E com dois navegadores reais (`npm run test:browser:m5`)
+
+São dois contextos Chromium contra o servidor real (`/ws`), em tempo real, com RTT e jitter simulados no enlace do cliente (FIFO). Em todos os perfis, os dois clientes mostraram exatamente o mesmo resultado autoritativo.
+
+| Perfil | Fase | Resultado oficial | Correções | Desvio de distância | Lead em cada input | Erros |
+| --- | --- | --- | --- | --- | --- | --- |
+| RTT 50 ms, sem jitter | 4 | Empate por chegada no mesmo instante (tick 2267, rotas idênticas) | 0 / 0 | 0 | 6 e 7 ticks | nenhum |
+| RTT 150 ms, jitter 25 ms | 6 | Ana vence pela chegada (tick 2393); Bia cai no vagão a 144,2 m | 0 / 0 | 0 | 10 ticks | nenhum |
+| RTT 300 ms, jitter 50 ms | 9 | Bia vence pela chegada (tick 2437); Ana cai na barreira a 115,0 m | 0 / 0 | 0 | 15 ticks | nenhum |
+
+Também verificado:
+
+- **M5-T01**: os dois jogadores largaram com o mesmo `startAt`/`runId`. O terceiro navegador recebeu "A sala já tem dois jogadores." e um cliente com protocolo v0 recebeu `version`.
+- **M5-T06**: P (pausa), B (loja) e T (troca de trem) foram recusados durante a corrida, que avançou 91 ticks nesse intervalo. O trem continuou `cyber`. Save da campanha e saldo (777) ficaram intactos nos dois navegadores.
+- **Fantasma do adversário**: visível nas três corridas.
+- **M5-T07**: depois das corridas, **0 salas, 0 conexões, 0 sockets e o laço do servidor parado**.
+
+Evidências: [resultados](../../artifacts/validation/m5-e2e-20261007/browser-results.json); capturas de [lobby](../../artifacts/validation/m5-e2e-20261007/m5-rtt50-lobby.png), [corrida com o fantasma](../../artifacts/validation/m5-e2e-20261007/m5-rtt50-racing.png) e [resultado](../../artifacts/validation/m5-e2e-20261007/m5-rtt300-result.png).
+
+### Achados do E2E corrigidos antes desta execução
+
+1. O buffer do adversário guardava o tick da simulação do participante, que congela quando ele cai. Com isso, o HUD indicava "conexão instável" assim que o adversário caía. Agora prevalece o tick do servidor, e há teste para isso.
+2. A janela de inputs atrasados subiu de 30 para 60 ticks: o comando de um cliente travado é aplicado no próximo tick, em vez de descartado.
+3. A contagem regressiva ficou configurável (`ROOM_COUNTDOWN_MS`, padrão 3 s). No E2E ela é de 10 s, porque a GPU por software trava a página por segundos compilando shaders no primeiro quadro. Com contagem curta, a largada caía dentro desse travamento.
+4. O E2E espaça os desenhos (`renderIntervalMs`, só em teste) para não saturar os 4 núcleos com duas páginas em SwiftShader. Simulação e rede não mudam.
+
+## Aceites M5
+
+| Aceite | Estado | Evidência |
+| --- | --- | --- |
+| M5-A01 | Aprovado automaticamente | Dois navegadores largam juntos; terceiro e versão incompatível recusados |
+| M5-A02 | Aprovado automaticamente | Servidor define layout, perfil e resultado; campos forjados ignorados (Node) |
+| M5-A03 | Aprovado automaticamente | Duplicados, sequências antigas e futuras, janela, frames malformados e limite de frequência (Node); zero erros nos navegadores |
+| M5-A04 | Aprovado nos perfis simulados | 0 correções (limite: ≤ 0,5 m e ≤ 1 a cada 10 inputs), desvio de distância 0 e resultado igual nos dois clientes. Movimento local aplicado no tick seguinte (16,7 ms de simulação). **Latência visual p95 em hardware e redes reais não medidas** |
+| M5-A05 | Aprovado automaticamente | Chegada, empate, quedas, abandono, carência, abandono duplo e expiração com resultado único (Node e navegador) |
+| M5-A06 | Aprovado automaticamente | Pausa, loja e trem bloqueados na corrida; save, saldo e troféu solo intactos |
+| M5-A07 | Aprovado automaticamente | 100 salas (Node) e navegadores voltam à linha de base. A regressão solo segue nas suítes M2–M4; carga real de produção não foi medida |
+
+## Limites
+
+Os perfis de rede são simulados no cliente com entrega FIFO. Não foram testados rede real, rádio móvel, reconexão, mais de dois jogadores, matchmaking nem carga de produção, e o MVP não prevê nenhum desses itens. A latência visual depende do hardware: no SwiftShader a renderização roda a ~1–2 FPS e não serve para medir os 100 ms do p95.
 
 ## Reprodução
 

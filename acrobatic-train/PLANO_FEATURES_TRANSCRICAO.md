@@ -267,6 +267,6 @@ Meta de fluidez: 60 FPS no ambiente desktop de referência e controles responsiv
 
 **Propostas adotadas no plano, ainda ajustáveis:** chegada por distância sem meta obrigatória de pontos, fase 9 solucionável, colisão inicial apenas da locomotiva, atributos controlados por fase, sem bônus extra de conclusão no primeiro ciclo e mods separados da economia/conquista oficial.
 
-**Pendente de preferência:** formato prioritário de multiplayer. Dois jogadores online com trens separados é a hipótese inicial, registrada como tal.
+**Preferência confirmada em 07/10/2026:** dois jogadores online com trens separados, transporte WebSocket (`ws`). Implementado na M5 ([relatório](docs/planejamento/VALIDACAO_M5.md)).
 
 **A confirmar na integração:** contrato final da loja, política de equipamento durante uma tentativa, unidades/efeitos dos atributos e economia. **A calibrar em playtest:** comprimentos, velocidades, avisos, espaçamento e dificuldade humana da fase final.

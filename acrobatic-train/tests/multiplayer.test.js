@@ -5,6 +5,7 @@ import { PROTOCOL_VERSION, LIMITS, parseClientMessage, contentHash } from '../sr
 import { getLevel, LEVELS } from '../src/levels/level-config.js';
 import { arrivalTimeS } from '../src/levels/hazard-registry.js';
 import { createRng } from '../src/core/rng.js';
+import { SnapshotBuffer, EXTRAPOLATION_LIMIT_MS, INTERPOLATION_DELAY_MS } from '../src/network/online-client.js';
 import { ProgressStore } from '../src/core/progress-store.js';
 import { traverse } from './helpers/traversal.js';
 import { ROUTES } from './helpers/routes.js';
@@ -75,7 +76,7 @@ test('M5-T02: the server owns identity, layout and outcome; forged fields change
 });
 
 test('M5-T03: duplicates, stale/future sequences, window, malformed frames and rate limits do not corrupt the room', () => {
-  const p = pair(); startRace(p); p.advance(LIMITS.countdownMs + 1000);
+  const p = pair(); startRace(p); p.advance(LIMITS.countdownMs + 1500);
   const tick = p.a.last('snapshot').tick; assert.ok(tick > LIMITS.inputLateTicks + 5);
   p.a.send({ type: 'input', runId: 1, seq: 5, tick: tick + 2, lanes: { front: -1, rear: -1 } });
   p.a.send({ type: 'input', runId: 1, seq: 5, tick: tick + 2, lanes: { front: 1, rear: 1 } });
@@ -167,4 +168,19 @@ test('M5-T07: 100 rooms created and closed return rooms, connections and the loo
   for (const conn of [...h.manager.connections.keys()]) h.manager.disconnect(conn);
   h.advance(LIMITS.disconnectGraceMs + LIMITS.resultTtlMs + 200);
   assert.deepEqual(h.manager.stats(), baseline); assert.equal(h.loops.size, 0);
+});
+
+test('M5-T04 (client side): opponent buffer interpolates, caps extrapolation and stays fresh after the opponent crashes', () => {
+  const buffer = new SnapshotBuffer(), startAt = 10_000, at = tick => startAt + INTERPOLATION_DELAY_MS + tick * TICK_MS;
+  buffer.push(30, { tick: 30, dist: 10, front: 0, rear: 0, air: 0, speed: 20, state: 'running' });
+  buffer.push(33, { tick: 33, dist: 11, front: 3.4, rear: 3.4, air: 0, speed: 20, state: 'running' });
+  const mid = buffer.sample(at(31.5), startAt);
+  assert.ok(Math.abs(mid.dist - 10.5) < 1e-9); assert.ok(Math.abs(mid.front - 1.7) < 1e-9); assert.equal(mid.stale, false);
+  const ahead = buffer.sample(at(33) + 1000, startAt);
+  assert.ok(Math.abs(ahead.dist - (11 + 20 * EXTRAPOLATION_LIMIT_MS / 1000)) < 1e-9, 'extrapolation capped at 250 ms'); assert.equal(ahead.stale, true);
+  // A crashed participant keeps reporting its frozen sim tick; the server tick must still advance the buffer.
+  buffer.push(36, { tick: 34, dist: 11.2, front: 3.4, rear: 3.4, air: 0, speed: 0, state: 'crashed' });
+  buffer.push(39, { tick: 34, dist: 11.2, front: 3.4, rear: 3.4, air: 0, speed: 0, state: 'crashed' });
+  const after = buffer.sample(at(39), startAt);
+  assert.equal(after.stale, false); assert.equal(after.dist, 11.2); assert.equal(buffer.items.at(-1).tick, 39);
 });

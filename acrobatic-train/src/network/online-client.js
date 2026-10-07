@@ -13,7 +13,7 @@ export class OnlineClient {
   constructor({ url, WebSocketImpl = globalThis.WebSocket, now = () => Date.now(), link = null, timers = globalThis } = {}) {
     Object.assign(this, { url, WebSocketImpl, now, link, timers });
     this.listeners = new Map(); this.seq = 0; this.offset = 0; this.rtt = null; this.samples = []; this.socket = null;
-    this.outAt = 0; this.inAt = 0; this.pingTimer = null; this.closed = false;
+    this.queues = { in: [], out: [] }; this.flushTimers = { in: null, out: null }; this.pingTimer = null; this.closed = false;
   }
   on(type, fn) { if (!this.listeners.has(type)) this.listeners.set(type, new Set()); this.listeners.get(type).add(fn); return () => this.listeners.get(type).delete(fn); }
   emit(type, data) { for (const fn of [...(this.listeners.get(type) || [])]) fn(data); }
@@ -26,11 +26,21 @@ export class OnlineClient {
       socket.onmessage = event => this.delay('in', () => this.receive(event.data));
     });
   }
+  /** Test link: per-direction queue drained in order by one timer, so delivery is FIFO even if timers fire late. */
   delay(direction, fn) {
     if (!this.link) return fn();
-    const key = direction === 'in' ? 'inAt' : 'outAt', base = this.link.rttMs / 2 + (this.link.random?.() ?? Math.random()) * (this.link.jitterMs || 0);
-    const at = Math.max(this[key], this.now() + base); this[key] = at;
-    this.timers.setTimeout(fn, Math.max(0, at - this.now()));
+    const queue = this.queues[direction], base = this.link.rttMs / 2 + (this.link.random?.() ?? Math.random()) * (this.link.jitterMs || 0);
+    queue.push({ at: Math.max(queue.at(-1)?.at ?? 0, this.now() + base), fn });
+    this.schedule(direction);
+  }
+  schedule(direction) {
+    const queue = this.queues[direction];
+    if (this.flushTimers[direction] !== null || !queue.length) return;
+    this.flushTimers[direction] = this.timers.setTimeout(() => {
+      this.flushTimers[direction] = null;
+      while (queue.length && queue[0].at <= this.now()) queue.shift().fn();
+      this.schedule(direction);
+    }, Math.max(0, queue[0].at - this.now()));
   }
   receive(text) {
     let message;
@@ -73,7 +83,8 @@ export class SnapshotBuffer {
   constructor() { this.items = []; }
   push(tick, state) {
     if (this.items.length && tick <= this.items.at(-1).tick) return;
-    this.items.push({ tick, ...state }); if (this.items.length > 64) this.items.shift();
+    // The server tick wins over the participant's own sim tick, which freezes once it crashes or finishes.
+    this.items.push({ ...state, tick }); if (this.items.length > 64) this.items.shift();
   }
   clear() { this.items = []; }
   sample(serverTimeMs, startAt) {

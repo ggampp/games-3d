@@ -157,7 +157,7 @@ import { TransformInterpolation } from '../scene/interpolation.js';
   let online = null, ghost = null; // M5 online race state and opponent ghost (see ONLINE RACE below)
   let hazardWorld = new HazardWorld({}, TRAIN_GEOMETRY);
   let uiCommands = [];
-  let renderedFrames = 0;
+  let renderedFrames = 0, lastDrawMs = -Infinity;
   let animationFrame = 0;
   let destroyed = false;
   const present = callback => uiCommands.push({ runId: run.state.runId, callback });
@@ -229,7 +229,7 @@ import { TransformInterpolation } from '../scene/interpolation.js';
     if (remote && online?.race && !online.race.result && run.state.mode === 'playing') {
       const seq = online.client.input(online.race.runId, run.tick + 1, { [end]: Math.round(track / TRACK_SPACING) });
       online.race.pending.push({ seq, tick: run.tick + 1 }); online.race.inputs += 1;
-      online.race.sent.push({ seq, tick: run.tick + 1, end, lane: Math.round(track / TRACK_SPACING) }); if (online.race.sent.length > 32) online.race.sent.shift();
+      online.race.sent.push({ seq, tick: run.tick + 1, end, lane: Math.round(track / TRACK_SPACING), serverTickEstimate: Math.floor((online.client.serverNow() - online.race.startAt) / TICK_MS), rtt: online.client.rtt }); if (online.race.sent.length > 32) online.race.sent.shift();
     }
   }
 
@@ -1687,8 +1687,13 @@ import { TransformInterpolation } from '../scene/interpolation.js';
     for (const command of commands) if (command.runId === run.state.runId) command.callback();
     renderOpponent();
     bg.position.set(camera.position.x, 0, camera.position.z);
-    interpolation.render(interpolated(), window.__TRAIN_TEST_CONFIG__?.manualClock ? 1 : clock.accumulator / clock.stepS, () => renderer.render(scene, camera));
-    renderedFrames += 1;
+    // Test-only: a software-GPU harness may space out draws to keep the main thread free for timers/sockets.
+    const drawEvery = window.__TRAIN_TEST_CONFIG__?.renderIntervalMs ?? 0;
+    if (!drawEvery || now - lastDrawMs >= drawEvery) {
+      lastDrawMs = now;
+      interpolation.render(interpolated(), window.__TRAIN_TEST_CONFIG__?.manualClock ? 1 : clock.accumulator / clock.stepS, () => renderer.render(scene, camera));
+      renderedFrames += 1;
+    }
     hud.renderSnapshot({ score, best, bankPoints, speedKmh: speed * 3.6, front: moves.front.to, rear: moves.rear.to,
       diagonal: Math.abs(ends.front - ends.rear) >= TRACK_SPACING * 0.7,
       driftCombo, driftFill: driftTime ? (driftTime % 1.5) * 66.6 : 0, dist, lengthM: activeLevel?.lengthM, warning: getWarning(activeLevel, dist, { timeS: run.timeS, content: levelContent }), metrics: run.metrics });
@@ -1702,7 +1707,7 @@ import { TransformInterpolation } from '../scene/interpolation.js';
     online: () => online && ({ roomId: online.roomId, me: online.me, levelId: online.levelId, rtt: online.client.rtt, offset: online.client.offset,
       race: online.race && { runId: online.race.runId, lead: online.race.lead, startAt: online.race.startAt, inputs: online.race.inputs, pending: online.race.pending.length,
         corrections: online.race.corrections, maxCorrection: online.race.maxCorrection, distDrift: online.race.distDrift, crashMismatch: online.race.crashMismatch,
-        maxExtrapolatedMs: online.race.maxExtrapolatedMs, firstMismatch: online.race.firstMismatch, staleFrames: online.race.staleFrames, errors: [...online.race.errors], result: online.race.result,
+        maxExtrapolatedMs: online.race.maxExtrapolatedMs, firstMismatch: online.race.firstMismatch, sent: online.race.sent.slice(-8), staleFrames: online.race.staleFrames, errors: [...online.race.errors], result: online.race.result,
         serverTick: online.race.lastServerTick, serverScore: online.race.serverScore, ghostVisible: ghost?.root.visible ?? false } }),
     judge: () => evaluateStuntWithJev('TEST STUNT', 1, 4),
     crash: () => triggerCrash('Colisão de teste'),
