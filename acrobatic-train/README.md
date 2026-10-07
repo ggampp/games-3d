@@ -35,7 +35,7 @@ O projeto conta com ferramentas automatizadas alimentadas pelo modelo de decisã
 ---
 
 ## 🏗️ Diretrizes de Arquitetura (`AGENTS.md`)
-O arquivo [`AGENTS.md`](file:///d:/claude_projects/dev-games/games-3d/acrobatic-train/AGENTS.md) serve como fonte de verdade para o Guardrail do Jev e para o agente de codificação:
+O arquivo [`AGENTS.md`](./AGENTS.md) serve como fonte de verdade para o Guardrail do Jev e para o agente de codificação:
 - Separação modular de Three.js (`src/core/`, `src/scene/`, `src/entities/`, `src/physics/`, `src/audio/`, `src/ui/`).
 - Proibição de mutações diretas no DOM dentro de loops de render/física (60 FPS).
 - Descarte limpo de geometrias e materiais WebGL ao descarregar cenas.
