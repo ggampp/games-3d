@@ -102,9 +102,16 @@ try {
         if (trainId === 'class395') assert.ok(s.track[0].s0 <= -11 * 9.9, `tail of 12 cars has track: ${s.track[0].s0}`);
         const before = s.renderedFrames;
         await page.waitForFunction(n => window.__TRAIN_TEST_HOOKS__.snapshot().renderedFrames >= n + 3, before, { timeout: 180000 });
-        if (cycle >= 2) ((samples[trainId] ||= {})[id] ||= []).push((await snapshot(page)).memory);
+        if (cycle >= 2) { const m = await snapshot(page); ((samples[trainId] ||= {})[id] ||= []).push({ ...m.memory, smokeParticles: m.smokeParticles }); }
       }
-      for (const [id, values] of Object.entries(samples[trainId])) assert.ok(values.every(v => v.geometries === values[0].geometries && v.textures === values[0].textures), `${trainId}/${id}: ${JSON.stringify(values)}`);
+      // TC-08: without particles the count is exact; live smoke particles own cloned geometries that the renderer
+      // uploads only when drawn, so with smoke the count may oscillate in a narrow band but must not trend upward.
+      for (const [id, values] of Object.entries(samples[trainId])) {
+        const g = values.map(v => v.geometries), half = Math.floor(g.length / 2), mean = a => a.reduce((x, y) => x + y, 0) / a.length;
+        assert.ok(values.every(v => v.textures === values[0].textures), `${trainId}/${id} textures`);
+        if (values.every(v => v.smokeParticles === 0)) assert.ok(g.every(n => n === g[0]), `${trainId}/${id}: ${g}`);
+        else assert.ok(Math.max(...g) - Math.min(...g) <= 4 && mean(g.slice(half)) <= mean(g.slice(0, half)) + 0.5, `${trainId}/${id}: ${g}`);
+      }
       await page.evaluate(() => { const hooks = window.__TRAIN_TEST_HOOKS__; hooks.openMap(); hooks.chooseLevel('level-09'); hooks.startLevel('level-09'); });
       const done = await replay(page, ROUTES['level-09'], LENGTHS['level-09']);
       assert.equal(done.currentTrainId, trainId); assert.equal(done.carriages, trainId === 'class395' ? 11 : 1);
