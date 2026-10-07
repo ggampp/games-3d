@@ -7,7 +7,7 @@ Cada pasta é um projeto independente. Instale e rode **dentro** dela.
 | Pasta | Loop | Como rodar |
 |---|---|---|
 | [`canyon-rails/`](./canyon-rails) | Assentar trilhos + trem | `npm install && npm run dev` |
-| [`acrobatic-train/`](./acrobatic-train) | Acrobatic Train — trem-bala acrobático, campanha de 3 fases + loja + modo infinito | `npm install && npm start` |
+| [`acrobatic-train/`](./acrobatic-train) | Acrobatic Train — trem-bala acrobático, campanha de 6 fases (cancelas, pórticos, vagões) + loja + modo infinito | `npm install && npm start` |
 | [`flight-simulator/`](./flight-simulator) | Skywatch — voo 3D | `npm install && npm run dev` |
 | [`living-medieval-town/`](./living-medieval-town) | Stagsmere — cidade medieval | servir a pasta (`npx serve .`) |
 | [`shot-gun-3d/`](./shot-gun-3d) | Splinter — FPS voxel / destruição | `npm install && npm run dev` |

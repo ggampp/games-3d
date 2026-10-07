@@ -2,7 +2,7 @@
 
 Data: 06/10/2026. Origem: [plano geral](../../PLANO_FEATURES_TRANSCRICAO.md) e [transcrição](../../transcricao_audio_trem.md).
 
-**M0/M1 validadas e M2 implementada com validação automatizada aprovada em 06/10/2026**. [Relatório M2](VALIDACAO_M2.md), [histórico M0/M1](VALIDACAO_M0_M1.md). Fases 1–3 disponíveis; M3–M6 permanecem planejados. O gate humano da M2 continua pendente.
+**M0/M1 validadas; M2 (06/10/2026) e M3 (07/10/2026) implementadas com validação automatizada aprovada**. [Relatório M3](VALIDACAO_M3.md), [relatório M2](VALIDACAO_M2.md), [histórico M0/M1](VALIDACAO_M0_M1.md). Fases 1–6 disponíveis; M4–M6 permanecem planejados. Os gates humanos da M2 e da M3 continuam pendentes.
 
 ## Como executar o planejamento
 

@@ -2,7 +2,7 @@
 
 Jogo 3D de trem acrobático em Three.js integrado com a suíte de ferramentas de decisão ultrarrápidas **TypeSafe Jev (System One)** para agentes de codificação e automação E2E.
 
-M2 disponível: três fases, mapa/briefing, desbloqueio e progresso salvo, barreiras/trilhos rompidos/rampas, mais modo infinito. A loja preserva compras; seleção durante a corrida equipa na próxima tentativa. Execute `npm start`, `npm test` e `npm run test:browser` (Playwright instalado ou `PLAYWRIGHT_MODULE_DIR` configurado). Veja o [relatório M2](docs/planejamento/VALIDACAO_M2.md) e o [histórico M0/M1](docs/planejamento/VALIDACAO_M0_M1.md).
+M3 disponível: seis fases, mapa/briefing, desbloqueio e progresso salvo. Fases 1–3 têm barreiras, trilhos rompidos e rampas; fases 4–6 trazem cancelas temporizadas, pórticos de alinhamento e vagões de manutenção cruzando a via. Modo infinito separado. A loja preserva compras; seleção durante a corrida equipa na próxima tentativa. Execute `npm start`, `npm test`, `npm run test:browser` e `npm run test:browser:m3` (Playwright instalado ou `PLAYWRIGHT_MODULE_DIR` configurado). Veja o [relatório M3](docs/planejamento/VALIDACAO_M3.md), o [relatório M2](docs/planejamento/VALIDACAO_M2.md) e o [histórico M0/M1](docs/planejamento/VALIDACAO_M0_M1.md).
 
 ---
 

@@ -1,7 +1,8 @@
 import { createRng, RNG_VERSION } from '../core/rng.js';
 import { rampRewardPosition, TRAIN_GEOMETRY } from '../physics/acrobatics.js';
-const config = (number, name, lengthM, startSpeedMps, maxSpeedMps, briefing, objective, encounters) => Object.freeze({
-  id: `level-0${number}`, number, name, version: 'm2-v1', seed: `acrobatic-campaign-v1-0${number}`, rngVersion: RNG_VERSION,
+import { HAZARD_FAMILIES, isHazardFamily } from './hazard-registry.js';
+const config = (number, name, lengthM, startSpeedMps, maxSpeedMps, briefing, objective, encounters, version = 'm2-v1') => Object.freeze({
+  id: `level-0${number}`, number, name, version, seed: `acrobatic-campaign-v1-0${number}`, rngVersion: RNG_VERSION,
   lengthM, startSpeedMps, maxSpeedMps, accelerationMps2: 0.35, briefing, objective,
   encounters: Object.freeze(encounters.map(e => Object.freeze({ ...e, lanes: Object.freeze(e.lanes) }))),
 });
@@ -31,7 +32,43 @@ export const LEVEL_THREE = config(3, 'Primeiro voo', 850, 18, 24,
     { id: 'ramp-3', type: 'ramp', s: 565, length: 7, lanes: [0], safeLane: -1, message: 'ANEL AÉREO · precisa de altura; esquerda livre' },
     { id: 'ramp-4', type: 'ramp', s: 695, length: 7, lanes: [-1], safeLane: 0, message: 'ÚLTIMA RAMPA · salto opcional e pouso livre' },
   ]);
-export const LEVELS = Object.freeze([LEVEL_ONE, LEVEL_TWO, LEVEL_THREE]);
+export const LEVEL_FOUR = config(4, 'Cancela ferroviária', 950, 20, 27,
+  'A cancela fecha por tempo. Observe o sinal e a haste e use uma via livre; sempre existe uma lateral sem cancela.',
+  'Extra opcional: passar por uma cancela aberta em vez de desviar.', [
+    { id: 'gate-1', type: 'gate', s: 130, length: 0.4, lanes: [0], arrivalCycleS: [6], safeLane: -1, message: 'CANCELA NO CENTRO · desvie para a esquerda' },
+    { id: 'gate-2', type: 'gate', s: 300, length: 0.4, lanes: [-1], arrivalCycleS: [2], safeLane: 0, message: 'CANCELA À ESQUERDA · centro sem cancela' },
+    { id: 'gate-3', type: 'gate', s: 470, length: 0.4, lanes: [-1, 1], arrivalCycleS: [6, 2.5], safeLane: 0, message: 'CANCELAS NAS LATERAIS · centro sem cancela' },
+    { id: 'gate-4', type: 'gate', s: 640, length: 0.4, lanes: [1], arrivalCycleS: [6], safeLane: 0, message: 'CANCELA À DIREITA · itens no centro livre' },
+    { id: 'gate-5', type: 'gate', s: 790, length: 0.4, lanes: [0], arrivalCycleS: [6.5], safeLane: -1, message: 'CANCELA NO CENTRO · antecipe a esquerda' },
+  ], 'm3-v1');
+export const LEVEL_FIVE = config(5, 'Ponte de manobras', 1100, 22, 30,
+  'O pórtico deixa uma passagem. Alinhe frente e traseira na via indicada (W alinha) antes de entrar.',
+  'Extra opcional: cruzar todos os pórticos sem postura diagonal.', [
+    { id: 'gantry-1', type: 'gantry', s: 140, length: 1.2, lanes: [-1, 1], safeLane: 0, message: 'PÓRTICO · abertura no centro, mantenha alinhado' },
+    { id: 'gantry-2', type: 'gantry', s: 320, length: 1.2, lanes: [-1, 0], safeLane: 1, message: 'PÓRTICO · abertura à direita, frente e traseira' },
+    { id: 'poles-1', type: 'poles', s: 490, length: 10.5, lanes: [], safeLane: 1, message: 'POSTES ENTRE VIAS · não troque de via aqui' },
+    { id: 'gantry-3', type: 'gantry', s: 700, length: 1.2, lanes: [0, 1], safeLane: -1, message: 'PÓRTICO · abertura à esquerda, duas trocas' },
+    { id: 'gap-1', type: 'gap', s: 895, length: 8, lanes: [1], safeLane: 0, group: 'final', message: 'TRILHO ROMPIDO À DIREITA E PÓRTICO NO CENTRO · fique no centro' },
+    { id: 'gantry-4', type: 'gantry', s: 930, length: 1.2, lanes: [-1, 1], safeLane: 0, group: 'final', message: 'PÓRTICO NO CENTRO · mantenha alinhado' },
+  ], 'm3-v1');
+export const LEVEL_SIX = config(6, 'Cruzamento em movimento', 1200, 24, 33,
+  'O vagão de manutenção cruza a via. Observe de que lado ele vem e desvie para o lado oposto antes do cruzamento.',
+  'Extra opcional: passar por todos os cruzamentos sem colisão.', [
+    { id: 'wagon-1', type: 'wagon', s: 150, length: 2.6, lanes: [-1, 0], safeLane: 1, message: 'VAGÃO ⇢ VINDO DA ESQUERDA · use a direita' },
+    { id: 'wagon-2', type: 'wagon', s: 350, length: 2.6, lanes: [1, 0], safeLane: -1, message: 'VAGÃO ⇠ VINDO DA DIREITA · use a esquerda' },
+    { id: 'wagon-3', type: 'wagon', s: 565, length: 2.6, lanes: [-1, 0], safeLane: 1, message: 'VAGÃO ⇢ VINDO DA ESQUERDA · direita com itens' },
+    { id: 'ramp-1', type: 'ramp', s: 790, length: 7, lanes: [0], safeLane: 1, message: 'RAMPA CENTRAL OPCIONAL · direita livre' },
+    { id: 'gap-1', type: 'gap', s: 1000, length: 10, lanes: [0], safeLane: 1, group: 'final', message: 'TRILHO ROMPIDO NO CENTRO E VAGÃO ⇢ À ESQUERDA · use a direita' },
+    { id: 'wagon-4', type: 'wagon', s: 1030, length: 2.6, lanes: [-1], safeLane: 1, group: 'final', message: 'VAGÃO ⇢ À ESQUERDA · fique na direita' },
+  ], 'm3-v1');
+export const LEVELS = Object.freeze([LEVEL_ONE, LEVEL_TWO, LEVEL_THREE, LEVEL_FOUR, LEVEL_FIVE, LEVEL_SIX]);
+/** Contract budget per difficulty group (CONTRATOS.md §2), in seconds at max speed. */
+export function budgetFor(level) {
+  if (level.number <= 3) return { reactionS: 1.4, warningS: 2.5, restS: 2.5 };
+  if (level.number <= 6) return { reactionS: 1.0, warningS: 2.0, restS: 2.0 };
+  if (level.number <= 8) return { reactionS: 0.7, warningS: 1.6, restS: 1.6 };
+  return { reactionS: 0.45, warningS: 1.2, restS: 1.2 };
+}
 export const getLevel = id => LEVELS.find(level => level.id === id) || null;
 
 /** Compatibility fixture for the M1 travel regression; gameplay uses full content. */
@@ -42,16 +79,33 @@ export function createBasicLayout(level = LEVEL_ONE) {
     return Array.from({ length: 5 }, (_, i) => ({ id: `${level.id}:row-${row}:item-${i}`, s: s + i * 3, lane, points: 10 }));
   });
 }
-export function encounterEnd(e) { return e.type === 'barrier' ? e.s + e.length / 2 : e.s + e.length; }
-export function encounterStart(e) { return e.type === 'barrier' ? e.s - e.length / 2 : e.s; }
-export function warningStart(level, encounter) { return encounterStart(encounter) - TRAIN_GEOMETRY.carLength / 2 - level.maxSpeedMps * 2.7; }
-export function getWarning(level, dist) {
+const CENTERED = new Set(['barrier', 'gate', 'gantry', 'wagon']);
+export function encounterEnd(e) { return CENTERED.has(e.type) ? e.s + e.length / 2 : e.s + e.length; }
+export function encounterStart(e) { return CENTERED.has(e.type) ? e.s - e.length / 2 : e.s; }
+export const WARNING_LEAD_S = 2.7;
+export function warningStart(level, encounter) { return encounterStart(encounter) - TRAIN_GEOMETRY.carLength / 2 - level.maxSpeedMps * WARNING_LEAD_S; }
+/** Seconds the message is actually on screen at max speed: it waits for the previous encounter to clear. */
+export function effectiveWarningS(level, index) {
+  const e = level.encounters[index], previous = level.encounters[index - 1];
+  const shownFrom = Math.max(warningStart(level, e), previous ? encounterEnd(previous) + TRAIN_GEOMETRY.carLength / 2 : -Infinity, 0);
+  return (encounterStart(e) - TRAIN_GEOMETRY.carLength / 2 - shownFrom) / level.maxSpeedMps;
+}
+/** Required warning for k sequential lane changes (CONTRATOS.md §2). */
+export function requiredWarningS(level, index, crossTimeS = 0.28) {
+  const e = level.encounters[index], previous = level.encounters[index - 1], budget = budgetFor(level);
+  const k = Math.abs(e.safeLane - (previous ? previous.safeLane : 0));
+  return Math.max(budget.warningS, budget.reactionS + k * crossTimeS + 0.15);
+}
+/** Message for the next encounter; moving families append their live simulation state. */
+export function getWarning(level, dist, { timeS, content } = {}) {
   if (!level) return '';
   const next = level.encounters.find(e => dist <= encounterEnd(e) + TRAIN_GEOMETRY.carLength / 2);
-  return next && dist >= warningStart(level, next) ? next.message : '';
+  if (!next || dist < warningStart(level, next)) return '';
+  const status = content && Number.isFinite(timeS) && isHazardFamily(next.type) ? HAZARD_FAMILIES[next.type].status(next, content, timeS) : '';
+  return status ? `${next.message} · ${status}` : next.message;
 }
 export function createLevelContent(level) {
-  const items = [], barriers = [], gaps = [], poles = [], ramps = [];
+  const items = [], barriers = [], gaps = [], poles = [], ramps = [], families = { gates: [], gantries: [], wagons: [] };
   const addRow = (s, lane, id) => { for (let i = 0; i < 5; i++) items.push({ id: `${level.id}:${id}:${i}`, s: s + i * 3, lane, y: 1.6, level: 0, points: 10 }); };
   for (const e of level.encounters) {
     if (e.type === 'barrier') e.lanes.forEach(lane => barriers.push({ id: e.id, s: e.s, lane, length: e.length, width: 2.2, height: 3.2 }));
@@ -62,23 +116,31 @@ export function createLevelContent(level) {
       const reward = rampRewardPosition(e.s, level.maxSpeedMps, Boolean(e.spin));
       items.push({ id: `${level.id}:${e.id}:air`, ...reward, lane: e.lanes[0], level: e.spin ? 1 : 2, points: 50 });
     }
-    addRow(encounterEnd(e) + 12, e.safeLane, e.id);
+    if (isHazardFamily(e.type)) HAZARD_FAMILIES[e.type].build(e, level, families);
+    if (!e.group || e === level.encounters.findLast(other => other.group === e.group)) addRow(encounterEnd(e) + 12, e.safeLane, e.id);
   }
   if (level.number === 1) addRow(360, 0, 'center-items');
-  return { barriers, gaps, poles, ramps, items };
+  return { barriers, gaps, poles, ramps, items, ...families };
 }
 export function validateLevel(level) {
   const errors = [];
   if (!level || !/^level-0[1-9]$/.test(level.id)) return ['Invalid level ID'];
   if (!Number.isFinite(level.lengthM) || level.lengthM < 300 || !Number.isFinite(level.startSpeedMps) || !Number.isFinite(level.maxSpeedMps) || level.startSpeedMps <= 0 || level.maxSpeedMps < level.startSpeedMps || level.maxSpeedMps > 42 || !Number.isFinite(level.accelerationMps2) || level.accelerationMps2 < 0 || typeof level.seed !== 'string' || !level.seed) errors.push('Invalid dimensions/speed/seed');
   if (!Array.isArray(level.encounters)) return [...errors, 'Invalid encounters'];
-  let lastEnd = 0;
+  let previous = null;
   for (const e of level.encounters) {
-    if (!e || !['barrier', 'gap', 'poles', 'ramp'].includes(e.type) || !Number.isFinite(e.s) || !Number.isFinite(e.length) || e.length <= 0 || !Array.isArray(e.lanes) || !e.lanes.every(l => [-1, 0, 1].includes(l))) { errors.push('Invalid encounter'); continue; }
+    if (!e || !['barrier', 'gap', 'poles', 'ramp', 'gate', 'gantry', 'wagon'].includes(e.type) || !Number.isFinite(e.s) || !Number.isFinite(e.length) || e.length <= 0 || !Array.isArray(e.lanes) || !e.lanes.every(l => [-1, 0, 1].includes(l))) { errors.push('Invalid encounter'); continue; }
     if (encounterStart(e) < 80 || encounterEnd(e) > level.lengthM - 80) errors.push('Unsafe start/finish');
     if (e.lanes.length >= 3 || ![-1, 0, 1].includes(e.safeLane) || (e.type !== 'poles' && e.lanes.includes(e.safeLane))) errors.push('No terrestrial route');
-    if (lastEnd && encounterStart(e) - lastEnd < level.maxSpeedMps * 2.5) errors.push('Insufficient recovery');
-    lastEnd = encounterEnd(e);
+    if (isHazardFamily(e.type)) errors.push(...HAZARD_FAMILIES[e.type].validate(e, level));
+    const grouped = previous && e.group && e.group === previous.group;
+    if (grouped && (e.safeLane !== previous.safeLane || encounterStart(e) <= encounterEnd(previous))) errors.push('Grouped encounters must share a lane and stay ordered');
+    if (previous && !grouped && encounterStart(e) - encounterEnd(previous) < level.maxSpeedMps * budgetFor(level).restS) errors.push('Insufficient recovery');
+    previous = e;
   }
+  level.encounters.forEach((e, i) => {
+    const grouped = i > 0 && e.group && e.group === level.encounters[i - 1].group;
+    if (!grouped && e && Number.isFinite(e.s) && effectiveWarningS(level, i) + 1e-9 < requiredWarningS(level, i)) errors.push(`Warning budget too short for ${e.id}`);
+  });
   return errors;
 }

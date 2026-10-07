@@ -22,7 +22,8 @@ import { RunSession } from '../levels/campaign.js';
 import { LEVEL_ONE, LEVELS, getLevel, createLevelContent, getWarning } from '../levels/level-config.js';
 import { ProgressStore } from './progress-store.js';
 import { CampaignUi } from '../ui/campaign-ui.js';
-import { createWorkBarrier } from '../entities/obstacles.js';
+import { createWorkBarrier, OBSTACLE_MESHES } from '../entities/obstacles.js';
+import { HazardWorld } from '../physics/hazards.js';
 import { stepAcrobatics, TRAIN_GEOMETRY, JUMP_SETTINGS } from '../physics/acrobatics.js';
 import { segAt, trackRetention } from '../entities/track.js';
 import { ease, easeD, moveLift, targetMove, stepMove } from '../physics/train-motion.js';
@@ -148,6 +149,8 @@ import { TransformInterpolation } from '../scene/interpolation.js';
   let activeLevel = LEVEL_ONE;
   let activeProfile = getTrainGameplayProfile(shop.selected, activeLevel);
   const pendingJudges = new Set();
+  let levelContent = null;
+  let hazardWorld = new HazardWorld({}, TRAIN_GEOMETRY);
   let uiCommands = [];
   let renderedFrames = 0;
   let animationFrame = 0;
@@ -463,7 +466,7 @@ import { TransformInterpolation } from '../scene/interpolation.js';
   const railTopMat = std(0xe0e6ed, 0.95, 0.15, { side: THREE.DoubleSide });
   const gapMat = std(0x2d1f14, 0, 1, { polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
 
-  const ramps = [], poles = [], items = [], gaps = [], barriers = [];
+  const ramps = [], poles = [], items = [], gaps = [], barriers = [], hazardMeshes = [];
 
   function railRanges(seg, tz) {
     let ranges = [[0, seg.len]];
@@ -523,11 +526,12 @@ import { TransformInterpolation } from '../scene/interpolation.js';
     drop(seg.items, items);
     drop(seg.gaps, gaps);
     drop(seg.barriers, barriers);
+    drop(seg.hazards, hazardMeshes);
   }
 
   const newSeg = (s0, len, x0, z0, h0, k) => ({
     s0, len, x0, z0, h0, k,
-    ramps: [], poles: [], items: [], gaps: [], barriers: [], meshes: []
+    ramps: [], poles: [], items: [], gaps: [], barriers: [], hazards: [], meshes: []
   });
 
   // Track ties (sleepers) instancing
@@ -738,10 +742,34 @@ import { TransformInterpolation } from '../scene/interpolation.js';
     }
   }
 
+  /** M3 families: the mesh samples the same simulation-time state the HazardWorld collides with. */
+  function addHazard(seg, family, data) {
+    const asset = OBSTACLE_MESHES[family](THREE, data), point = segAt(seg, data.s - seg.s0);
+    asset.group.position.set(point.x, 0, point.z); asset.group.rotation.y = -point.h; scene.add(asset.group);
+    const object = { family, data, s: data.s, mesh: asset.group, movers: asset.movers, update: asset.update, dispose: asset.dispose, phase: asset.update(run.timeS) };
+    hazardMeshes.push(object); seg.hazards.push(object);
+  }
+
+  function updateHazards() {
+    for (const hazard of hazardMeshes) {
+      const phase = hazard.update(run.timeS), near = hazard.s > dist && hazard.s - dist < 160;
+      if (mode === 'playing' && near && phase !== hazard.phase) {
+        if (hazard.family === 'gate' && phase === 'warning') sound.gateBell();
+        if (hazard.family === 'wagon' && phase === 'entering') sound.wagonAlert();
+      }
+      hazard.phase = phase;
+    }
+  }
+
   function initTrack() {
+    levelContent = null; hazardWorld = new HazardWorld({}, TRAIN_GEOMETRY);
     if (activeLevel) {
       const seg = newSeg(-TRACK_BEHIND - 10, TRACK_BEHIND + 10 + activeLevel.lengthM + 100, -TRACK_BEHIND - 10, 0, 0, 0);
       const content = createLevelContent(activeLevel);
+      levelContent = content; hazardWorld = new HazardWorld(content, TRAIN_GEOMETRY);
+      for (const gate of content.gates) addHazard(seg, 'gate', gate);
+      for (const gantry of content.gantries) addHazard(seg, 'gantry', gantry);
+      for (const wagon of content.wagons) addHazard(seg, 'wagon', wagon);
       for (const gap of content.gaps) addGap(seg, gap.lane * TRACK_SPACING, gap.a, gap.b);
       for (const ramp of content.ramps) addRamp(seg, ramp.s, ramp.lane * TRACK_SPACING);
       for (const pole of content.poles) addPole(seg, pole.s, pole.lat);
@@ -1049,6 +1077,12 @@ import { TransformInterpolation } from '../scene/interpolation.js';
     rb.q.set(rb.q.x + qW.x, rb.q.y + qW.y, rb.q.z + qW.z, rb.q.w + qW.w).normalize();
   }
 
+  const HAZARD_CRASH = {
+    gate: { default: 'A cancela fechada atingiu o trem! Leia o sinal e use a via sem cancela.', post: 'O trem raspou no poste da cancela! Troque de via antes dela.' },
+    gantry: { default: 'O trem bateu na lateral do pórtico! Alinhe frente e traseira na abertura.', roof: 'O trem bateu no teto do pórtico! Não salte dentro da abertura.' },
+    wagon: { default: 'Colisão com o vagão de manutenção! Desvie para o lado oposto ao que ele vem.' },
+  };
+
   // Hit testing & Switches
   function checkHits(half, slant, lf, lr, jy) {
     if (run.state.mode !== 'playing') return;
@@ -1082,6 +1116,9 @@ import { TransformInterpolation } from '../scene/interpolation.js';
         }
       }
     }
+
+    const hazardHit = hazardWorld.check({ ...collisionPose, top: jy + Math.max(lf, lr) + TRAIN_GEOMETRY.bodyHeight, timeS: run.timeS });
+    if (hazardHit) { triggerCrash(HAZARD_CRASH[hazardHit.family][hazardHit.part] || HAZARD_CRASH[hazardHit.family].default); return; }
 
 
     // Collectible Rings & Gems with Drift Multiplier
@@ -1392,6 +1429,7 @@ import { TransformInterpolation } from '../scene/interpolation.js';
     }
 
     maintainTrack();
+    updateHazards();
     stepSprings(dt);
     updateSparks(dt);
 
@@ -1481,8 +1519,10 @@ import { TransformInterpolation } from '../scene/interpolation.js';
 
   }
 
+  const interpolated = () => [car, camera, ...carriages.map(c => c.mesh), ...hazardMeshes.flatMap(h => h.movers)];
+
   function simulationStep(dt) {
-    interpolation.capture([car, camera, ...carriages.map(c => c.mesh)]);
+    interpolation.capture(interpolated());
     run.step(dt, stepWorld);
     mode = run.state.mode; speed = run.travel.speed; dist = run.travel.dist; score = run.score;
   }
@@ -1496,16 +1536,16 @@ import { TransformInterpolation } from '../scene/interpolation.js';
     const commands = uiCommands; uiCommands = [];
     for (const command of commands) if (command.runId === run.state.runId) command.callback();
     bg.position.set(camera.position.x, 0, camera.position.z);
-    interpolation.render([car, camera, ...carriages.map(c => c.mesh)], window.__TRAIN_TEST_CONFIG__?.manualClock ? 1 : clock.accumulator / clock.stepS, () => renderer.render(scene, camera));
+    interpolation.render(interpolated(), window.__TRAIN_TEST_CONFIG__?.manualClock ? 1 : clock.accumulator / clock.stepS, () => renderer.render(scene, camera));
     renderedFrames += 1;
     hud.renderSnapshot({ score, best, bankPoints, speedKmh: speed * 3.6, front: moves.front.to, rear: moves.rear.to,
       diagonal: Math.abs(ends.front - ends.rear) >= TRACK_SPACING * 0.7,
-      driftCombo, driftFill: driftTime ? (driftTime % 1.5) * 66.6 : 0, dist, lengthM: activeLevel?.lengthM, warning: getWarning(activeLevel, dist), metrics: run.metrics });
+      driftCombo, driftFill: driftTime ? (driftTime % 1.5) * 66.6 : 0, dist, lengthM: activeLevel?.lengthM, warning: getWarning(activeLevel, dist, { timeS: run.timeS, content: levelContent }), metrics: run.metrics });
     animationFrame = requestAnimationFrame(renderFrame);
   }
 
   if (window.__TRAIN_TEST_CONFIG__) window.__TRAIN_TEST_HOOKS__ = {
-    snapshot: () => ({ ...run.snapshot(), air: pose.air, progress: progress.snapshot(), jump: { ...jump }, barriers: barriers.map(b => ({ s: b.s, lat: b.lat, length: b.length, width: b.width, height: b.height })), ramps: ramps.map(r => ({ s: r.s, tz: r.tz })), renderedFrames, clock: { lastMs: clock.lastMs, accumulator: clock.accumulator }, testConfig: { ...window.__TRAIN_TEST_CONFIG__ }, shop: shop.snapshot(), currentTrainId, ends: { ...ends }, targets: { front: moves.front.to, rear: moves.rear.to }, gaps: gaps.map(g => ({ tz: g.tz, a: g.a, b: g.b })), track: segs.map(s => ({ s0: s.s0, len: s.len, k: s.k })), layout: items.map(i => ({ s: i.s, lat: i.lat, id: i.id })), memory: { ...renderer.info.memory }, pendingJudges: pendingJudges.size }),
+    snapshot: () => ({ ...run.snapshot(), air: pose.air, progress: progress.snapshot(), jump: { ...jump }, barriers: barriers.map(b => ({ s: b.s, lat: b.lat, length: b.length, width: b.width, height: b.height })), ramps: ramps.map(r => ({ s: r.s, tz: r.tz })), renderedFrames, clock: { lastMs: clock.lastMs, accumulator: clock.accumulator }, testConfig: { ...window.__TRAIN_TEST_CONFIG__ }, shop: shop.snapshot(), currentTrainId, ends: { ...ends }, targets: { front: moves.front.to, rear: moves.rear.to }, gaps: gaps.map(g => ({ tz: g.tz, a: g.a, b: g.b })), hazards: hazardMeshes.map(h => ({ family: h.family, id: h.data.id, s: h.s, phase: h.phase, movers: h.movers.map(m => ({ z: m.position.z, rx: m.rotation.x })) })), warning: getWarning(activeLevel, dist, { timeS: run.timeS, content: levelContent }), track: segs.map(s => ({ s0: s.s0, len: s.len, k: s.k })), layout: items.map(i => ({ s: i.s, lat: i.lat, id: i.id })), memory: { ...renderer.info.memory }, pendingJudges: pendingJudges.size }),
     step: ticks => { for (let i = 0; i < Math.min(10000, ticks); i++) simulationStep(1 / 60); },
     openMap, chooseLevel, startLevel: id => startGame('campaign', id), menu: returnToMenu,
     judge: () => evaluateStuntWithJev('TEST STUNT', 1, 4),

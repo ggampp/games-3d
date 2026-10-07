@@ -235,7 +235,7 @@ export class HudManager {
   showLevelResult(show, snapshot = {}) {
     if (show) {
       document.getElementById('level-result-title').textContent = `FASE ${snapshot.levelNumber} CONCLUÍDA!`;
-      this.levelSummary.textContent = `${snapshot.lengthM} m em ${snapshot.timeS.toFixed(1)} s · ${snapshot.score} pontos. ${snapshot.metrics?.items ?? 0} itens, ${snapshot.metrics?.aerialItems ?? 0} anéis aéreos e ${snapshot.metrics?.stuntsLanded ?? 0} manobras pousadas. ${snapshot.levelNumber === 3 ? 'Fases 1–3 concluídas. Fase 4 em breve.' : ''}`;
+      this.levelSummary.textContent = `${snapshot.lengthM} m em ${snapshot.timeS.toFixed(1)} s · ${snapshot.score} pontos. ${snapshot.metrics?.items ?? 0} itens, ${snapshot.metrics?.aerialItems ?? 0} anéis aéreos e ${snapshot.metrics?.stuntsLanded ?? 0} manobras pousadas. ${snapshot.levelNumber === 6 ? 'Fases 1–6 concluídas. Fase 7 em breve.' : ''}`;
     }
     if (this.levelModal) this.levelModal.hidden = !show;
     this.dialogs?.sync();

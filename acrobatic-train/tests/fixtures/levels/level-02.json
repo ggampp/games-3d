@@ -312,6 +312,9 @@
         "level": 0,
         "points": 10
       }
-    ]
+    ],
+    "gates": [],
+    "gantries": [],
+    "wagons": []
   }
 }

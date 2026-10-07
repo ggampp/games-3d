@@ -1,6 +1,6 @@
 # Fase 5 — Ponte de manobras
 
-Status: planejada; sem implementação/testes executados. Entrega: M3. Dependência: Fase 4; pórtico e colisão tridimensional de M3. Referências: [contratos](../CONTRATOS.md), [testes](../TESTES.md), [índice](../README.md).
+Status: implementada na M3 e validada automaticamente em 07/10/2026. [Resultados](../VALIDACAO_M3.md). Playtest humano pendente. Conteúdo e valores efetivos estão em src/levels/level-config.js e nas fixtures/replays. Entrega: M3. Dependência: Fase 4; pórtico e colisão tridimensional de M3. Referências: [contratos](../CONTRATOS.md), [testes](../TESTES.md), [índice](../README.md).
 
 ## Objetivo e experiência
 

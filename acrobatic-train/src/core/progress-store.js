@@ -1,6 +1,8 @@
 export const PROGRESS_KEY = 'acrobatic_train_campaign_v1';
-export const CONTENT_VERSION = 'm2-v1';
+export const CONTENT_VERSION = 'm3-v1';
 const ids = Array.from({ length: 9 }, (_, i) => `level-0${i + 1}`);
+/** Levels with shipped content; later ones unlock logically but stay unavailable. */
+export const PLAYABLE_LEVELS = Object.freeze(ids.slice(0, 6));
 const empty = () => ({ schemaVersion: 1, contentVersion: CONTENT_VERSION, highestUnlockedLevel: 1, results: {}, achievements: [] });
 const validScore = value => Number.isSafeInteger(value) && value >= 0;
 const validTime = value => Number.isFinite(value) && value > 0 && value <= 3600;
@@ -32,10 +34,10 @@ export class ProgressStore {
     if (version === 1 && ((value.highestUnlockedLevel !== undefined && value.highestUnlockedLevel !== this.data.highestUnlockedLevel) || Object.keys(results).some(id => !ids.includes(id) || !this.data.results[id]))) this.warning = 'Progresso inválido parcialmente recuperado. Compras preservadas.';
     if (Object.keys(this.data.results).length === 9 && Array.isArray(value.achievements) && value.achievements.includes('campaign-9-complete')) this.data.achievements = ['campaign-9-complete'];
   }
-  canPlay(id) { return ['level-01', 'level-02', 'level-03'].includes(id) && Number(id.slice(-2)) <= this.data.highestUnlockedLevel; }
+  canPlay(id) { return PLAYABLE_LEVELS.includes(id) && Number(id.slice(-2)) <= this.data.highestUnlockedLevel; }
   continueLevelId() {
-    for (const id of ids.slice(0, 3)) if (this.canPlay(id) && !this.data.results[id]) return id;
-    return `level-0${Math.min(3, this.data.highestUnlockedLevel)}`;
+    for (const id of PLAYABLE_LEVELS) if (this.canPlay(id) && !this.data.results[id]) return id;
+    return `level-0${Math.min(PLAYABLE_LEVELS.length, this.data.highestUnlockedLevel)}`;
   }
   complete({ levelId, score, timeS, eventId, source = 'campaign' }) {
     if (source !== 'campaign' || !this.canPlay(levelId) || !validScore(score) || !validTime(timeS) || typeof eventId !== 'string' || !eventId || this.#seen.has(eventId)) return false;

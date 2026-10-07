@@ -135,6 +135,17 @@ class SoundEngine {
     this.playTone('triangle', base * 1.5, base * 1.5, 0.14, 0.22, 0.06);
   }
 
+  // Level-crossing bell when a gate ahead starts its warning
+  gateBell() {
+    for (let i = 0; i < 3; i++) this.playTone('triangle', 1568, 1480, 0.12, 0.18, i * 0.22);
+  }
+
+  // Two-tone alert when a maintenance wagon starts crossing
+  wagonAlert() {
+    this.playTone('square', 660, 660, 0.14, 0.08);
+    this.playTone('square', 495, 495, 0.18, 0.08, 0.16);
+  }
+
   // Stunt completed triumphant chord
   stunt() {
     this.playTone('triangle', 523.25, 659.25, 0.18, 0.3, 0);
