@@ -111,7 +111,8 @@ const server = http.createServer(async (req, res) => {
 });
 
 // ---------- M5: two-player rooms over WebSocket, only on /ws ----------
-const rooms = new RoomManager();
+// Countdown is configurable (default 3 s) so slow clients can finish preparing the scene before the start.
+const rooms = new RoomManager({ countdownMs: Number(process.env.ROOM_COUNTDOWN_MS) || undefined });
 // Frames above 16 KiB close the socket; 4–16 KiB frames get a 'too-large' protocol error.
 const wss = new WebSocketServer({ noServer: true, maxPayload: 16 * 1024 });
 server.on('upgrade', (req, socket, head) => {

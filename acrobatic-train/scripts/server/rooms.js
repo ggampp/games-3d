@@ -13,8 +13,8 @@ const EPS = 1e-9;
  * drive everything deterministically with update(nowMs).
  */
 export class RoomManager {
-  constructor({ now = () => Date.now(), schedule = (fn, ms) => setInterval(fn, ms), cancel = handle => clearInterval(handle), random = max => crypto.randomInt(max), uuid = () => crypto.randomUUID() } = {}) {
-    Object.assign(this, { now, schedule, cancel, random, uuid });
+  constructor({ countdownMs = LIMITS.countdownMs, now = () => Date.now(), schedule = (fn, ms) => setInterval(fn, ms), cancel = handle => clearInterval(handle), random = max => crypto.randomInt(max), uuid = () => crypto.randomUUID() } = {}) {
+    Object.assign(this, { countdownMs, now, schedule, cancel, random, uuid });
     this.rooms = new Map(); this.connections = new Map(); this.loop = null;
   }
   // ---------- transport entry points ----------
@@ -70,7 +70,7 @@ export class RoomManager {
     if (room.participants.length === 2 && room.participants.every(p => p.ready)) this.start(room);
   }
   start(room) {
-    room.state = 'countdown'; room.runId += 1; room.tick = 0; room.startAt = this.now() + LIMITS.countdownMs;
+    room.state = 'countdown'; room.runId += 1; room.tick = 0; room.startAt = this.now() + this.countdownMs;
     const profile = getTrainGameplayProfile('cyber', room.level);
     for (const p of room.participants) Object.assign(p, { sim: new TrainSimulation(room.level, profile), lastSeq: 0, appliedSeq: 0, pending: [] });
     this.broadcast(room, { type: 'start', roomId: room.id, runId: room.runId, startTick: 0, startAt: room.startAt, serverTime: this.now(), levelId: room.levelId, seed: room.level.seed,
