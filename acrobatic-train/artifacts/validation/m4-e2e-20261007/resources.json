@@ -1,0 +1,228 @@
+{
+  "class395": {
+    "level-07": [
+      {
+        "geometries": 115,
+        "textures": 2,
+        "smokeParticles": 0
+      },
+      {
+        "geometries": 115,
+        "textures": 2,
+        "smokeParticles": 0
+      },
+      {
+        "geometries": 115,
+        "textures": 2,
+        "smokeParticles": 0
+      },
+      {
+        "geometries": 115,
+        "textures": 2,
+        "smokeParticles": 0
+      },
+      {
+        "geometries": 115,
+        "textures": 2,
+        "smokeParticles": 0
+      },
+      {
+        "geometries": 115,
+        "textures": 2,
+        "smokeParticles": 0
+      },
+      {
+        "geometries": 115,
+        "textures": 2,
+        "smokeParticles": 0
+      },
+      {
+        "geometries": 115,
+        "textures": 2,
+        "smokeParticles": 0
+      },
+      {
+        "geometries": 115,
+        "textures": 2,
+        "smokeParticles": 0
+      },
+      {
+        "geometries": 115,
+        "textures": 2,
+        "smokeParticles": 0
+      }
+    ],
+    "level-08": [
+      {
+        "geometries": 114,
+        "textures": 2,
+        "smokeParticles": 0
+      },
+      {
+        "geometries": 114,
+        "textures": 2,
+        "smokeParticles": 0
+      },
+      {
+        "geometries": 114,
+        "textures": 2,
+        "smokeParticles": 0
+      },
+      {
+        "geometries": 114,
+        "textures": 2,
+        "smokeParticles": 0
+      },
+      {
+        "geometries": 114,
+        "textures": 2,
+        "smokeParticles": 0
+      },
+      {
+        "geometries": 114,
+        "textures": 2,
+        "smokeParticles": 0
+      },
+      {
+        "geometries": 114,
+        "textures": 2,
+        "smokeParticles": 0
+      },
+      {
+        "geometries": 114,
+        "textures": 2,
+        "smokeParticles": 0
+      },
+      {
+        "geometries": 114,
+        "textures": 2,
+        "smokeParticles": 0
+      },
+      {
+        "geometries": 114,
+        "textures": 2,
+        "smokeParticles": 0
+      }
+    ],
+    "level-09": [
+      {
+        "geometries": 137,
+        "textures": 2,
+        "smokeParticles": 0
+      },
+      {
+        "geometries": 137,
+        "textures": 2,
+        "smokeParticles": 0
+      },
+      {
+        "geometries": 137,
+        "textures": 2,
+        "smokeParticles": 0
+      },
+      {
+        "geometries": 137,
+        "textures": 2,
+        "smokeParticles": 0
+      },
+      {
+        "geometries": 137,
+        "textures": 2,
+        "smokeParticles": 0
+      },
+      {
+        "geometries": 137,
+        "textures": 2,
+        "smokeParticles": 0
+      },
+      {
+        "geometries": 137,
+        "textures": 2,
+        "smokeParticles": 0
+      },
+      {
+        "geometries": 137,
+        "textures": 2,
+        "smokeParticles": 0
+      },
+      {
+        "geometries": 137,
+        "textures": 2,
+        "smokeParticles": 0
+      },
+      {
+        "geometries": 137,
+        "textures": 2,
+        "smokeParticles": 0
+      }
+    ]
+  },
+  "steam": {
+    "level-07": [
+      {
+        "geometries": 134,
+        "textures": 2,
+        "smokeParticles": 20
+      },
+      {
+        "geometries": 134,
+        "textures": 2,
+        "smokeParticles": 22
+      },
+      {
+        "geometries": 134,
+        "textures": 2,
+        "smokeParticles": 19
+      },
+      {
+        "geometries": 134,
+        "textures": 2,
+        "smokeParticles": 22
+      }
+    ],
+    "level-08": [
+      {
+        "geometries": 134,
+        "textures": 2,
+        "smokeParticles": 21
+      },
+      {
+        "geometries": 134,
+        "textures": 2,
+        "smokeParticles": 20
+      },
+      {
+        "geometries": 134,
+        "textures": 2,
+        "smokeParticles": 22
+      },
+      {
+        "geometries": 133,
+        "textures": 2,
+        "smokeParticles": 21
+      }
+    ],
+    "level-09": [
+      {
+        "geometries": 156,
+        "textures": 2,
+        "smokeParticles": 22
+      },
+      {
+        "geometries": 156,
+        "textures": 2,
+        "smokeParticles": 21
+      },
+      {
+        "geometries": 156,
+        "textures": 2,
+        "smokeParticles": 21
+      },
+      {
+        "geometries": 156,
+        "textures": 2,
+        "smokeParticles": 21
+      }
+    ]
+  }
+}

@@ -35,7 +35,16 @@ Data: 07/10/2026. **M4 implementada, com validação automatizada aprovada. Play
 
 `npm test`: **62 testes passaram**, zero falhas. Nove são novos, em `tests/m4-campaign.test.js`. O helper de reação tardia foi extraído para `tests/helpers/late-route.js`.
 
-E2E do navegador: ver a seção abaixo, preenchida com a execução final.
+| Cenário E2E (`npm run test:browser:m4`) | Resultado |
+| --- | --- |
+| Campanha 1→9 no desktop, save novo, cyber, API offline | As nove fases foram concluídas com reloads após a 3 e a 6. Nenhuma compra. Troféu só depois da fase 9. Foco inicial em "Jogar modo infinito" e Tab preso no modal. O contador de áudio registrou de 85 a 155 osciladores por fase com som ligado e **0** na final com mudo |
+| Retry da final e galeria | Retry concluído (2 conclusões da fase 9) com um único troféu e a mensagem "já conquistado". A galeria mostra o troféu e 9 itens |
+| Infinito após a final | Inicia sem fase e não altera o progresso depois de 600 ticks. O troféu persiste após reload |
+| Retrato touch, save com 1–8 | Fase 9 vencida por botões touch, troféu concedido, foco correto e zero erros de página |
+| Class 395 (12 carros) e steam nas fases 7–9 | Pista atrás da cauda; fase 9 concluída com os dois trens. Geometrias do Class 395 constantes em 10 ciclos (115/114/137). O steam oscila numa faixa de até 1 geometria (fumaça viva), sem tendência de alta. SwiftShader a ~1,4 FPS: custo relativo, não orçamento de hardware |
+| Regressão M3 (`npm run test:browser:m3`) | Executada depois desta suíte, já com a fase 7 liberada após a 6 |
+
+Evidências: [resultados](../../artifacts/validation/m4-e2e-20261007/browser-results.json), [recursos](../../artifacts/validation/m4-e2e-20261007/resources.json), [campanha completa (desktop)](../../artifacts/validation/m4-e2e-20261007/m4-desktop-campaign-complete.png), [galeria](../../artifacts/validation/m4-e2e-20261007/m4-desktop-gallery.png), [campanha completa (retrato)](../../artifacts/validation/m4-e2e-20261007/m4-portrait-campaign-complete.png), [Class 395 na fase 9](../../artifacts/validation/m4-e2e-20261007/m4-class395-final.png).
 
 ## Reprodução
 
