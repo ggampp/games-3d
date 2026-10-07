@@ -18,7 +18,8 @@
     "jev:skills": "node scripts/jev/skill-selector.js",
     "jev:browser": "node scripts/jev/browser-action.js",
     "jev:compact": "node scripts/jev/compact-context.js",
-    "jev:test": "node scripts/jev/test-suite.js"
+    "jev:test": "node scripts/jev/test-suite.js",
+    "elevenlabs:whistle": "node scripts/generate-whistles-elevenlabs.js"
   },
   "keywords": [
     "threejs",

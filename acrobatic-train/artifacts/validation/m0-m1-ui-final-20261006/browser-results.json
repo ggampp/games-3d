@@ -1,0 +1,22 @@
+{
+  "runId": "m0-m1-ui-final-20261006",
+  "generatedAt": "2026-10-06T22:26:23.117Z",
+  "reports": [
+    {
+      "viewport": "desktop",
+      "passed": true,
+      "arrival": 600,
+      "layoutItems": 25,
+      "softwareGpu": true,
+      "pageErrors": []
+    },
+    {
+      "viewport": "mobile",
+      "passed": true,
+      "arrival": 600,
+      "layoutItems": 25,
+      "softwareGpu": true,
+      "pageErrors": []
+    }
+  ]
+}

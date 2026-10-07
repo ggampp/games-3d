@@ -1,0 +1,12 @@
+{
+  "generatedAt": "2026-10-06T22:16:16.059Z",
+  "reports": [
+    {
+      "viewport": "wall-clock-480x768",
+      "passed": true,
+      "tick": 6,
+      "dist": 1.4020416666666664,
+      "shadowsDisabledForSoftwareGpu": true
+    }
+  ]
+}

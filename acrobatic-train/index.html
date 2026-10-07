@@ -46,7 +46,7 @@
         <!-- Train Store Button -->
         <button id="store-btn" class="hud-store-btn" title="Abrir Loja de Trens (Tecla B)">
           <span class="store-icon">🛍️</span>
-          <div class="stat-item" style="align-items:flex-start;">
+          <div class="stat-item hud-btn-stat">
             <span class="stat-title">[B] LOJA DE TRENS</span>
             <span class="stat-val" style="font-size:12px; color:var(--accent-gold);">CATÁLOGO</span>
           </div>
@@ -55,7 +55,7 @@
         <!-- Train Series Quick Switch Card -->
         <button class="skin-selector-card" id="skin-toggle-btn" title="Alternar Série da Locomotiva (Tecla T)" aria-label="Selecionar próximo trem" type="button">
           <div class="skin-swatch" id="skin-swatch" style="background:#00f2fe; color:#00f2fe;"></div>
-          <div class="stat-item" style="align-items:flex-start;">
+          <div class="stat-item hud-btn-stat">
             <span class="stat-title">[T] LOCOMOTIVA</span>
             <span class="stat-val" id="skin-name-display" style="font-size:13px; color:#fff;">CYBER SHINKANSEN</span>
           </div>
@@ -204,36 +204,80 @@
 
     <!-- Tutorial / Instructions Modal -->
     <div id="tutorial-modal" class="overlay-modal">
-      <div class="modal-card">
-        <h1 class="modal-title">🚄 MANUAL DE OPERAÇÃO DO MAQUINISTA</h1>
-        <p class="modal-subtitle">Assuma a cabine de comando da composição de alta velocidade! Controle os dois truques (bogies) de forma independente através das alavancas de desvio (AMV) em 3 vias paralelas e execute manobras acrobáticas!</p>
+      <div class="modal-card start-menu-card">
+        <header class="start-menu-header">
+          <div class="start-badge">
+            <span class="start-badge-dot"></span>
+            <span>SIMULAÇÃO FERROVIÁRIA 3D • BITOLA TRIPLA</span>
+          </div>
+          <h1 class="modal-title">🚄 MANUAL DE OPERAÇÃO DO MAQUINISTA</h1>
+          <p class="modal-subtitle">Assuma a cabine de comando da composição de alta velocidade! Manobre os truques de forma independente pelas 3 vias paralelas e execute acrobacias aéreas!</p>
+        </header>
 
-        <div class="tutorial-keys-grid">
-          <div class="tut-key-box">
-            <div class="tut-key-header">🕹️ Truque Frontal (Agulha)</div>
-            <div class="tut-key-desc">Use <strong>A</strong> e <strong>D</strong> para manobrar o truque dianteiro entre as 3 vias paralelas.</div>
+        <div class="start-menu-grid">
+          <!-- Coluna Esquerda: Instruções de Pilotagem -->
+          <div class="start-col start-col-guide">
+            <div class="start-col-header">
+              <span class="start-col-icon">🎮</span>
+              <span>CONTROLES & MANOBRAS</span>
+            </div>
+
+            <div class="tutorial-keys-grid">
+              <div class="tut-key-box">
+                <div class="tut-key-header">🕹️ Truque Frontal</div>
+                <div class="tut-key-desc">Use <span class="tut-key-chip">A</span> e <span class="tut-key-chip">D</span> para desviar a agulha dianteira entre as 3 vias.</div>
+              </div>
+              <div class="tut-key-box">
+                <div class="tut-key-header">🕹️ Truque Traseiro</div>
+                <div class="tut-key-desc">Use <span class="tut-key-chip">←</span> <span class="tut-key-chip">→</span> ou <span class="tut-key-chip">J</span> <span class="tut-key-chip">L</span> para mudar o truque traseiro.</div>
+              </div>
+              <div class="tut-key-box">
+                <div class="tut-key-header">🤸 Desvio & Drift</div>
+                <div class="tut-key-desc">Vias diferentes geram <strong>Drift Contínuo</strong>! Rampa reta: <em>Backflip</em> | Rampa diagonal: <em>Barrel Roll</em>!</div>
+              </div>
+              <div class="tut-key-box">
+                <div class="tut-key-header">⌨️ Válvulas de Cabine</div>
+                <div class="tut-key-desc"><span class="tut-key-chip">W</span> Alinhar | <span class="tut-key-chip">H/Espaço</span> Apito | <span class="tut-key-chip">P</span> Freio | <span class="tut-key-chip">T</span> Trem.</div>
+              </div>
+            </div>
+
+            <div class="start-campaign-callout">
+              <span class="callout-icon">🏆</span>
+              <p class="callout-text"><strong>Campanha (9 Fases):</strong> Desvie de obras, trilhos partidos, pórticos e cruzamentos até o troféu. Chegar vivo libera a próxima fase!</p>
+            </div>
           </div>
-          <div class="tut-key-box">
-            <div class="tut-key-header">🕹️ Truque Traseiro (Tração)</div>
-            <div class="tut-key-desc">Use <strong>←</strong> e <strong>→</strong> (ou <strong>J</strong> e <strong>L</strong>) para mudar o truque traseiro de via.</div>
-          </div>
-          <div class="tut-key-box">
-            <div class="tut-key-header">🤸 Desvio Diagonal & Manobras</div>
-            <div class="tut-key-desc">Rode em vias diferentes para acumular <strong>Drift Contínuo</strong>! Rampa alinhada = Backflip | Rampa diagonal = Barrel Roll!</div>
-          </div>
-          <div class="tut-key-box">
-            <div class="tut-key-header">⌨️ Válvulas e Controles de Cabine</div>
-            <div class="tut-key-desc"><strong>[W]</strong> Alinhar Bitola Reta | <strong>[H / Espaço]</strong> Apito Ferroviário | <strong>[P]</strong> Freio Emergência | <strong>[T]</strong> Série do Trem.</div>
+
+          <!-- Coluna Direita: Central de Partida e Modos -->
+          <div class="start-col start-col-actions">
+            <div class="start-col-header">
+              <span class="start-col-icon">🚦</span>
+              <span>CENTRAL DE PARTIDA</span>
+            </div>
+
+            <p class="campaign-save-status" role="status"></p>
+
+            <button id="continue-campaign-btn" class="action-btn btn-primary start-continue-btn">CONTINUAR CAMPANHA</button>
+
+            <div class="start-modes-grid">
+              <button id="start-game-btn" class="action-btn btn-secondary start-mode-btn">
+                <span class="mode-icon">🗺️</span>
+                <span>ESCOLHER FASE</span>
+              </button>
+              <button id="start-infinite-btn" class="action-btn btn-secondary start-mode-btn">
+                <span class="mode-icon">⚡</span>
+                <span>MODO INFINITO</span>
+              </button>
+              <button id="start-online-btn" class="action-btn btn-secondary start-mode-btn">
+                <span class="mode-icon">🌐</span>
+                <span>CORRIDA ONLINE 1v1</span>
+              </button>
+              <button id="menu-store-btn" class="action-btn btn-secondary start-mode-btn">
+                <span class="mode-icon">🛍️</span>
+                <span>LOJA DE TRENS</span>
+              </button>
+            </div>
           </div>
         </div>
-
-        <p class="modal-subtitle">Campanha: nove fases com obras, trilhos rompidos, saltos, cancelas, pórticos e vagões cruzando, até o desafio final e o troféu. Chegar vivo libera a próxima fase. Itens e pontos são opcionais.</p>
-        <p class="campaign-save-status" role="status"></p>
-        <button id="continue-campaign-btn" class="action-btn btn-primary">CONTINUAR CAMPANHA</button>
-        <button id="start-game-btn" class="action-btn btn-secondary">ESCOLHER FASE</button>
-        <button id="start-infinite-btn" class="action-btn btn-secondary">JOGAR MODO INFINITO</button>
-        <button id="start-online-btn" class="action-btn btn-secondary">CORRIDA ONLINE · 2 JOGADORES</button>
-        <button id="menu-store-btn" class="action-btn btn-secondary">ABRIR LOJA DE TRENS</button>
       </div>
     </div>
 

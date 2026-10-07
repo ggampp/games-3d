@@ -10,6 +10,8 @@ class SoundEngine {
     this.noiseBuf = null;
     this.soundOn = true;
     this.volume = 0.5;
+    this.samples = {};
+    this.samplesLoaded = false;
 
     // Auto unlock on first user interaction
     const unlock = () => {
@@ -40,6 +42,7 @@ class SoundEngine {
       channelData[i] = Math.random() * 2 - 1;
     }
 
+    this.preloadSamples();
     return this.actx;
   }
 
@@ -229,8 +232,64 @@ class SoundEngine {
     this.playNoise('highpass', 4000, 2000, 0.25, 0.15, 0.15, 1.5);
   }
 
-  // Play appropriate whistle based on train type
+  // Preload ElevenLabs high-fidelity audio samples
+  async preloadSamples() {
+    if (typeof window === 'undefined' || !this.actx || this.samplesLoaded) return;
+    this.samplesLoaded = true;
+    const samplesToLoad = {
+      steam: '/assets/audio/whistle-steam.mp3',
+      cyber: '/assets/audio/horn-cyber.mp3',
+      british: '/assets/audio/horn-british.mp3',
+      class395: '/assets/audio/horn-british.mp3',
+      passenger: '/assets/audio/horn-cyber.mp3',
+      freight: '/assets/audio/horn-diesel.mp3',
+      diesel: '/assets/audio/horn-diesel.mp3',
+      default: '/assets/audio/horn-cyber.mp3',
+    };
+    for (const [key, url] of Object.entries(samplesToLoad)) {
+      this.loadSample(key, url);
+    }
+  }
+
+  // Fetch and decode external audio asset via Web Audio API
+  async loadSample(key, url) {
+    if (typeof window === 'undefined' || !this.actx) return;
+    try {
+      const res = await fetch(url);
+      if (!res.ok) return;
+      const arrayBuf = await res.arrayBuffer();
+      const decoded = await this.actx.decodeAudioData(arrayBuf);
+      this.samples[key] = decoded;
+    } catch {
+      // Seamless graceful fallback to procedural Web Audio synthesis
+    }
+  }
+
+  // Play high-definition decoded sample buffer with volume control
+  playSample(trainType = 'cyber', vol = 0.65) {
+    if (!this.isReady()) return false;
+    const buffer = this.samples[trainType] || (trainType === 'default' ? this.samples.cyber : null);
+    if (!buffer) return false;
+    try {
+      const src = this.actx.createBufferSource();
+      const gain = this.actx.createGain();
+      src.buffer = buffer;
+      gain.gain.setValueAtTime(vol, this.actx.currentTime);
+      src.connect(gain).connect(this.master);
+      src.start();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  // Play appropriate whistle based on train type (ElevenLabs HD sample with procedural fallback)
   playWhistle(trainType = 'cyber') {
+    // Attempt high-fidelity ElevenLabs audio sample if loaded
+    if (this.playSample(trainType)) {
+      return;
+    }
+    // Procedural Web Audio fallback (offline / unit tests / instant zero-latency)
     switch (trainType) {
       case 'steam':
         this.steamWhistle();

@@ -289,6 +289,14 @@ export class HudManager {
     this.updateCoins(bankPoints);
     this.storeGrid.innerHTML = '';
 
+    const previewImages = {
+      cyber: '/assets/images/trains/cyber_shinkansen.jpg',
+      steam: '/assets/images/trains/steam_train_1880.jpg',
+      passenger: '/assets/images/trains/passenger_express.jpg',
+      highspeed: '/assets/images/trains/aero_highspeed.jpg',
+      class395: '/assets/images/trains/class395_javelin.jpg'
+    };
+
     const previewIcons = {
       cyber: '🚄',
       steam: '🚂',
@@ -321,7 +329,10 @@ export class HudManager {
         <span class="store-card-badge" style="background:${train.accentColor}25; color:${train.accentColor}; border:1px solid ${train.accentColor}50;">
           ${train.badge}
         </span>
-        <div class="store-card-preview">${previewIcons[train.id] || '🚂'}</div>
+        <div class="store-card-preview">
+          <img src="${previewImages[train.id] || ''}" alt="${train.name}" class="store-train-img" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='block';">
+          <span class="store-train-fallback" style="display:none; font-size:38px;">${previewIcons[train.id] || '🚂'}</span>
+        </div>
         <div class="store-card-name">${train.name}</div>
         <div class="store-card-sub">${train.subtitle}</div>
         <div class="store-card-desc">${train.description}</div>
