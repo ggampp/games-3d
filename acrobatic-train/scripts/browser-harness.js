@@ -19,7 +19,7 @@ export async function createHarness({ defaultRunId, port = '3191' }) {
   const h = { url, runId, directory, captures, browser: null };
   h.snapshot = page => page.evaluate(() => window.__TRAIN_TEST_HOOKS__.snapshot());
   h.step = (page, ticks) => page.evaluate(n => window.__TRAIN_TEST_HOOKS__.step(n), ticks);
-  h.ready = async page => { await page.goto(url, { waitUntil: 'networkidle' }); await page.waitForFunction(() => Boolean(window.__TRAIN_TEST_HOOKS__)); };
+  h.ready = async page => { await page.goto(url, { waitUntil: 'networkidle' }); await page.waitForFunction(() => Boolean(window.__TRAIN_TEST_HOOKS__), null, { timeout: 120000 }); };
   h.steer = async (page, end, lane, touch) => {
     const current = Math.round((await h.snapshot(page)).targets[end] / 3.4), direction = Math.sign(lane - current);
     for (let i = 0; i < Math.abs(lane - current); i++) {

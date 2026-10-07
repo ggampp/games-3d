@@ -4,7 +4,7 @@ export class Dialogs {
     this.root = root; this.active = null; this.returnFocus = null;
     this.onKeyDown = event => {
       if (event.key !== 'Tab' || !this.active) return;
-      const buttons = [...this.active.querySelectorAll('button:not(:disabled), [tabindex="0"]')].filter(el => !el.closest('[hidden]'));
+      const buttons = [...this.active.querySelectorAll('button:not(:disabled), input:not(:disabled), select:not(:disabled), [tabindex="0"]')].filter(el => !el.closest('[hidden]'));
       if (!buttons.length) { event.preventDefault(); return; }
       const first = buttons[0], last = buttons.at(-1);
       if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }

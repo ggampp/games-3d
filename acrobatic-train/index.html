@@ -232,6 +232,7 @@
         <button id="continue-campaign-btn" class="action-btn btn-primary">CONTINUAR CAMPANHA</button>
         <button id="start-game-btn" class="action-btn btn-secondary">ESCOLHER FASE</button>
         <button id="start-infinite-btn" class="action-btn btn-secondary">JOGAR MODO INFINITO</button>
+        <button id="start-online-btn" class="action-btn btn-secondary">CORRIDA ONLINE · 2 JOGADORES</button>
         <button id="menu-store-btn" class="action-btn btn-secondary">ABRIR LOJA DE TRENS</button>
       </div>
     </div>
@@ -302,11 +303,41 @@
         <button id="level-menu-btn" class="action-btn btn-secondary">ESCOLHER FASE</button>
       </div>
     </section>
+    <section id="online-modal" class="overlay-modal" role="dialog" aria-modal="true" aria-labelledby="online-title" hidden>
+      <div class="modal-card online-card">
+        <h2 id="online-title" class="modal-title">CORRIDA ONLINE</h2>
+        <p class="modal-subtitle">Dois jogadores, mesma fase, cada um no seu trem e sem colisão entre vocês. O servidor decide quem chega primeiro. Corridas online não mexem na campanha, no saldo nem no troféu.</p>
+        <div id="online-setup" class="online-form">
+          <label class="online-field">Seu nome <input id="online-name" maxlength="16" autocomplete="nickname" value="Jogador"></label>
+          <label class="online-field">Fase da corrida (qualquer uma, não libera a campanha) <select id="online-level"></select></label>
+          <button id="online-create-btn" class="action-btn btn-primary">CRIAR SALA</button>
+          <label class="online-field">Código da sala <input id="online-code" maxlength="5" autocapitalize="characters" autocomplete="off" placeholder="ABCDE"></label>
+          <button id="online-join-btn" class="action-btn btn-secondary">ENTRAR NA SALA</button>
+        </div>
+        <div id="online-lobby" class="online-lobby" hidden>
+          <p class="online-room">SALA <strong id="online-room-code"></strong> · <span id="online-room-level"></span></p>
+          <ul id="online-players" class="online-players"></ul>
+          <button id="online-ready-btn" class="action-btn btn-primary">ESTOU PRONTO</button>
+        </div>
+        <p id="online-status" class="online-status" role="status"></p>
+        <button id="online-leave-btn" class="action-btn btn-secondary">VOLTAR AO MENU</button>
+      </div>
+    </section>
+    <section id="online-result-modal" class="overlay-modal" role="dialog" aria-modal="true" aria-labelledby="online-result-title" hidden>
+      <div class="modal-card">
+        <h2 id="online-result-title" class="modal-title"></h2>
+        <p id="online-result-summary" class="modal-subtitle"></p>
+        <ul id="online-result-players" class="online-players"></ul>
+        <button id="online-again-btn" class="action-btn btn-primary">NOVA CORRIDA ONLINE</button>
+        <button id="online-menu-btn" class="action-btn btn-secondary">MENU PRINCIPAL</button>
+      </div>
+    </section>
     <section id="run-progress" class="campaign-progress" aria-label="Progresso da fase" hidden>
       <span id="run-label">FASE 1</span>
       <span id="run-progress-text">600 m restantes</span>
       <p id="run-objective" class="campaign-objective"></p>
       <p id="run-warning" class="campaign-warning" role="status"></p>
+      <p id="run-online" class="campaign-online" hidden></p>
       <div class="campaign-progress-track"><div id="run-progress-fill"></div></div>
     </section>
 

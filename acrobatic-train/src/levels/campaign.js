@@ -57,7 +57,8 @@ export class RunSession {
     worldStep(dt, this.snapshot()); // Collision may transition state before arrival.
     if (this.level && this.travel.dist >= this.level.lengthM && this.state.complete()) {
       this.travel.dist = this.level.lengthM; this.pending = [];
-      this.events.emit('levelCompleted', this.snapshot());
+      // Online races: crossing the line locally is only a prediction; the server emits the result.
+      this.events.emit(this.remoteTerminal ? 'remoteArrival' : 'levelCompleted', this.snapshot());
     }
   }
   snapshot() {

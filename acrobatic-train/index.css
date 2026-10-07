@@ -57,6 +57,18 @@ button:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
 .campaign-gallery-trophy { margin: 0 0 6px; color: #ffd166; font-weight: 700; font-size: 13px; }
 .campaign-gallery-list { margin: 0; padding-left: 18px; font-size: 12px; color: #d8e2ec; }
 .campaign-gallery-list:empty { display: none; }
+/* M5: online lobby, result and race status. */
+.online-form, .online-lobby { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; text-align: left; }
+.online-form[hidden], .online-lobby[hidden], .campaign-online[hidden] { display: none; }
+.online-field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #c9d6e2; }
+.online-field input, .online-field select { font: inherit; font-size: 15px; padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.25); background: #0e1a27; color: #fff; }
+.online-field input:focus-visible, .online-field select:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+#online-code { text-transform: uppercase; letter-spacing: 4px; }
+.online-room { margin: 0; font-size: 14px; } .online-room strong { letter-spacing: 4px; color: #00f2fe; font-size: 18px; }
+.online-players { margin: 6px 0; padding-left: 18px; font-size: 13px; color: #e2ebf3; text-align: left; }
+.online-status { min-height: 1.2em; color: #ffd166; font-size: 13px; font-weight: 700; }
+.campaign-online { margin: 6px 0 0; font-size: 12px; color: #9fe9ff; }
+.campaign-online.unstable { color: #ff7b7b; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }

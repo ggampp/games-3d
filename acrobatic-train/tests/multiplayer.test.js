@@ -88,6 +88,11 @@ test('M5-T03: duplicates, stale/future sequences, window, malformed frames and r
   p.advance(500);
   const mine = p.a.last('snapshot').players.find(x => x.id === 'p1');
   assert.deepEqual(mine.targets, { front: -1, rear: -1 }); assert.equal(mine.lastSeq, 5, 'applied exactly once');
+  // Snapshots acknowledge only applied inputs: a far-future input is received but not yet acknowledged.
+  const now = p.a.last('snapshot').tick;
+  p.a.send({ type: 'input', runId: 1, seq: 9, tick: now + 20, lanes: { front: 0 } }); p.advance(100);
+  assert.equal(p.a.last('snapshot').players.find(x => x.id === 'p1').lastSeq, 5);
+  p.advance(400); assert.equal(p.a.last('snapshot').players.find(x => x.id === 'p1').lastSeq, 9);
   for (let i = 0; i < LIMITS.maxInputsPerSecond + 10; i++) p.b.send({ type: 'input', runId: 1, seq: 100 + i, tick: p.a.last('snapshot').tick + 1, lanes: { front: i % 2 ? 1 : 0 } });
   assert.equal(p.b.errors().filter(c => c === 'rate-limited').length, 10);
   p.advance(300); assert.equal(p.a.last('snapshot').players.find(x => x.id === 'p1').state, 'running', 'opponent flood does not affect A');

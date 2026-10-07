@@ -52,7 +52,7 @@ export class RoomManager {
       if (room.state !== 'lobby') return this.error(client, 'room-started');
       if (room.participants.length >= 2) return this.error(client, 'room-full');
     }
-    const participant = { id: this.uuid(), slot: room.participants.length, name: msg.name, client, ready: false, connected: true, disconnectedAt: null, lastSeq: 0, pending: [], sim: null };
+    const participant = { id: this.uuid(), slot: room.participants.length, name: msg.name, client, ready: false, connected: true, disconnectedAt: null, lastSeq: 0, appliedSeq: 0, pending: [], sim: null };
     room.participants.push(participant); client.roomId = room.id; client.participantId = participant.id; room.lastActivity = this.now();
     this.send(client, { type: 'joined', roomId: room.id, participantId: participant.id, slot: participant.slot, levelId: room.levelId, contentHash: room.contentHash });
     this.broadcastLobby(room);
@@ -72,7 +72,7 @@ export class RoomManager {
   start(room) {
     room.state = 'countdown'; room.runId += 1; room.tick = 0; room.startAt = this.now() + LIMITS.countdownMs;
     const profile = getTrainGameplayProfile('cyber', room.level);
-    for (const p of room.participants) Object.assign(p, { sim: new TrainSimulation(room.level, profile), lastSeq: 0, pending: [] });
+    for (const p of room.participants) Object.assign(p, { sim: new TrainSimulation(room.level, profile), lastSeq: 0, appliedSeq: 0, pending: [] });
     this.broadcast(room, { type: 'start', roomId: room.id, runId: room.runId, startTick: 0, startAt: room.startAt, serverTime: this.now(), levelId: room.levelId, seed: room.level.seed,
       contentHash: room.contentHash, profile: { trainId: 'cyber', visual: 'cyber' }, players: room.participants.map(p => ({ id: p.id, slot: p.slot, name: p.name })) });
   }
@@ -86,7 +86,7 @@ export class RoomManager {
     if (!participant.sim.alive) return this.error(client, 'input-terminal');
     if (msg.seq <= participant.lastSeq) return this.error(client, 'input-stale');
     if (msg.tick > room.tick + LIMITS.inputAheadTicks || msg.tick < room.tick - LIMITS.inputLateTicks) return this.error(client, 'input-window');
-    participant.lastSeq = msg.seq;
+    participant.lastSeq = msg.seq; // Received; snapshots report appliedSeq so clients never reconcile against an unapplied input.
     // Applied on the requested tick when still in the future, otherwise on the next eligible tick.
     participant.pending.push({ seq: msg.seq, tick: Math.max(msg.tick, room.tick + 1), lanes: msg.lanes });
   }
@@ -98,7 +98,7 @@ export class RoomManager {
       room.tick += 1;
       for (const p of room.participants) {
         const due = p.pending.filter(input => input.tick <= room.tick); p.pending = p.pending.filter(input => input.tick > room.tick);
-        for (const input of due) for (const [end, lane] of Object.entries(input.lanes)) p.sim.setLane(end, lane);
+        for (const input of due) { for (const [end, lane] of Object.entries(input.lanes)) p.sim.setLane(end, lane); p.appliedSeq = input.seq; }
         p.sim.step();
       }
       this.resolve(room);
@@ -176,6 +176,6 @@ export class RoomManager {
   }
   broadcastSnapshot(room) {
     this.broadcast(room, { type: 'snapshot', runId: room.runId, tick: room.tick, serverTime: this.now(),
-      players: room.participants.map(p => ({ id: p.id, slot: p.slot, lastSeq: p.lastSeq, connected: p.connected, ...p.sim.snapshot() })) });
+      players: room.participants.map(p => ({ id: p.id, slot: p.slot, lastSeq: p.appliedSeq, connected: p.connected, ...p.sim.snapshot() })) });
   }
 }
