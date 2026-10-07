@@ -1,0 +1,41 @@
+{
+  "runId": "m0-m1-final-20261006",
+  "generatedAt": "2026-10-06T22:19:25.470Z",
+  "reports": [
+    {
+      "viewport": "desktop",
+      "passed": true,
+      "arrival": 600,
+      "layoutItems": 25,
+      "softwareGpu": true,
+      "pageErrors": []
+    },
+    {
+      "viewport": "mobile",
+      "passed": true,
+      "arrival": 600,
+      "layoutItems": 25,
+      "softwareGpu": true,
+      "pageErrors": []
+    },
+    {
+      "viewport": "desktop-class395",
+      "passed": true,
+      "totalCars": 12,
+      "arrival": 600,
+      "stableRestartCycles": 30,
+      "memory": {
+        "geometries": 57,
+        "textures": 2
+      },
+      "pageErrors": []
+    },
+    {
+      "viewport": "wall-clock-480x768",
+      "passed": true,
+      "tick": 16,
+      "dist": 3.746555555555556,
+      "shadowsDisabledForSoftwareGpu": true
+    }
+  ]
+}

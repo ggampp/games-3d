@@ -1,0 +1,27 @@
+{
+  "version": "m2-v1",
+  "seed": "acrobatic-campaign-v1-03",
+  "profile": "cyber",
+  "commands": [
+    {
+      "atM": 340,
+      "front": 1,
+      "rear": 0
+    },
+    {
+      "atM": 445,
+      "front": 0,
+      "rear": 0
+    },
+    {
+      "atM": 645,
+      "front": -1,
+      "rear": -1
+    }
+  ],
+  "expected": {
+    "mode": "levelComplete",
+    "minLandings": 3,
+    "minAerialItems": 1
+  }
+}

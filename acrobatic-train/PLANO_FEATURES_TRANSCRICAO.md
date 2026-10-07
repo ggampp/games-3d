@@ -2,6 +2,8 @@
 
 Data: 06/10/2026. Base: `transcricao_audio_trem.md`, documentação e código disponíveis nesta leitura.
 
+Atualização de implementação em 06/10/2026: M0/M1 validadas e M2 implementada com validação automatizada aprovada; playtest humano pendente. [Relatório M2](docs/planejamento/VALIDACAO_M2.md). [Resultados, contratos e evidências](docs/planejamento/VALIDACAO_M0_M1.md). As seções abaixo preservam a proposta geral e o retrato da leitura inicial.
+
 Status: planejamento, sem implementação das features. A Train Shop está sendo criada por outro agente; os contratos descritos aqui são propostas para integrar os trabalhos após a entrega da loja. O checkout pode mudar durante esse trabalho paralelo.
 
 Detalhamento: [índice das etapas de implementação e das nove fases jogáveis](docs/planejamento/README.md), com arquivos separados, aceites e casos de teste. O inventário e os resultados da seção 11 abaixo são o retrato da primeira leitura; o índice detalhado registra atualizações posteriores, incluindo a presença de `tests/architecture-spec.test.js`.

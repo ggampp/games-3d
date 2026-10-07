@@ -2,7 +2,7 @@
 
 Data: 06/10/2026. Origem: [plano geral](../../PLANO_FEATURES_TRANSCRICAO.md) e [transcrição](../../transcricao_audio_trem.md).
 
-Esta entrega contém especificações e casos de teste **planejados**. Não implementa sistemas, fases ou testes executáveis. Nenhum aceite abaixo está marcado como aprovado. Valores de balanceamento são hipóteses iniciais e precisam de simulação e playtest.
+**M0/M1 validadas e M2 implementada com validação automatizada aprovada em 06/10/2026**. [Relatório M2](VALIDACAO_M2.md), [histórico M0/M1](VALIDACAO_M0_M1.md). Fases 1–3 disponíveis; M3–M6 permanecem planejados. O gate humano da M2 continua pendente.
 
 ## Como executar o planejamento
 
@@ -54,8 +54,8 @@ Cada arquivo contém configuração, roteiro de encontros, tarefas de conteúdo,
 
 Na leitura desta etapa, `tests/architecture-spec.test.js` existe. Seus testes procuram strings como `JUMP_G`, `throttleInterval` e `.dispose()`; não medem colisão, desacoplamento em execução ou vazamento de recursos. A presença desse arquivo atualiza o inventário anterior, que não o encontrou.
 
-Os nomes de novos módulos, fixtures e comandos de teste nestes documentos são propostas, salvo indicação expressa de que existem hoje. Os testes de gameplay, rede e mods descritos aqui ainda precisam ser escritos e executados na implementação.
+Os módulos/fixtures/comandos M0/M1 já implementados estão no relatório. Os demais nomes continuam propostas; gameplay de M2–M4, rede e mods ainda precisam dos testes descritos nos seus marcos.
 
 O guardrail Jev aprovou a proposta de criação destes documentos. A aprovação não é validação das features. A checagem desta entrega verifica organização, links e rastreabilidade dos aceites; não substitui testes do jogo.
 
-Este conjunto contém 19 documentos: índice, contratos, estratégia de testes, sete marcos e nove fases. Há 102 aceites locais ligados a 102 casos de teste, mais dez aceites e dez testes comuns. Os casos comuns precisam ser executados para cada fase; 112 é a quantidade de especificações distintas, não a quantidade de execuções necessárias.
+O planejamento inicial contém 19 documentos, acrescidos dos relatórios M0/M1 e M2. Há 102 aceites locais ligados a 102 casos de teste planejados, mais dez aceites e dez testes comuns. Os casos comuns devem ser executados para cada fase; 112 é o total de especificações distintas, não de execuções nem de testes já implementados.

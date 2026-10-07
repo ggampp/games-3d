@@ -1,6 +1,6 @@
 # Fase 1 — Saída da estação
 
-Status: planejada, sem implementação/testes executados. Entrega: M1 básico; M2 completo. Dependência: M1 e barreira estática de M2. Referências obrigatórias: [contratos](../CONTRATOS.md), [testes](../TESTES.md), [índice](../README.md).
+Status: implementada na M2 e validada automaticamente em 06/10/2026. [Resultados](../VALIDACAO_M2.md). Playtest humano pendente. Conteúdo e valores efetivos estão em src/levels/level-config.js e nas fixtures/replays.
 
 ## Objetivo e experiência
 
@@ -64,7 +64,7 @@ Todos os aceites C-01 a C-10 de [CONTRATOS.md](../CONTRATOS.md) são obrigatóri
 
 ## Casos de teste específicos
 
-Testes de domínio/física usam fixtures e relógio injetado; casos de tela exigem navegador real; legibilidade exige playtest humano. São planos de teste, não resultados obtidos.
+Testes de domínio/física usam fixtures e relógio injetado; casos de tela exigem navegador real; legibilidade exige playtest humano. Os resultados automatizados estão no relatório; testes com jogador continuam pendentes.
 
 | ID | Precondição → ação | Asserções esperadas | Aceite |
 | --- | --- | --- | --- |

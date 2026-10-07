@@ -1,6 +1,6 @@
 # Estratégia e catálogo de testes
 
-Status: **testes planejados**; os arquivos executáveis listados abaixo ainda não foram criados por esta tarefa. A leitura atual encontrou apenas `tests/architecture-spec.test.js` e scripts existentes de captura/CDP. Esta entrega valida documentação; implementação e execução dos testes do jogo pertencem aos marcos.
+Status: catálogo de testes planejado originalmente; **testes M0/M1/M2 implementados e executados** em 06/10/2026. Veja o [relatório M2](VALIDACAO_M2.md) e o [histórico M0/M1](VALIDACAO_M0_M1.md). Existem agora testes de loja, estado, simulação, HUD e recursos, além do harness `scripts/test-m1-browser.js`. Os casos de M3–M6 e os nomes ainda não criados abaixo continuam como propostas.
 
 ## 1. Organização proposta
 

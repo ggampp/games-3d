@@ -1,0 +1,186 @@
+{
+  "mode": "playing",
+  "screen": "game",
+  "runId": 1,
+  "pauseReasons": [],
+  "speed": 14.093333333333334,
+  "dist": 3.746555555555556,
+  "timeS": 0.26666666666666666,
+  "tick": 16,
+  "score": 0,
+  "deterministicScore": 0,
+  "levelId": "level-01",
+  "lengthM": 600,
+  "profile": {
+    "trainId": "cyber",
+    "totalCars": 1,
+    "bonusMultiplier": 1,
+    "whistleType": "cyber",
+    "startSpeedMps": 14,
+    "maxSpeedMps": 18,
+    "accelerationMps2": 0.35,
+    "crossTimeS": 0.28
+  },
+  "reason": "",
+  "renderedFrames": 30,
+  "clock": {
+    "lastMs": 3256.6,
+    "accumulator": 0.016633333333333136
+  },
+  "testConfig": {
+    "disableShadows": true
+  },
+  "shop": {
+    "bank": 50,
+    "best": 0,
+    "selected": "cyber",
+    "owned": [
+      "cyber"
+    ],
+    "storageError": false
+  },
+  "currentTrainId": "cyber",
+  "ends": {
+    "front": 0,
+    "rear": 0
+  },
+  "track": [
+    {
+      "s0": -70,
+      "len": 770,
+      "k": 0
+    }
+  ],
+  "layout": [
+    {
+      "s": 120,
+      "lat": -3.4,
+      "id": "level-01:row-0:item-0"
+    },
+    {
+      "s": 123,
+      "lat": -3.4,
+      "id": "level-01:row-0:item-1"
+    },
+    {
+      "s": 126,
+      "lat": -3.4,
+      "id": "level-01:row-0:item-2"
+    },
+    {
+      "s": 129,
+      "lat": -3.4,
+      "id": "level-01:row-0:item-3"
+    },
+    {
+      "s": 132,
+      "lat": -3.4,
+      "id": "level-01:row-0:item-4"
+    },
+    {
+      "s": 200,
+      "lat": 3.4,
+      "id": "level-01:row-1:item-0"
+    },
+    {
+      "s": 203,
+      "lat": 3.4,
+      "id": "level-01:row-1:item-1"
+    },
+    {
+      "s": 206,
+      "lat": 3.4,
+      "id": "level-01:row-1:item-2"
+    },
+    {
+      "s": 209,
+      "lat": 3.4,
+      "id": "level-01:row-1:item-3"
+    },
+    {
+      "s": 212,
+      "lat": 3.4,
+      "id": "level-01:row-1:item-4"
+    },
+    {
+      "s": 280,
+      "lat": 0,
+      "id": "level-01:row-2:item-0"
+    },
+    {
+      "s": 283,
+      "lat": 0,
+      "id": "level-01:row-2:item-1"
+    },
+    {
+      "s": 286,
+      "lat": 0,
+      "id": "level-01:row-2:item-2"
+    },
+    {
+      "s": 289,
+      "lat": 0,
+      "id": "level-01:row-2:item-3"
+    },
+    {
+      "s": 292,
+      "lat": 0,
+      "id": "level-01:row-2:item-4"
+    },
+    {
+      "s": 360,
+      "lat": -3.4,
+      "id": "level-01:row-3:item-0"
+    },
+    {
+      "s": 363,
+      "lat": -3.4,
+      "id": "level-01:row-3:item-1"
+    },
+    {
+      "s": 366,
+      "lat": -3.4,
+      "id": "level-01:row-3:item-2"
+    },
+    {
+      "s": 369,
+      "lat": -3.4,
+      "id": "level-01:row-3:item-3"
+    },
+    {
+      "s": 372,
+      "lat": -3.4,
+      "id": "level-01:row-3:item-4"
+    },
+    {
+      "s": 440,
+      "lat": 0,
+      "id": "level-01:row-4:item-0"
+    },
+    {
+      "s": 443,
+      "lat": 0,
+      "id": "level-01:row-4:item-1"
+    },
+    {
+      "s": 446,
+      "lat": 0,
+      "id": "level-01:row-4:item-2"
+    },
+    {
+      "s": 449,
+      "lat": 0,
+      "id": "level-01:row-4:item-3"
+    },
+    {
+      "s": 452,
+      "lat": 0,
+      "id": "level-01:row-4:item-4"
+    }
+  ],
+  "memory": {
+    "geometries": 39,
+    "textures": 1
+  },
+  "pendingJudges": 0
+}

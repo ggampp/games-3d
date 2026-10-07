@@ -1,0 +1,317 @@
+{
+  "id": "level-02",
+  "number": 2,
+  "name": "Trilhos em reparo",
+  "version": "m2-v1",
+  "seed": "acrobatic-campaign-v1-02",
+  "rngVersion": "fnv1a-mulberry32-v1",
+  "lengthM": 750,
+  "startSpeedMps": 16,
+  "maxSpeedMps": 21,
+  "accelerationMps2": 0.35,
+  "briefing": "Trilhos rompidos derrubam o trem. Procure a via contínua e alinhe os dois truques antes da lacuna.",
+  "objective": "Extra opcional: seguir uma linha de itens na via segura.",
+  "encounters": [
+    {
+      "id": "gap-1",
+      "type": "gap",
+      "s": 115,
+      "length": 8,
+      "lanes": [
+        0
+      ],
+      "safeLane": -1,
+      "message": "TRILHO ROMPIDO NO CENTRO · use uma lateral"
+    },
+    {
+      "id": "gap-2",
+      "type": "gap",
+      "s": 235,
+      "length": 10,
+      "lanes": [
+        -1
+      ],
+      "safeLane": 0,
+      "message": "TRILHO ROMPIDO À ESQUERDA · centro livre"
+    },
+    {
+      "id": "gap-3",
+      "type": "gap",
+      "s": 365,
+      "length": 8,
+      "lanes": [
+        -1,
+        0
+      ],
+      "safeLane": 1,
+      "message": "DOIS TRILHOS ROMPIDOS · frente e traseira à direita"
+    },
+    {
+      "id": "gap-4",
+      "type": "gap",
+      "s": 505,
+      "length": 10,
+      "lanes": [
+        1
+      ],
+      "safeLane": 0,
+      "message": "TRILHO ROMPIDO À DIREITA · volte ao centro"
+    },
+    {
+      "id": "gap-5",
+      "type": "gap",
+      "s": 615,
+      "length": 12,
+      "lanes": [
+        0
+      ],
+      "safeLane": -1,
+      "message": "ÚLTIMO REPARO NO CENTRO · use uma lateral"
+    }
+  ],
+  "content": {
+    "barriers": [],
+    "gaps": [
+      {
+        "id": "gap-1:0",
+        "a": 115,
+        "b": 123,
+        "lane": 0
+      },
+      {
+        "id": "gap-2:-1",
+        "a": 235,
+        "b": 245,
+        "lane": -1
+      },
+      {
+        "id": "gap-3:-1",
+        "a": 365,
+        "b": 373,
+        "lane": -1
+      },
+      {
+        "id": "gap-3:0",
+        "a": 365,
+        "b": 373,
+        "lane": 0
+      },
+      {
+        "id": "gap-4:1",
+        "a": 505,
+        "b": 515,
+        "lane": 1
+      },
+      {
+        "id": "gap-5:0",
+        "a": 615,
+        "b": 627,
+        "lane": 0
+      }
+    ],
+    "poles": [],
+    "ramps": [],
+    "items": [
+      {
+        "id": "level-02:gap-1:0",
+        "s": 135,
+        "lane": -1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-02:gap-1:1",
+        "s": 138,
+        "lane": -1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-02:gap-1:2",
+        "s": 141,
+        "lane": -1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-02:gap-1:3",
+        "s": 144,
+        "lane": -1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-02:gap-1:4",
+        "s": 147,
+        "lane": -1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-02:gap-2:0",
+        "s": 257,
+        "lane": 0,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-02:gap-2:1",
+        "s": 260,
+        "lane": 0,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-02:gap-2:2",
+        "s": 263,
+        "lane": 0,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-02:gap-2:3",
+        "s": 266,
+        "lane": 0,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-02:gap-2:4",
+        "s": 269,
+        "lane": 0,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-02:gap-3:0",
+        "s": 385,
+        "lane": 1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-02:gap-3:1",
+        "s": 388,
+        "lane": 1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-02:gap-3:2",
+        "s": 391,
+        "lane": 1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-02:gap-3:3",
+        "s": 394,
+        "lane": 1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-02:gap-3:4",
+        "s": 397,
+        "lane": 1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-02:gap-4:0",
+        "s": 527,
+        "lane": 0,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-02:gap-4:1",
+        "s": 530,
+        "lane": 0,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-02:gap-4:2",
+        "s": 533,
+        "lane": 0,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-02:gap-4:3",
+        "s": 536,
+        "lane": 0,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-02:gap-4:4",
+        "s": 539,
+        "lane": 0,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-02:gap-5:0",
+        "s": 639,
+        "lane": -1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-02:gap-5:1",
+        "s": 642,
+        "lane": -1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-02:gap-5:2",
+        "s": 645,
+        "lane": -1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-02:gap-5:3",
+        "s": 648,
+        "lane": -1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      },
+      {
+        "id": "level-02:gap-5:4",
+        "s": 651,
+        "lane": -1,
+        "y": 1.6,
+        "level": 0,
+        "points": 10
+      }
+    ]
+  }
+}

@@ -14,12 +14,43 @@
   --font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
+.campaign-progress {
+  position: absolute; top: 155px; left: 50%; transform: translateX(-50%);
+  width: min(420px, calc(100vw - 32px)); padding: 10px 14px;
+  background: rgba(9, 18, 29, 0.92); border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 12px; color: #fff; font-size: 12px; pointer-events: none;
+}
+.campaign-progress[hidden] { display: none; }
+.campaign-progress-track { height: 4px; margin-top: 8px; background: #324354; }
+#run-progress-text { float: right; }
+#run-progress-fill { height: 100%; width: 0; background: #00f2fe; }
+.overlay-modal { overscroll-behavior: contain; }
+.modal-card .action-btn + .action-btn { margin-top: 10px; }
+button.skin-selector-card { background: transparent; border: 0; color: inherit; font: inherit; }
+.campaign-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 16px 0; }
+.campaign-level { min-height: 74px; padding: 12px; border: 1px solid #506275; border-radius: 10px; background: #172333; color: #fff; font: inherit; font-size: 13px; cursor: pointer; }
+.campaign-level:disabled { opacity: 0.55; cursor: default; }
+.campaign-map-card { width: min(680px, calc(100vw - 32px)); }
+.campaign-save-status { color: #ffd166; font-size: 13px; margin: 8px 0; }
+.campaign-save-status:empty { display: none; }
+.campaign-objective { font-size: 11px; margin: 6px 0 0; }
+.campaign-warning { color: #ffd166; font-size: 12px; font-weight: 700; margin: 6px 0 0; }
+.campaign-warning:empty { display: none; }
+@media (max-width: 520px) { .campaign-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.modal-card { max-height: calc(100dvh - 32px); overflow-y: auto; }
+button:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+@media (max-width: 768px) { .campaign-progress { top: 200px; } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
   -webkit-tap-highlight-color: transparent;
 }
+[hidden] { display: none !important; }
 
 html, body {
   width: 100%;
@@ -909,4 +940,392 @@ canvas {
   #stunt-banner {
     top: 74px;
   }
+}
+
+/* ==========================================================================
+   TRAIN STORE & CREDITS SYSTEM STYLES (Loja de Trens)
+   ========================================================================== */
+
+/* Coins badge in Top Score container */
+.coins-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--accent-gold);
+  background: rgba(255, 209, 102, 0.12);
+  border: 1px solid rgba(255, 209, 102, 0.3);
+  padding: 3px 8px;
+  border-radius: 8px;
+  margin-top: 5px;
+  box-shadow: 0 0 10px rgba(255, 209, 102, 0.15);
+}
+
+.coin-icon {
+  font-size: 13px;
+  filter: drop-shadow(0 0 4px rgba(255, 209, 102, 0.6));
+}
+
+/* Store Button in Top HUD */
+.hud-store-btn {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.95));
+  border: 1px solid rgba(255, 209, 102, 0.4);
+  border-radius: 12px;
+  padding: 6px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), inset 0 0 12px rgba(255, 209, 102, 0.1);
+}
+
+.hud-store-btn:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent-gold);
+  box-shadow: 0 6px 22px rgba(255, 209, 102, 0.25), inset 0 0 16px rgba(255, 209, 102, 0.2);
+}
+
+.hud-store-btn:active {
+  transform: translateY(1px);
+}
+
+.store-icon {
+  font-size: 20px;
+  filter: drop-shadow(0 0 6px rgba(255, 209, 102, 0.5));
+}
+
+/* Store Modal Card Layout */
+.store-modal-card {
+  max-width: 980px;
+  width: 94%;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  padding: 24px 28px;
+  overflow: hidden;
+  text-align: left;
+}
+
+.store-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  position: relative;
+}
+
+.store-title-cluster {
+  flex: 1;
+}
+
+.store-title {
+  font-size: 24px;
+  font-weight: 900;
+  color: #fff;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.store-subtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 0;
+}
+
+.store-bank-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  background: rgba(255, 209, 102, 0.12);
+  border: 1px solid rgba(255, 209, 102, 0.35);
+  border-radius: 12px;
+  padding: 8px 16px;
+  box-shadow: 0 0 16px rgba(255, 209, 102, 0.15);
+}
+
+.store-bank-label {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.store-bank-val {
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--accent-gold);
+  line-height: 1.1;
+}
+
+.store-close-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #fff;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.store-close-btn:hover {
+  background: rgba(239, 71, 111, 0.3);
+  border-color: var(--accent-red);
+  transform: scale(1.05);
+}
+
+/* Trains Grid */
+.store-trains-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  padding: 20px 4px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* Custom Scrollbar for Store Grid */
+.store-trains-grid::-webkit-scrollbar {
+  width: 6px;
+}
+.store-trains-grid::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 4px;
+}
+.store-trains-grid::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+.store-trains-grid::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-cyan);
+}
+
+/* Individual Train Card */
+.store-card {
+  background: rgba(18, 24, 38, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.store-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.5);
+}
+
+.store-card.is-equipped {
+  border-color: var(--accent-green);
+  box-shadow: 0 0 24px rgba(6, 214, 160, 0.25);
+}
+
+.store-card-badge {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  text-transform: uppercase;
+}
+
+.store-card-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 64px;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 12px;
+  margin-bottom: 14px;
+  font-size: 38px;
+}
+
+.store-card-name {
+  font-size: 17px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.2;
+}
+
+.store-card-sub {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent-cyan);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.store-card-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.45;
+  margin-bottom: 14px;
+  flex: 1;
+}
+
+/* Train Specifications Matrix */
+.store-card-specs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+  padding: 8px 10px;
+  margin-bottom: 14px;
+}
+
+.spec-row {
+  display: flex;
+  flex-direction: column;
+}
+
+.spec-lbl {
+  font-size: 8px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.spec-val {
+  font-size: 11px;
+  font-weight: 800;
+  color: #f1f5f9;
+}
+
+/* Card Action Buttons */
+.store-action-btn {
+  width: 100%;
+  padding: 10px 0;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.store-action-btn.equipped {
+  background: rgba(6, 214, 160, 0.18);
+  border: 1px solid var(--accent-green);
+  color: var(--accent-green);
+  cursor: default;
+}
+
+.store-action-btn.equip {
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+  color: #0b111a;
+  box-shadow: 0 4px 14px rgba(0, 242, 254, 0.3);
+}
+
+.store-action-btn.equip:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 242, 254, 0.45);
+}
+
+.store-action-btn.buy {
+  background: linear-gradient(135deg, #f59e0b, #ffd166);
+  color: #1a1405;
+  box-shadow: 0 4px 14px rgba(255, 209, 102, 0.35);
+}
+
+.store-action-btn.buy:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(255, 209, 102, 0.5);
+}
+
+.store-action-btn.locked {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #64748b;
+  cursor: not-allowed;
+}
+
+/* Store Modal Footer */
+.store-modal-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.store-footer-tip {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.store-modal-footer .action-btn {
+  width: auto;
+  padding: 10px 20px;
+  margin-top: 0;
+  font-size: 13px;
+}
+
+@media (max-width: 600px) {
+  .store-modal-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .store-bank-pill {
+    align-items: flex-start;
+    width: 100%;
+  }
+  .store-close-btn {
+    position: absolute;
+    top: 0;
+    right: 0;
+  }
+  .store-modal-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+/* Keep shop/pause/audio controls reachable on both touch orientations. */
+@media (max-width: 768px), (pointer: coarse) {
+  #hud-top .score-container { flex: 0 0 auto; }
+  #hud-top .stats-container { flex: 1; min-width: 0; flex-wrap: wrap; justify-content: flex-end; }
+  .hud-store-btn .stat-item { display: none; }
+  #store-btn, #skin-toggle-btn, #horn-btn, #pause-btn, #sound-btn { min-width: 44px; min-height: 44px; padding: 6px; }
+  #stunt-banner { top: 125px; width: calc(100vw - 32px); }
+  .stunt-badge { font-size: 13px; letter-spacing: 0.3px; padding: 8px 12px; text-align: center; }
+  #drift-combo-hud { top: 255px; }
+}
+@media (max-height: 500px) and (pointer: coarse) {
+  #hud-top { top: 6px; left: 8px; right: 8px; gap: 6px; align-items: flex-start; }
+  .hud-glass-card { padding: 4px 8px; }
+  .score-value { font-size: 22px; }
+  .score-label, .high-score, .stat-title { font-size: 9px; }
+  .skin-selector-card .stat-item, .rail-signal-box .signal-info { display: none; }
+  .stats-container { gap: 6px; }
+  .campaign-progress { top: 90px; padding: 6px 10px; }
+  #stunt-banner { top: 180px; }
+  #drift-combo-hud { top: 230px; }
 }

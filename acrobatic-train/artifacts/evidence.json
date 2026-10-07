@@ -1,0 +1,83 @@
+{
+  "version": 1,
+  "runId": "m2-ui-final-20261006",
+  "captures": [
+    {
+      "mode": "desktop",
+      "state": "desktop-map",
+      "report": "artifacts/validation/m2-ui-final-20261006/browser-results.json"
+    },
+    {
+      "mode": "desktop",
+      "state": "desktop-briefing",
+      "report": "artifacts/validation/m2-ui-final-20261006/browser-results.json"
+    },
+    {
+      "mode": "desktop",
+      "state": "desktop-playing",
+      "report": "artifacts/validation/m2-ui-final-20261006/browser-results.json"
+    },
+    {
+      "mode": "desktop",
+      "state": "desktop-result",
+      "report": "artifacts/validation/m2-ui-final-20261006/browser-results.json"
+    },
+    {
+      "mode": "mobile",
+      "state": "portrait-map",
+      "report": "artifacts/validation/m2-ui-final-20261006/browser-results.json"
+    },
+    {
+      "mode": "mobile",
+      "state": "portrait-briefing",
+      "report": "artifacts/validation/m2-ui-final-20261006/browser-results.json"
+    },
+    {
+      "mode": "mobile",
+      "state": "portrait-playing",
+      "report": "artifacts/validation/m2-ui-final-20261006/browser-results.json"
+    },
+    {
+      "mode": "mobile",
+      "state": "portrait-result",
+      "report": "artifacts/validation/m2-ui-final-20261006/browser-results.json"
+    },
+    {
+      "mode": "mobile-landscape",
+      "state": "landscape-map",
+      "report": "artifacts/validation/m2-ui-final-20261006/browser-results.json"
+    },
+    {
+      "mode": "mobile-landscape",
+      "state": "landscape-briefing",
+      "report": "artifacts/validation/m2-ui-final-20261006/browser-results.json"
+    },
+    {
+      "mode": "mobile-landscape",
+      "state": "landscape-playing",
+      "report": "artifacts/validation/m2-ui-final-20261006/browser-results.json"
+    },
+    {
+      "mode": "mobile-landscape",
+      "state": "landscape-result",
+      "report": "artifacts/validation/m2-ui-final-20261006/browser-results.json"
+    }
+  ],
+  "artifacts": [
+    "artifacts/validation/m2-ui-final-20261006/desktop-map.png",
+    "artifacts/validation/m2-ui-final-20261006/desktop-briefing.png",
+    "artifacts/validation/m2-ui-final-20261006/desktop-playing.png",
+    "artifacts/validation/m2-ui-final-20261006/desktop-result.png",
+    "artifacts/validation/m2-ui-final-20261006/portrait-map.png",
+    "artifacts/validation/m2-ui-final-20261006/portrait-briefing.png",
+    "artifacts/validation/m2-ui-final-20261006/portrait-playing.png",
+    "artifacts/validation/m2-ui-final-20261006/portrait-result.png",
+    "artifacts/validation/m2-ui-final-20261006/landscape-map.png",
+    "artifacts/validation/m2-ui-final-20261006/landscape-briefing.png",
+    "artifacts/validation/m2-ui-final-20261006/landscape-playing.png",
+    "artifacts/validation/m2-ui-final-20261006/landscape-result.png",
+    "artifacts/validation/m2-motion-20261006/aerial.webm"
+  ],
+  "limitation": "Functional tests with software GPU and accelerated/manual test clock. Human playtest and hardware FPS unverified.",
+  "motionRunId": "m2-motion-20261006"
+}

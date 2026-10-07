@@ -1,0 +1,163 @@
+{
+  "runId": "m2-extended-20261006",
+  "generatedAt": "2026-10-06T23:10:59.079Z",
+  "reports": [
+    {
+      "scenario": "aerial",
+      "passed": true,
+      "metrics": {
+        "items": 9,
+        "aerialItems": 4,
+        "stuntsLanded": 4
+      },
+      "pageErrors": []
+    },
+    {
+      "scenario": "storage-failure",
+      "passed": true,
+      "pageErrors": []
+    },
+    {
+      "scenario": "zero-score",
+      "passed": true,
+      "score": 0,
+      "bank": 50,
+      "unlocked": 2,
+      "pageErrors": []
+    },
+    {
+      "scenario": "resource-transitions",
+      "passed": true,
+      "transitions": 30,
+      "samples": {
+        "level-01": [
+          {
+            "geometries": 58,
+            "textures": 2
+          },
+          {
+            "geometries": 58,
+            "textures": 2
+          },
+          {
+            "geometries": 58,
+            "textures": 2
+          },
+          {
+            "geometries": 58,
+            "textures": 2
+          },
+          {
+            "geometries": 58,
+            "textures": 2
+          },
+          {
+            "geometries": 58,
+            "textures": 2
+          },
+          {
+            "geometries": 58,
+            "textures": 2
+          },
+          {
+            "geometries": 58,
+            "textures": 2
+          },
+          {
+            "geometries": 58,
+            "textures": 2
+          },
+          {
+            "geometries": 58,
+            "textures": 2
+          }
+        ],
+        "level-02": [
+          {
+            "geometries": 72,
+            "textures": 2
+          },
+          {
+            "geometries": 72,
+            "textures": 2
+          },
+          {
+            "geometries": 72,
+            "textures": 2
+          },
+          {
+            "geometries": 72,
+            "textures": 2
+          },
+          {
+            "geometries": 72,
+            "textures": 2
+          },
+          {
+            "geometries": 72,
+            "textures": 2
+          },
+          {
+            "geometries": 72,
+            "textures": 2
+          },
+          {
+            "geometries": 72,
+            "textures": 2
+          },
+          {
+            "geometries": 72,
+            "textures": 2
+          },
+          {
+            "geometries": 72,
+            "textures": 2
+          }
+        ],
+        "level-03": [
+          {
+            "geometries": 42,
+            "textures": 2
+          },
+          {
+            "geometries": 42,
+            "textures": 2
+          },
+          {
+            "geometries": 42,
+            "textures": 2
+          },
+          {
+            "geometries": 42,
+            "textures": 2
+          },
+          {
+            "geometries": 42,
+            "textures": 2
+          },
+          {
+            "geometries": 42,
+            "textures": 2
+          },
+          {
+            "geometries": 42,
+            "textures": 2
+          },
+          {
+            "geometries": 42,
+            "textures": 2
+          },
+          {
+            "geometries": 42,
+            "textures": 2
+          },
+          {
+            "geometries": 42,
+            "textures": 2
+          }
+        ]
+      },
+      "pageErrors": []
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 # M1 — Base da campanha e fase 1 básica
 
-Status: planejado. Dependência: [M0](m0-integracao-loja.md). Próximo: [M2](m2-fases-faceis.md). Conteúdo: [fase 1](../fases/fase-01.md). Contratos: [comuns](../CONTRATOS.md).
+Status: implementado e validado em 06/10/2026 no escopo básico. [Resultados por aceite](../VALIDACAO_M0_M1.md). Dependência: [M0](m0-integracao-loja.md) validada. Próximo: [M2](m2-fases-faceis.md). Conteúdo: [fase 1](../fases/fase-01.md). Contratos: [comuns](../CONTRATOS.md).
 
 ## Objetivo
 

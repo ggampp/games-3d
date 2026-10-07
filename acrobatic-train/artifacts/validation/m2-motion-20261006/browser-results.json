@@ -1,0 +1,16 @@
+{
+  "runId": "m2-motion-20261006",
+  "generatedAt": "2026-10-06T23:14:54.586Z",
+  "reports": [
+    {
+      "scenario": "aerial",
+      "passed": true,
+      "metrics": {
+        "items": 9,
+        "aerialItems": 4,
+        "stuntsLanded": 4
+      },
+      "pageErrors": []
+    }
+  ]
+}

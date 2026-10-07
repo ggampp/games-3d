@@ -17,16 +17,19 @@ export class KeyboardController {
     };
 
     this.activeKeys = new Set();
+    this.abort = new AbortController();
     this.initListeners();
     this.initTouchListeners();
   }
 
   initListeners() {
-    window.addEventListener('keydown', (e) => this.handleKeyDown(e));
-    window.addEventListener('keyup', (e) => this.handleKeyUp(e));
+    window.addEventListener('keydown', (e) => this.handleKeyDown(e), { signal: this.abort.signal });
+    window.addEventListener('keyup', (e) => this.handleKeyUp(e), { signal: this.abort.signal });
   }
 
   handleKeyDown(e) {
+    if (e.target?.closest?.('input, textarea, select, [contenteditable="true"]')) return;
+    if (['Space', 'Enter'].includes(e.code) && e.target?.closest?.('button, a')) return;
     if (e.repeat) return; // Ignore auto-repeat to require deliberate taps for track shifts
     this.activeKeys.add(e.code);
     this.highlightKey(e.code, true);
@@ -102,6 +105,12 @@ export class KeyboardController {
         this.handlers.onCycleSkin?.();
         break;
 
+      // Train Store (Loja de Trens)
+      case 'KeyB':
+        e.preventDefault();
+        this.handlers.onStoreToggle?.();
+        break;
+
       // Mute / Sound Toggle
       case 'KeyM':
         e.preventDefault();
@@ -145,10 +154,10 @@ export class KeyboardController {
         el.classList.remove('active');
       };
 
-      el.addEventListener('pointerdown', onPress, { passive: false });
-      el.addEventListener('pointerup', onRelease, { passive: false });
-      el.addEventListener('pointercancel', onRelease, { passive: false });
-      el.addEventListener('pointerleave', onRelease, { passive: false });
+      el.addEventListener('pointerdown', onPress, { passive: false, signal: this.abort.signal });
+      el.addEventListener('pointerup', onRelease, { passive: false, signal: this.abort.signal });
+      el.addEventListener('pointercancel', onRelease, { passive: false, signal: this.abort.signal });
+      el.addEventListener('pointerleave', onRelease, { passive: false, signal: this.abort.signal });
     };
 
     // Mobile Touch HUD (2 Left buttons & 2 Right buttons + Center Align)
@@ -167,4 +176,6 @@ export class KeyboardController {
     bindControl('key-H', () => this.handlers.onHorn?.());
     bindControl('key-P', () => this.handlers.onPause?.());
   }
+
+  dispose() { this.abort.abort(); this.activeKeys.clear(); }
 }

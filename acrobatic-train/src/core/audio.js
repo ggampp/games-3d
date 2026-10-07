@@ -16,9 +16,11 @@ class SoundEngine {
       const a = this.getAudioContext();
       if (a && a.state !== 'running') a.resume();
     };
-    ['pointerdown', 'touchend', 'keydown'].forEach((evt) => {
-      document.addEventListener(evt, unlock, { once: true, passive: true });
-    });
+    if (typeof document !== 'undefined') {
+      ['pointerdown', 'touchend', 'keydown'].forEach((evt) => {
+        document.addEventListener(evt, unlock, { once: true, passive: true });
+      });
+    }
   }
 
   getAudioContext() {
@@ -48,6 +50,12 @@ class SoundEngine {
   toggleSound() {
     this.soundOn = !this.soundOn;
     return this.soundOn;
+  }
+
+  dispose() {
+    this.master?.disconnect();
+    this.actx?.close().catch(() => {});
+    this.actx = null; this.master = null; this.noiseBuf = null;
   }
 
   playTone(type, f0, f1, duration, vol, delay = 0) {
@@ -148,6 +156,79 @@ class SoundEngine {
     this.playTone('sawtooth', 415.30, 410, 0.75, 0.18, 0);
     this.playTone('sawtooth', 523.25, 517, 0.75, 0.14, 0);
     this.playNoise('bandpass', 1100, 750, 0.75, 0.16, 0, 1.4);
+  }
+
+  // Steam locomotive high-pressure whistle with realistic steam hiss and harmonic intervals
+  steamWhistle() {
+    if (!this.isReady()) return;
+    // Classic 3-chime Crosby steam whistle (D5, F#5, A5)
+    this.playTone('sine', 587.33, 595, 0.95, 0.28, 0);
+    this.playTone('triangle', 739.99, 746, 0.95, 0.24, 0);
+    this.playTone('sine', 880.00, 892, 0.95, 0.20, 0);
+    this.playNoise('bandpass', 1400, 2600, 0.95, 0.15, 0, 2.5);
+    // Second short trailing puff
+    this.playTone('sine', 587.33, 590, 0.45, 0.24, 0.2);
+    this.playTone('triangle', 739.99, 742, 0.45, 0.20, 0.2);
+    this.playNoise('bandpass', 1800, 1200, 0.45, 0.12, 0.2, 2.0);
+  }
+
+  // Passenger express diesel/electric horn
+  passengerHorn() {
+    this.playTone('sawtooth', 293.66, 290, 0.8, 0.26, 0);
+    this.playTone('sawtooth', 369.99, 365, 0.8, 0.24, 0);
+    this.playTone('sawtooth', 440.00, 435, 0.8, 0.18, 0);
+    this.playNoise('bandpass', 950, 750, 0.8, 0.14, 0, 1.5);
+  }
+
+  // British Rail / Southeastern Class 395 signature two-tone horn ("Doo-Daa" chime)
+  britishTwoToneHorn() {
+    if (!this.isReady()) return;
+    // High note
+    this.playTone('sawtooth', 440.00, 438, 0.38, 0.26, 0);
+    this.playTone('sine', 440.00, 438, 0.38, 0.18, 0);
+    this.playNoise('bandpass', 1200, 950, 0.38, 0.12, 0, 1.8);
+    // Low note
+    this.playTone('sawtooth', 349.23, 347, 0.48, 0.26, 0.35);
+    this.playTone('sine', 349.23, 347, 0.48, 0.18, 0.35);
+    this.playNoise('bandpass', 1050, 800, 0.48, 0.12, 0.35, 1.8);
+  }
+
+  // Procedural steam exhaust puff (chuff-chuff) scaled with train velocity
+  steamChuff(speedKmh = 50) {
+    if (!this.isReady()) return;
+    const intensity = Math.min(0.25, 0.08 + (speedKmh / 100) * 0.12);
+    this.playNoise('bandpass', 450, 220, 0.065, intensity, 0, 1.2);
+    this.playTone('triangle', 95, 45, 0.05, intensity * 0.8, 0);
+  }
+
+  // Celebratory register & chime when unlocking a train in the Train Store
+  storePurchase() {
+    if (!this.isReady()) return;
+    const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51];
+    notes.forEach((f, idx) => {
+      this.playTone('triangle', f, f, 0.15, 0.22, idx * 0.06);
+      this.playTone('sine', f * 2, f * 2, 0.12, 0.08, idx * 0.06);
+    });
+    this.playNoise('highpass', 4000, 2000, 0.25, 0.15, 0.15, 1.5);
+  }
+
+  // Play appropriate whistle based on train type
+  playWhistle(trainType = 'cyber') {
+    switch (trainType) {
+      case 'steam':
+        this.steamWhistle();
+        break;
+      case 'passenger':
+        this.passengerHorn();
+        break;
+      case 'class395':
+      case 'british':
+        this.britishTwoToneHorn();
+        break;
+      default:
+        this.horn();
+        break;
+    }
   }
 
   // Derailment or crash blast

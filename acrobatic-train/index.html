@@ -27,6 +27,10 @@
         </span>
         <div class="score-value" id="score-display">0</div>
         <div class="high-score" id="best-display">Recorde: 0</div>
+        <div class="coins-badge" id="coins-display" title="Créditos Ferroviários para a Loja de Trens">
+          <span class="coin-icon">🪙</span>
+          <span id="coins-val">50 pts</span>
+        </div>
       </div>
 
       <div class="hud-glass-card stats-container">
@@ -39,14 +43,23 @@
           </div>
         </div>
 
+        <!-- Train Store Button -->
+        <button id="store-btn" class="hud-store-btn" title="Abrir Loja de Trens (Tecla B)">
+          <span class="store-icon">🛍️</span>
+          <div class="stat-item" style="align-items:flex-start;">
+            <span class="stat-title">[B] LOJA DE TRENS</span>
+            <span class="stat-val" style="font-size:12px; color:var(--accent-gold);">CATÁLOGO</span>
+          </div>
+        </button>
+
         <!-- Train Series Quick Switch Card -->
-        <div class="skin-selector-card" id="skin-toggle-btn" title="Alternar Série da Locomotiva (Tecla T)">
+        <button class="skin-selector-card" id="skin-toggle-btn" title="Alternar Série da Locomotiva (Tecla T)" aria-label="Selecionar próximo trem" type="button">
           <div class="skin-swatch" id="skin-swatch" style="background:#00f2fe; color:#00f2fe;"></div>
           <div class="stat-item" style="align-items:flex-start;">
-            <span class="stat-title">[T] SÉRIE DO TREM</span>
+            <span class="stat-title">[T] LOCOMOTIVA</span>
             <span class="stat-val" id="skin-name-display" style="font-size:13px; color:#fff;">CYBER SHINKANSEN</span>
           </div>
-        </div>
+        </button>
 
         <div class="stat-item">
           <span class="stat-title">Velocímetro</span>
@@ -214,16 +227,42 @@
           </div>
         </div>
 
-        <button id="start-game-btn" class="action-btn btn-primary">ACELERAR COMPOSIÇÃO (ESPAÇO)</button>
+        <p class="modal-subtitle">Campanha: três fases com obras, trilhos rompidos e saltos. Chegar vivo libera a próxima fase. Itens e pontos são opcionais.</p>
+        <p class="campaign-save-status" role="status"></p>
+        <button id="continue-campaign-btn" class="action-btn btn-primary">CONTINUAR CAMPANHA</button>
+        <button id="start-game-btn" class="action-btn btn-secondary">ESCOLHER FASE</button>
+        <button id="start-infinite-btn" class="action-btn btn-secondary">JOGAR MODO INFINITO</button>
+        <button id="menu-store-btn" class="action-btn btn-secondary">ABRIR LOJA DE TRENS</button>
       </div>
     </div>
 
     <!-- Pause Modal -->
+    <section id="campaign-map-modal" class="overlay-modal" role="dialog" aria-modal="true" aria-labelledby="campaign-map-title" hidden>
+      <div class="modal-card campaign-map-card">
+        <h2 id="campaign-map-title" class="modal-title">SUA VIAGEM</h2>
+        <p class="modal-subtitle">Complete uma fase para liberar a próxima. Compras e progresso ficam salvos separadamente.</p>
+        <p class="campaign-save-status" role="status"></p>
+        <div id="campaign-grid" class="campaign-grid"></div>
+        <button id="map-menu-btn" class="action-btn btn-secondary">VOLTAR AO MENU</button>
+      </div>
+    </section>
+    <section id="level-briefing-modal" class="overlay-modal" role="dialog" aria-modal="true" aria-labelledby="briefing-title" hidden>
+      <div class="modal-card">
+        <h2 id="briefing-title" class="modal-title"></h2>
+        <p id="briefing-description" class="modal-subtitle"></p>
+        <p id="briefing-objective" class="modal-subtitle"></p>
+        <p class="campaign-save-status" role="status"></p>
+        <button id="briefing-start-btn" class="action-btn btn-primary">PARTIR DA ESTAÇÃO</button>
+        <button id="briefing-map-btn" class="action-btn btn-secondary">VOLTAR ÀS FASES</button>
+      </div>
+    </section>
     <div id="pause-modal" class="overlay-modal" hidden>
       <div class="modal-card">
         <h2 class="modal-title" style="color: var(--accent-cyan);">🛑 FREIO DE EMERGÊNCIA ACIONADO</h2>
         <p class="modal-subtitle">A composição ferroviária está parada na via. Pressione <strong>P</strong> ou clique abaixo para liberar os freios e retomar a corrida.</p>
         <button id="resume-btn" class="action-btn btn-primary">LIBERAR FREIOS E ACELERAR (P)</button>
+        <button id="pause-menu-btn" class="action-btn btn-secondary">VOLTAR AO MENU</button>
+        <button id="pause-store-btn" class="action-btn btn-secondary">CONSULTAR LOJA DE TRENS</button>
       </div>
     </div>
 
@@ -239,6 +278,52 @@
         </div>
 
         <button id="retry-btn" class="action-btn btn-primary">NOVA PARTIDA DA ESTAÇÃO (ESPAÇO)</button>
+        <button id="over-menu-btn" class="action-btn btn-secondary">VOLTAR AO MENU</button>
+      </div>
+    </div>
+
+    <section id="level-result-modal" class="overlay-modal" role="dialog" aria-modal="true" aria-labelledby="level-result-title" hidden>
+      <div class="modal-card">
+        <h2 id="level-result-title" class="modal-title">FASE 1 CONCLUÍDA!</h2>
+        <p id="level-result-summary" class="modal-subtitle"></p>
+        <p class="campaign-save-status" role="status"></p>
+        <button id="level-next-btn" class="action-btn btn-primary">PRÓXIMA FASE</button>
+        <button id="level-retry-btn" class="action-btn btn-secondary">REPETIR FASE</button>
+        <button id="level-menu-btn" class="action-btn btn-secondary">ESCOLHER FASE</button>
+      </div>
+    </section>
+    <section id="run-progress" class="campaign-progress" aria-label="Progresso da fase" hidden>
+      <span id="run-label">FASE 1</span>
+      <span id="run-progress-text">600 m restantes</span>
+      <p id="run-objective" class="campaign-objective"></p>
+      <p id="run-warning" class="campaign-warning" role="status"></p>
+      <div class="campaign-progress-track"><div id="run-progress-fill"></div></div>
+    </section>
+
+    <!-- Train Store Modal (Loja de Trens) -->
+    <div id="store-modal" class="overlay-modal" hidden>
+      <div class="modal-card store-modal-card">
+        <div class="store-modal-header">
+          <div class="store-title-cluster">
+            <h2 class="modal-title store-title">🛍️ LOJA DE TRENS & COMPOSIÇÕES</h2>
+            <p class="modal-subtitle store-subtitle">Desbloqueie novas locomotivas e composições exclusivas com seus pontos acumulados!</p>
+          </div>
+          <div class="store-bank-pill">
+            <span class="store-bank-label">SEUS CRÉDITOS</span>
+            <span class="store-bank-val" id="store-bank-points">🪙 50 pts</span>
+          </div>
+          <button id="store-close-btn" class="store-close-btn" title="Fechar Loja (ESC)" aria-label="Fechar loja">✕</button>
+        </div>
+
+        <!-- Trains Dynamic Grid -->
+        <div class="store-trains-grid" id="store-trains-grid">
+          <!-- Injected dynamically by HudManager -->
+        </div>
+
+        <div class="store-modal-footer">
+          <p class="store-footer-tip">💡 <strong>Como acumular créditos:</strong> Colete anéis coloridos nos trilhos e execute manobras diagonais de <em>Drift Contínuo</em>!</p>
+          <button id="store-back-btn" class="action-btn btn-secondary">RETORNAR À FERROVIA (ESC)</button>
+        </div>
       </div>
     </div>
   </div>

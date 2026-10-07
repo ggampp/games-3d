@@ -1,0 +1,26 @@
+{
+  "zeroBalance": {
+    "acrobatic_train_bank_points": "0",
+    "acrobatic_train_best": "95",
+    "acrobatic_train_unlocked_trains": "[\"cyber\",\"steam\"]",
+    "acrobatic_train_current_train": "steam"
+  },
+  "starter": {
+    "acrobatic_train_bank_points": "50",
+    "acrobatic_train_best": "0",
+    "acrobatic_train_unlocked_trains": "[\"cyber\"]",
+    "acrobatic_train_current_train": "cyber"
+  },
+  "longTrain": {
+    "acrobatic_train_bank_points": "2000",
+    "acrobatic_train_best": "500",
+    "acrobatic_train_unlocked_trains": "[\"cyber\",\"class395\"]",
+    "acrobatic_train_current_train": "class395"
+  },
+  "corruptOwned": {
+    "acrobatic_train_bank_points": "2000",
+    "acrobatic_train_best": "42",
+    "acrobatic_train_unlocked_trains": "{",
+    "acrobatic_train_current_train": "class395"
+  }
+}

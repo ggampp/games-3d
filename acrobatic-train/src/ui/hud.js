@@ -4,35 +4,56 @@
  * (Rule 3 compliant: No direct DOM mutation in physics loop)
  */
 
+import { Dialogs } from './dialogs.js';
+
 export class HudManager {
   constructor() {
-    this.scoreEl = document.getElementById('score-display');
-    this.bestEl = document.getElementById('best-display');
-    this.speedEl = document.getElementById('speed-display');
-    this.frontTrackEl = document.getElementById('front-track-label');
-    this.rearTrackEl = document.getElementById('rear-track-label');
-    this.soundBtn = document.getElementById('sound-btn');
-    this.stuntBanner = document.getElementById('stunt-banner');
-    this.stuntText = document.getElementById('stunt-text');
-    this.aiJudgeLabel = document.getElementById('ai-judge-label');
+    const getEl = (id) => (typeof document !== 'undefined' ? document.getElementById(id) : null);
+    this.scoreEl = getEl('score-display');
+    this.bestEl = getEl('best-display');
+    this.speedEl = getEl('speed-display');
+    this.frontTrackEl = getEl('front-track-label');
+    this.rearTrackEl = getEl('rear-track-label');
+    this.soundBtn = getEl('sound-btn');
+    this.stuntBanner = getEl('stunt-banner');
+    this.stuntText = getEl('stunt-text');
+    this.aiJudgeLabel = getEl('ai-judge-label');
 
-    this.driftComboHud = document.getElementById('drift-combo-hud');
-    this.comboBadge = document.getElementById('combo-badge');
-    this.comboBarFill = document.getElementById('combo-bar-fill');
+    this.driftComboHud = getEl('drift-combo-hud');
+    this.comboBadge = getEl('combo-badge');
+    this.comboBarFill = getEl('combo-bar-fill');
 
-    this.skinSwatch = document.getElementById('skin-swatch');
-    this.skinNameDisplay = document.getElementById('skin-name-display');
+    this.skinSwatch = getEl('skin-swatch');
+    this.skinNameDisplay = getEl('skin-name-display');
 
-    this.signalLamp = document.getElementById('signal-lamp');
-    this.signalStatus = document.getElementById('signal-status');
+    this.signalLamp = getEl('signal-lamp');
+    this.signalStatus = getEl('signal-status');
 
-    this.tutorialModal = document.getElementById('tutorial-modal');
-    this.pauseModal = document.getElementById('pause-modal');
-    this.resumeBtn = document.getElementById('resume-btn');
-    this.gameoverModal = document.getElementById('gameover-modal');
-    this.finalScoreEl = document.getElementById('final-score');
-    this.finalBestEl = document.getElementById('final-best');
-    this.gameoverReason = document.getElementById('gameover-reason');
+    this.tutorialModal = getEl('tutorial-modal');
+    this.pauseModal = getEl('pause-modal');
+    this.resumeBtn = getEl('resume-btn');
+    this.gameoverModal = getEl('gameover-modal');
+    this.finalScoreEl = getEl('final-score');
+    this.finalBestEl = getEl('final-best');
+    this.gameoverReason = getEl('gameover-reason');
+
+    // Train Store Elements
+    this.coinsDisplay = getEl('coins-val');
+    this.storeBtn = getEl('store-btn');
+    this.storeModal = getEl('store-modal');
+    this.storeCloseBtn = getEl('store-close-btn');
+    this.storeBackBtn = getEl('store-back-btn');
+    this.storeBankPoints = getEl('store-bank-points');
+    this.storeGrid = getEl('store-trains-grid');
+    this.levelModal = getEl('level-result-modal');
+    this.levelSummary = getEl('level-result-summary');
+    this.runProgress = getEl('run-progress');
+    this.runLabel = getEl('run-label');
+    this.runProgressFill = getEl('run-progress-fill');
+    this.runProgressText = getEl('run-progress-text');
+    this.runObjective = getEl('run-objective');
+    this.runWarning = getEl('run-warning');
+    this.dialogs = typeof document !== 'undefined' ? new Dialogs(getEl('app')) : null;
 
     this.lastRenderTime = 0;
     this.throttleInterval = 80;
@@ -41,6 +62,7 @@ export class HudManager {
       score: 0,
       best: 0,
       speed: 0,
+      coins: null,
       frontTrack: 'AMV: Via Central',
       rearTrack: 'AMV: Via Central',
       comboActive: false,
@@ -51,6 +73,7 @@ export class HudManager {
   showPause(isPaused) {
     if (this.pauseModal) {
       this.pauseModal.hidden = !isPaused;
+      this.dialogs?.sync();
     }
   }
 
@@ -191,13 +214,151 @@ export class HudManager {
     if (this.finalBestEl) this.finalBestEl.textContent = `Melhor: ${best} Pontos`;
     if (this.gameoverReason) this.gameoverReason.textContent = reason;
     if (this.gameoverModal) this.gameoverModal.hidden = false;
+    this.dialogs?.sync();
   }
 
   hideGameOver() {
     if (this.gameoverModal) this.gameoverModal.hidden = true;
+    this.dialogs?.sync();
   }
 
   hideTutorial() {
     if (this.tutorialModal) this.tutorialModal.hidden = true;
+    this.dialogs?.sync();
+  }
+
+  showTutorial() {
+    if (this.tutorialModal) this.tutorialModal.hidden = false;
+    this.dialogs?.sync();
+  }
+
+  showLevelResult(show, snapshot = {}) {
+    if (show) {
+      document.getElementById('level-result-title').textContent = `FASE ${snapshot.levelNumber} CONCLUÍDA!`;
+      this.levelSummary.textContent = `${snapshot.lengthM} m em ${snapshot.timeS.toFixed(1)} s · ${snapshot.score} pontos. ${snapshot.metrics?.items ?? 0} itens, ${snapshot.metrics?.aerialItems ?? 0} anéis aéreos e ${snapshot.metrics?.stuntsLanded ?? 0} manobras pousadas. ${snapshot.levelNumber === 3 ? 'Fases 1–3 concluídas. Fase 4 em breve.' : ''}`;
+    }
+    if (this.levelModal) this.levelModal.hidden = !show;
+    this.dialogs?.sync();
+  }
+
+  showRun(level) {
+    if (this.runLabel) this.runLabel.textContent = level ? `FASE ${level.number} · ${level.name}` : 'MODO INFINITO';
+    if (this.runObjective) this.runObjective.textContent = level ? `${level.objective} Chegar vivo basta.` : '';
+    if (this.runWarning) this.runWarning.textContent = '';
+    if (this.runProgress) this.runProgress.hidden = !level;
+  }
+
+  renderSnapshot(snapshot, now = performance.now()) {
+    if (now - this.lastRenderTime < this.throttleInterval) return false;
+    this.update(snapshot.score, snapshot.best, snapshot.speedKmh, snapshot.front, snapshot.rear, snapshot.diagonal, true);
+    this.lastRenderTime = now;
+    this.updateCoins(snapshot.bankPoints);
+    this.updateDriftCombo(snapshot.driftCombo, snapshot.driftFill);
+    if (this.runWarning && this.runWarning.textContent !== (snapshot.warning || '')) this.runWarning.textContent = snapshot.warning || '';
+    if (snapshot.lengthM && this.runProgressFill) {
+      const percentage = Math.max(0, Math.min(100, snapshot.dist / snapshot.lengthM * 100));
+      this.runProgressFill.style.width = `${percentage}%`;
+      if (this.runProgressText) this.runProgressText.textContent = `${Math.max(0, Math.ceil(snapshot.lengthM - snapshot.dist))} m restantes`;
+    }
+    return true;
+  }
+
+  dispose() { clearTimeout(this.stuntTimer); this.dialogs?.dispose(); }
+
+  updateCoins(coins) {
+    if (coins !== this.cachedState.coins) {
+      this.cachedState.coins = coins;
+      if (this.coinsDisplay) {
+        this.coinsDisplay.textContent = `${coins} pts`;
+      }
+      if (this.storeBankPoints) {
+        this.storeBankPoints.textContent = `🪙 ${coins} pts`;
+      }
+    }
+  }
+
+  showStore(isOpen) {
+    if (this.storeModal) {
+      this.storeModal.hidden = !isOpen;
+      this.dialogs?.sync();
+    }
+  }
+
+  renderStore(catalog, unlockedList, currentTrainId, bankPoints, onEquip, onBuy) {
+    if (!this.storeGrid) return;
+    this.updateCoins(bankPoints);
+    this.storeGrid.innerHTML = '';
+
+    const previewIcons = {
+      cyber: '🚄',
+      steam: '🚂',
+      passenger: '🚆',
+      highspeed: '⚡',
+      class395: '🇬🇧'
+    };
+
+    Object.values(catalog).forEach((train) => {
+      const isEquipped = train.id === currentTrainId;
+      const isUnlocked = unlockedList.includes(train.id) || train.price === 0;
+      const canAfford = bankPoints >= train.price;
+
+      const card = document.createElement('div');
+      card.className = `store-card ${isEquipped ? 'is-equipped' : ''}`;
+
+      let btnHtml = '';
+      if (isEquipped) {
+        btnHtml = `<button class="store-action-btn equipped" disabled>✓ EQUIPADO</button>`;
+      } else if (isUnlocked) {
+        btnHtml = `<button class="store-action-btn equip" data-id="${train.id}">EQUIPAR</button>`;
+      } else if (canAfford) {
+        btnHtml = `<button class="store-action-btn buy" data-id="${train.id}">COMPRAR (${train.price} PTS)</button>`;
+      } else {
+        const diff = train.price - bankPoints;
+        btnHtml = `<button class="store-action-btn locked" disabled>BLOQUEADO (Faltam ${diff} pts)</button>`;
+      }
+
+      card.innerHTML = `
+        <span class="store-card-badge" style="background:${train.accentColor}25; color:${train.accentColor}; border:1px solid ${train.accentColor}50;">
+          ${train.badge}
+        </span>
+        <div class="store-card-preview">${previewIcons[train.id] || '🚂'}</div>
+        <div class="store-card-name">${train.name}</div>
+        <div class="store-card-sub">${train.subtitle}</div>
+        <div class="store-card-desc">${train.description}</div>
+        <div class="store-card-specs">
+          <div class="spec-row">
+            <span class="spec-lbl">Velocidade</span>
+            <span class="spec-val">${train.specs.speed}</span>
+          </div>
+          <div class="spec-row">
+            <span class="spec-lbl">Composição</span>
+            <span class="spec-val">${train.maxCars} ${train.maxCars === 1 ? 'Vagão' : 'Vagões'}</span>
+          </div>
+          <div class="spec-row">
+            <span class="spec-lbl">Aceleração</span>
+            <span class="spec-val">${train.specs.accel}</span>
+          </div>
+          <div class="spec-row">
+            <span class="spec-lbl">Especial</span>
+            <span class="spec-val" style="color:${train.accentColor}">${train.specs.special}</span>
+          </div>
+        </div>
+        ${btnHtml}
+      `;
+
+      const actionBtn = card.querySelector('.store-action-btn:not([disabled])');
+      if (actionBtn) {
+        actionBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (actionBtn.classList.contains('equip')) {
+            onEquip?.(train.id);
+          } else if (actionBtn.classList.contains('buy')) {
+            onBuy?.(train.id);
+          }
+        });
+      }
+
+      this.storeGrid.appendChild(card);
+    });
   }
 }

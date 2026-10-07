@@ -5,21 +5,36 @@
  * - Dynamic Physical Spark Particles on Rails & Drift
  * - Overhead Electrical Catenaries & Realistic Ballast
  * - Interactive Railroad Switch Tracks (Chaves de Desvio)
- * - Selectable Train Skins (Cyber, Crimson, Midnight)
+ * - Train Shop, finite phase-one slice and independent infinite mode
  * - Continuous Drift Combo Multiplier (x1 to x4)
- * - Cinematic Bullet-Time Stunt Camera
+ * - Fixed-step motion, visual interpolation and run-scoped asynchronous scoring
  * - TypeSafe Jev AI Stunt Judge & Telemetry Analyzer
  */
 
 import { sound } from './audio.js';
 import { KeyboardController } from './keyboard.js';
 import { HudManager } from '../ui/hud.js';
+import { TRAIN_CATALOG, buildTrainBody, buildCarriage, SteamSmokeEmitter } from '../entities/train-factory.js';
+import { ShopState, getTrainGameplayProfile } from './shop-state.js';
+import { FixedClock } from './fixed-clock.js';
+import { createRng } from './rng.js';
+import { RunSession } from '../levels/campaign.js';
+import { LEVEL_ONE, LEVELS, getLevel, createLevelContent, getWarning } from '../levels/level-config.js';
+import { ProgressStore } from './progress-store.js';
+import { CampaignUi } from '../ui/campaign-ui.js';
+import { createWorkBarrier } from '../entities/obstacles.js';
+import { stepAcrobatics, TRAIN_GEOMETRY, JUMP_SETTINGS } from '../physics/acrobatics.js';
+import { segAt, trackRetention } from '../entities/track.js';
+import { ease, easeD, moveLift, targetMove, stepMove } from '../physics/train-motion.js';
+import { gapUnder as containsGap, hitsBarrier, hitsPole, canCollect } from '../physics/collisions.js';
+import { disposeObject } from '../scene/resources.js';
+import { TransformInterpolation } from '../scene/interpolation.js';
 
 (() => {
   'use strict';
 
   // ---------- CONSTANTS & GEOMETRY SPECS ----------
-  const TRACK_BEHIND = 60;
+  let TRACK_BEHIND = 60;
   const TRACK_AHEAD = 700;
   const TIE_BACK = 30;
   const TIE_FRONT = 150;
@@ -27,7 +42,7 @@ import { HudManager } from '../ui/hud.js';
   const CURVE_R_MIN = 45, CURVE_R_MAX = 110;
   const CURVE_DEG_MIN = 20, CURVE_DEG_MAX = 60;
   const GAUGE = 1.0;
-  const TRACK_SPACING = 3.4;
+  const TRACK_SPACING = TRAIN_GEOMETRY.trackSpacing;
   const TRACKS = [-TRACK_SPACING, 0, TRACK_SPACING];
   const SLEEPER_STEP = 0.5;
   const BALLAST_H = 0.18;
@@ -36,19 +51,13 @@ import { HudManager } from '../ui/hud.js';
   const RAIL_H = 0.14;
   const RAIL_TOP = RAIL_BASE + RAIL_H;
 
-  // Speeds & Acceleration
-  const SPEED_START = 28;
-  const SPEED_MAX = 80;
-  const SPEED_ACCEL = 0.35;
   const BLUR_N = 5;
   const BLUR_A = 1 - Math.pow(0.05, 1 / BLUR_N);
 
   // Train Carriage Geometry
-  const DIAG_GAP = 3.4;
-  const OVERHANG = 0.9;
-  const BOGIE = Math.hypot(DIAG_GAP, TRACK_SPACING * 2) / 2;
-  const CAR_LEN = (BOGIE + OVERHANG) * 2;
-  const CAR_W = 1.7;
+  const BOGIE = TRAIN_GEOMETRY.bogie;
+  const CAR_LEN = TRAIN_GEOMETRY.carLength;
+  const CAR_W = TRAIN_GEOMETRY.carWidth;
   const SIDE_H = 1.75;
   const AXLE = 0.5;
   const WHEEL_R = 0.3;
@@ -66,23 +75,19 @@ import { HudManager } from '../ui/hud.js';
   const CAM_JUMP_FOLLOW = 0.75;
 
   // Movement & Acrobatics
-  const CROSS_TIME = 0.28;
   const HOP = 0.9;
   const AIR_MAX = 0.5;
   const AIR_FADE = 0.15;
-  const ease = (t) => t * t * (3 - 2 * t);
-  const easeD = (t) => 6 * t * (1 - t);
 
   // Jump Ramps & Stunt Lines
-  const RAMP_LEN = 7;
-  const RAMP_H = 1.0;
+  const RAMP_LEN = JUMP_SETTINGS.rampLength;
+  const RAMP_H = JUMP_SETTINGS.rampHeight;
   const RAMP_W = GAUGE + 0.7;
-  const RAMP_HIT = 0.7;
+  const RAMP_HIT = JUMP_SETTINGS.rampHit;
   const RAMP_END_MARGIN = 15;
   const LINE_AIR1 = 4;
   const LINE_AIR2 = LINE_AIR1 * 2;
-  const JUMP_G = 56;
-  const JUMP_PITCH = 0.25;
+  const JUMP_G = JUMP_SETTINGS.gravity;
   const SPIN_PIVOT_Y = 1.6;
   const JUMP_LAND = 1.5;
 
@@ -124,50 +129,31 @@ import { HudManager } from '../ui/hud.js';
   const FLIP_DIR = 1;
 
   const rnd = (a, b) => a + Math.random() * (b - a);
-  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
-
-  // ---------- TRAIN SKINS PALETTE ----------
-  const SKINS = {
-    cyber: {
-      name: 'Cyber Shinkansen',
-      accentColor: '#00f2fe',
-      bodyColor: 0xdfe6ed,
-      bodyMetal: 0.8,
-      bodyRough: 0.2,
-      bandColor: 0x00f2fe,
-      bandEmissive: 0x00f2fe,
-      lightColor: 0x00f2fe,
-      lightIntensity: 1.8,
-    },
-    crimson: {
-      name: 'Crimson Bullet',
-      accentColor: '#ef476f',
-      bodyColor: 0x8a1c2e,
-      bodyMetal: 0.6,
-      bodyRough: 0.3,
-      bandColor: 0xffd166,
-      bandEmissive: 0xffd166,
-      lightColor: 0xffea00,
-      lightIntensity: 2.0,
-    },
-    midnight: {
-      name: 'Midnight Gold',
-      accentColor: '#ffd166',
-      bodyColor: 0x121418,
-      bodyMetal: 0.9,
-      bodyRough: 0.15,
-      bandColor: 0xffd166,
-      bandEmissive: 0xffd166,
-      lightColor: 0xffd166,
-      lightIntensity: 2.2,
-    }
-  };
-  const skinKeys = Object.keys(SKINS);
-  let currentSkinIdx = 0;
+  let trackRandom = createRng('infinite-initial');
+  const trackRnd = (a, b) => a + trackRandom() * (b - a);
+  const trackPick = arr => arr[Math.floor(trackRandom() * arr.length)];
 
   // ---------- GAME STATE & HUD ----------
   const hud = new HudManager();
-  let speed = SPEED_START;
+  const clock = new FixedClock();
+  const interpolation = new TransformInterpolation();
+  let storage = null;
+  try { storage = window.localStorage; } catch { /* Play in memory if storage is unavailable. */ }
+  const shop = new ShopState(storage);
+  const progress = new ProgressStore(storage);
+  const run = new RunSession({ canStartLevel: level => progress.canPlay(level.id) && getLevel(level.id) === level });
+  const campaignUi = new CampaignUi(hud, progress, LEVELS);
+  let selectedLevelId = progress.continueLevelId();
+  let selectedMode = 'campaign';
+  let activeLevel = LEVEL_ONE;
+  let activeProfile = getTrainGameplayProfile(shop.selected, activeLevel);
+  const pendingJudges = new Set();
+  let uiCommands = [];
+  let renderedFrames = 0;
+  let animationFrame = 0;
+  let destroyed = false;
+  const present = callback => uiCommands.push({ runId: run.state.runId, callback });
+  let speed = activeProfile.startSpeedMps;
   let dist = 0;
   let score = 0;
   let best = 0;
@@ -182,21 +168,35 @@ import { HudManager } from '../ui/hud.js';
   let driftCombo = 1.0;
   let lastComboStep = 1;
 
-  try {
-    best = Math.max(0, parseInt(localStorage.getItem('acrobatic_train_best'), 10) || 0);
-  } catch {}
+  let bankPoints = shop.bank;
+  let unlockedTrains = shop.owned;
+  let currentTrainId = shop.selected;
+  best = shop.best;
+
+  function syncShop() {
+    bankPoints = shop.bank; unlockedTrains = shop.owned; best = shop.best;
+  }
+
+  function addPoints(pts, source = 'pickup', eventId = run.eventId(source), deterministic = true) {
+    if (run.state.mode !== 'playing') return 0;
+    const mult = activeProfile.bonusMultiplier;
+    const earned = Math.round(pts * mult);
+    if (!shop.awardPoints({ eventId, runId: run.state.runId, amount: earned, source })) return 0;
+    run.addScore(earned, { deterministic }); score = run.score;
+    syncShop();
+    return earned;
+  }
 
   // Bogie End States
   const ends = { front: 0, rear: 0 };
   const moves = {
-    front: { from: 0, to: 0, t: 1, h0: 0, airT: 0 },
-    rear: { from: 0, to: 0, t: 1, h0: 0, airT: 0 }
+    front: { value: 0, from: 0, to: 0, t: 1, h0: 0, airT: 0 },
+    rear: { value: 0, from: 0, to: 0, t: 1, h0: 0, airT: 0 }
   };
   const riding = { front: null, rear: null };
   const jump = { on: false, t: 0, T: 1, y0: 0, vy: 0, spin: false, dir: 1, p0: 0 };
   const sag = { front: { x: 0, v: 0 }, rear: { x: 0, v: 0 } };
   const roll = { x: 0, v: 0 };
-  const lands = [];
   const rb = { p: V(0, 0, 0), v: V(0, 0, 0), q: new THREE.Quaternion(), w: V(0, 0, 0) };
 
   // Pose representation
@@ -207,33 +207,23 @@ import { HudManager } from '../ui/hud.js';
   // Slope and lift helpers
   const slopeOf = (end) => {
     const m = moves[end];
-    return m.t >= 1 ? 0 : ((m.to - m.from) * easeD(m.t)) / (speed * CROSS_TIME);
+    return m.t >= 1 ? 0 : ((m.to - m.from) * easeD(m.t)) / (speed * activeProfile.crossTimeS);
   };
   const liftOf = (end) => {
-    const m = moves[end];
-    if (m.t >= 1) return 0;
-    const fade = Math.max(0, Math.min(1, 1 - (m.airT - AIR_MAX) / AIR_FADE));
-    return Math.max(m.h0 * (1 - ease(m.t)), HOP * Math.sin(Math.PI * m.t)) * fade;
+    return moveLift(moves[end], { hop: HOP, airMax: AIR_MAX, airFade: AIR_FADE });
   };
 
   function setTarget(end, track) {
-    const m = moves[end];
-    if (track === m.to) return;
-    m.h0 = Math.min(liftOf(end), HOP);
-    m.from = ends[end];
-    m.to = track;
-    m.t = 0;
+    if (!targetMove(moves[end], track, HOP)) return;
     sound.hop();
   }
 
   function stepMoves(dt) {
     ['front', 'rear'].forEach((end) => {
       const m = moves[end];
-      if (m.t >= 1) return;
-      m.t = Math.min(1, m.t + dt / CROSS_TIME);
-      m.airT = m.t >= 1 ? 0 : m.airT + dt;
-      ends[end] = m.from + (m.to - m.from) * ease(m.t);
-      if (m.t >= 1 && !jump.on) onLand(end, Math.sign(m.to - m.from));
+      const landed = stepMove(m, dt, activeProfile.crossTimeS);
+      ends[end] = m.value;
+      if (landed && !jump.on) onLand(end, Math.sign(m.to - m.from));
     });
   }
 
@@ -241,7 +231,6 @@ import { HudManager } from '../ui/hud.js';
     sag[end].v -= SAG_HIT;
     roll.v += dir * ROLL_HIT;
     shake = Math.min(shake + SHAKE_HIT, SHAKE_HIT * 1.6);
-    lands.push(end);
     if (mode === 'playing') sound.land();
   }
 
@@ -262,7 +251,7 @@ import { HudManager } from '../ui/hud.js';
   const canvas = document.getElementById('game-canvas');
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
   renderer.setClearColor(0x0a0e17);
-  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.enabled = !window.__TRAIN_TEST_CONFIG__?.disableShadows;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
   const scene = new THREE.Scene();
@@ -421,15 +410,6 @@ import { HudManager } from '../ui/hud.js';
 
   // ---------- TRACK SPLINE GENERATION ----------
   const segs = [];
-  function segAt(seg, u) {
-    const h = seg.h0 + seg.k * u;
-    if (seg.k === 0) return { x: seg.x0 + Math.cos(h) * u, z: seg.z0 + Math.sin(h) * u, h };
-    return {
-      x: seg.x0 + (Math.sin(h) - Math.sin(seg.h0)) / seg.k,
-      z: seg.z0 - (Math.cos(h) - Math.cos(seg.h0)) / seg.k,
-      h
-    };
-  }
 
   function pathAt(s) {
     let seg = segs[0];
@@ -483,7 +463,7 @@ import { HudManager } from '../ui/hud.js';
   const railTopMat = std(0xe0e6ed, 0.95, 0.15, { side: THREE.DoubleSide });
   const gapMat = std(0x2d1f14, 0, 1, { polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
 
-  const ramps = [], poles = [], items = [], gaps = [];
+  const ramps = [], poles = [], items = [], gaps = [], barriers = [];
 
   function railRanges(seg, tz) {
     let ranges = [[0, seg.len]];
@@ -534,6 +514,7 @@ import { HudManager } from '../ui/hud.js';
     });
     const drop = (list, arr) => list.forEach((o) => {
       if (o.mesh) scene.remove(o.mesh);
+      o.dispose?.();
       const i = arr.indexOf(o);
       if (i >= 0) arr.splice(i, 1);
     });
@@ -541,11 +522,12 @@ import { HudManager } from '../ui/hud.js';
     drop(seg.poles, poles);
     drop(seg.items, items);
     drop(seg.gaps, gaps);
+    drop(seg.barriers, barriers);
   }
 
   const newSeg = (s0, len, x0, z0, h0, k) => ({
     s0, len, x0, z0, h0, k,
-    ramps: [], poles: [], items: [], gaps: [], meshes: []
+    ramps: [], poles: [], items: [], gaps: [], barriers: [], meshes: []
   });
 
   // Track ties (sleepers) instancing
@@ -569,7 +551,7 @@ import { HudManager } from '../ui/hud.js';
   scene.add(ties);
 
   const gapAt = (tz, s) => gaps.some((g) => g.tz === tz && s >= g.a && s <= g.b);
-  const gapUnder = (lat, s) => gaps.some((g) => Math.abs(lat - g.tz) < RAMP_HIT && s >= g.a && s <= g.b);
+  const gapUnder = (lat, s) => containsGap(gaps, lat, s, RAMP_HIT);
 
   function placeTies() {
     const k0 = Math.ceil((dist - TIE_BACK) / SLEEPER_STEP);
@@ -617,13 +599,6 @@ import { HudManager } from '../ui/hud.js';
     seg.ramps.push(r);
   }
 
-  function rampAt(s, lat) {
-    for (const r of ramps) {
-      const u = s - r.s;
-      if (u >= 0 && u <= RAMP_LEN && Math.abs(lat - r.tz) < RAMP_HIT) return r;
-    }
-    return null;
-  }
 
   // Hazard Poles
   const poleGeo = new THREE.CylinderGeometry(POLE_R, POLE_R, POLE_H, 12).translate(0, POLE_H / 2, 0);
@@ -661,6 +636,7 @@ import { HudManager } from '../ui/hud.js';
     const o = { s, lat, y, level, mesh, taken: false, diag, pts, ring };
     seg.items.push(o);
     items.push(o);
+    return o;
   }
 
   function addGap(seg, tz, a, b) {
@@ -672,47 +648,51 @@ import { HudManager } from '../ui/hud.js';
   const PATTERNS = {
     ramp(seg, s, end) {
       const lip = s + RAMP_LEN;
-      const level = Math.random() < 0.5 ? 2 : 1;
+      const level = trackRandom() < 0.5 ? 2 : 1;
       const len = RAMP_LEN + 25;
       if (s + len > end) return 0;
-      const tz = pick(TRACKS);
+      const tz = trackPick(TRACKS);
       addRamp(seg, s, tz);
-      if (Math.random() < RAMP_GAP_RATE) addGap(seg, tz, lip + 1, lip + 1 + rnd(RAMP_GAP_MIN, RAMP_GAP_MAX));
+      if (trackRandom() < RAMP_GAP_RATE) addGap(seg, tz, lip + 1, lip + 1 + trackRnd(RAMP_GAP_MIN, RAMP_GAP_MAX));
       for (let i = 0; i < 5; i++) addItem(seg, lip + 10 + i * 4, tz, level);
       return len;
     },
     gap(seg, s, end) {
-      const len = rnd(GAP_MIN, GAP_MAX);
+      const len = trackRnd(GAP_MIN, GAP_MAX);
       if (s + len > end) return 0;
-      const order = TRACKS.slice().sort(() => Math.random() - 0.5);
-      const n = Math.random() < 0.5 ? 2 : 1;
+      const order = TRACKS.slice();
+      for (let i = order.length - 1; i > 0; i--) {
+        const j = Math.floor(trackRandom() * (i + 1));
+        [order[i], order[j]] = [order[j], order[i]];
+      }
+      const n = trackRandom() < 0.5 ? 2 : 1;
       order.slice(0, n).forEach((tz) => addGap(seg, tz, s, s + len));
       for (let x = s + 1; x < s + len; x += ITEM_STEP) addItem(seg, x, order[n], 0);
       return len;
     },
     poles(seg, s, end) {
-      const n = Math.floor(rnd(POLE_MIN_N, 7)), len = (n - 1) * POLE_STEP;
+      const n = Math.floor(trackRnd(POLE_MIN_N, 7)), len = (n - 1) * POLE_STEP;
       if (s + len > end) return 0;
       const half = TRACK_SPACING / 2;
-      const lats = Math.random() < 0.5 ? [-half, half] : [pick([-half, half])];
+      const lats = trackRandom() < 0.5 ? [-half, half] : [trackPick([-half, half])];
       lats.forEach((lat) => {
         for (let i = 0; i < n; i++) addPole(seg, s + i * POLE_STEP, lat);
       });
-      const tz = pick(TRACKS);
+      const tz = trackPick(TRACKS);
       for (let x = s; x <= s + len; x += ITEM_STEP) addItem(seg, x, tz, 0);
       return len;
     },
     items(seg, s, end) {
       const len = (ITEM_ROW - 1) * ITEM_STEP;
       if (s + len > end) return 0;
-      const tz = pick(TRACKS);
+      const tz = trackPick(TRACKS);
       for (let i = 0; i < ITEM_ROW; i++) addItem(seg, s + i * ITEM_STEP, tz, 0);
       return len;
     },
     diag(seg, s, end) {
       const len = (ITEM_ROW - 1) * ITEM_STEP;
       if (s + len > end) return 0;
-      const lat = pick([-1, 1]) * (TRACK_SPACING / 2);
+      const lat = trackPick([-1, 1]) * (TRACK_SPACING / 2);
       for (let i = 0; i < ITEM_ROW; i++) addItem(seg, s + i * ITEM_STEP, lat, 0, true, DIAG_POINTS);
       return len;
     }
@@ -722,9 +702,9 @@ import { HudManager } from '../ui/hud.js';
     const end = seg.s0 + seg.len - RAMP_END_MARGIN;
     for (let s = Math.max(from, SAFE_START); s < end; ) {
       const names = ['ramp', 'gap', 'poles', 'items', 'diag'];
-      const name = pick(names);
+      const name = trackPick(names);
       const used = PATTERNS[name](seg, s, end);
-      const next = used ? rnd(15, 30) : 10;
+      const next = used ? trackRnd(15, 30) : 10;
       s += (used || 5) + next;
     }
   }
@@ -734,19 +714,20 @@ import { HudManager } from '../ui/hud.js';
     const e = segAt(last, last.len);
     let len, k = 0;
     if (last.k === 0) {
-      const r = rnd(CURVE_R_MIN, CURVE_R_MAX), ang = THREE.MathUtils.degToRad(rnd(CURVE_DEG_MIN, CURVE_DEG_MAX));
-      k = (Math.random() < 0.5 ? -1 : 1) / r;
+      const r = trackRnd(CURVE_R_MIN, CURVE_R_MAX), ang = THREE.MathUtils.degToRad(trackRnd(CURVE_DEG_MIN, CURVE_DEG_MAX));
+      k = (trackRandom() < 0.5 ? -1 : 1) / r;
       len = ang * r;
     } else {
-      len = rnd(STRAIGHT_TIME[0], STRAIGHT_TIME[1]) * 35;
+      len = trackRnd(STRAIGHT_TIME[0], STRAIGHT_TIME[1]) * 35;
     }
     const seg = newSeg(last.s0 + last.len, len, e.x, e.z, e.h, k);
-    placeHazards(seg, seg.s0 + rnd(10, 25));
+    placeHazards(seg, seg.s0 + trackRnd(10, 25));
     buildSeg(seg);
     segs.push(seg);
   }
 
   function maintainTrack() {
+    if (activeLevel) return;
     let last = segs[segs.length - 1];
     while (last.s0 + last.len < dist + TRACK_AHEAD) {
       addSeg();
@@ -758,6 +739,26 @@ import { HudManager } from '../ui/hud.js';
   }
 
   function initTrack() {
+    if (activeLevel) {
+      const seg = newSeg(-TRACK_BEHIND - 10, TRACK_BEHIND + 10 + activeLevel.lengthM + 100, -TRACK_BEHIND - 10, 0, 0, 0);
+      const content = createLevelContent(activeLevel);
+      for (const gap of content.gaps) addGap(seg, gap.lane * TRACK_SPACING, gap.a, gap.b);
+      for (const ramp of content.ramps) addRamp(seg, ramp.s, ramp.lane * TRACK_SPACING);
+      for (const pole of content.poles) addPole(seg, pole.s, pole.lat);
+      for (const block of content.barriers) {
+        const asset = createWorkBarrier(THREE, block);
+        const point = offsetPt(segAt(seg, block.s - seg.s0), block.lane * TRACK_SPACING);
+        asset.group.position.set(point.x, 0, point.z); scene.add(asset.group);
+        const object = { ...block, lat: block.lane * TRACK_SPACING, mesh: asset.group, dispose: asset.dispose };
+        barriers.push(object); seg.barriers.push(object);
+      }
+      for (const item of content.items) {
+        const object = addItem(seg, item.s, item.lane * TRACK_SPACING, item.level, false, item.points);
+        object.id = item.id;
+        object.y = item.y; object.mesh.position.y = item.y;
+      }
+      buildSeg(seg); segs.push(seg); return;
+    }
     const seg = newSeg(-TRACK_BEHIND - 10, TRACK_BEHIND + 10 + 140, -TRACK_BEHIND - 10, 0, 0, 0);
     placeHazards(seg, SAFE_START);
     buildSeg(seg);
@@ -858,281 +859,89 @@ import { HudManager } from '../ui/hud.js';
     return b;
   }
 
-  let trainBodyMeshes = [];
-  let trainBandMeshes = [];
-  let trainAccentMeshes = [];
-  let headlightSpotlights = [];
-  let volumetricBeamMeshes = [];
-  let headlightLensMeshes = [];
-  let underglowMesh = null;
-  let pantographInsulatorMeshes = [];
+  let currentTrainBodyGroup = null;
+  let currentTrainDisposables = null;
+  let smokeEmitter = null;
+  let carriages = [];
+  let bodyPivot = null;
 
-  function applyTrainSkin(skinKey) {
-    const skin = SKINS[skinKey];
-    if (!skin) return;
+  function applyTrainModel(trainId) {
+    if (!TRAIN_CATALOG[trainId]) trainId = 'cyber';
+    TRACK_BEHIND = trackRetention(TRAIN_CATALOG[trainId].maxCars, CAR_LEN);
+    const constants = {
+      CAR_LEN, CAR_W, SIDE_H, BODY_Y, ROOF_Y, BOGIE, GAUGE, RAIL_TOP, WHEEL_R, WC
+    };
 
-    trainBodyMeshes.forEach((m) => {
-      m.material.color.setHex(skin.bodyColor);
-      m.material.metalness = skin.bodyMetal;
-      m.material.roughness = skin.bodyRough;
-    });
-
-    trainBandMeshes.forEach((m) => {
-      m.material.color.setHex(skin.bandColor);
-      m.material.emissive.setHex(skin.bandEmissive);
-    });
-
-    trainAccentMeshes.forEach((m) => {
-      m.material.color.setHex(skin.accentColor);
-      if (m.material.emissive) m.material.emissive.setHex(skin.bandEmissive);
-    });
-
-    headlightLensMeshes.forEach((m) => {
-      m.material.emissive.setHex(skin.lightColor);
-    });
-
-    if (underglowMesh) {
-      underglowMesh.material.color.setHex(skin.lightColor);
-      underglowMesh.material.emissive.setHex(skin.lightColor);
+    // 1. Clean disposal of previous train body assets (Rule 4 compliant)
+    if (currentTrainBodyGroup && bodyPivot) {
+      bodyPivot.remove(currentTrainBodyGroup);
+      if (currentTrainDisposables) {
+        new Set(currentTrainDisposables.geometries).forEach(g => g.dispose());
+        new Set(currentTrainDisposables.materials).forEach(m => m.dispose());
+      }
+      currentTrainBodyGroup = null;
+      currentTrainDisposables = null;
     }
 
-    pantographInsulatorMeshes.forEach((m) => {
-      m.material.color.setHex(skin.accentColor);
-      m.material.emissive.setHex(skin.bandEmissive);
-    });
+    if (smokeEmitter) {
+      smokeEmitter.dispose();
+      smokeEmitter = null;
+    }
 
-    headlightSpotlights.forEach((spot) => {
-      spot.color.setHex(skin.lightColor);
-      spot.intensity = skin.lightIntensity;
+    // 2. Clean disposal of existing carriages
+    carriages.forEach((c) => {
+      scene.remove(c.mesh);
+      disposeObject(c.mesh);
     });
+    carriages = [];
 
-    volumetricBeamMeshes.forEach((beam) => {
-      beam.material.color.setHex(skin.lightColor);
+    // 3. Assemble new 3D train body using TrainFactory
+    const { group, meta, disposables } = buildTrainBody(trainId, constants);
+    group.position.y = -BODY_Y;
+    if (bodyPivot) bodyPivot.add(group);
+    currentTrainBodyGroup = group;
+    currentTrainDisposables = disposables;
+
+    // 4. Smoke emitter for steam locomotive (Maria-fumaça)
+    if (meta.chimneyPos && (trainId === 'steam' || TRAIN_CATALOG[trainId]?.hasSmoke)) {
+      smokeEmitter = new SteamSmokeEmitter(scene, meta.chimneyPos);
+    }
+
+    // 5. Instantiate trailing carriages (e.g. 12 cars for Southeastern Class 395!)
+    const totalCars = TRAIN_CATALOG[trainId]?.maxCars || 1;
+    for (let i = 1; i < totalCars; i++) {
+      const cMesh = buildCarriage(trainId, i, totalCars, constants);
+      cMesh.visible = false;
+      scene.add(cMesh);
+      carriages.push({
+        index: i,
+        mesh: cMesh,
+        offsetDist: i * (CAR_LEN + 0.5)
+      });
+    }
+
+    hud.updateSkinDisplay(trainId, {
+      name: TRAIN_CATALOG[trainId].name,
+      accentColor: TRAIN_CATALOG[trainId].accentColor
     });
-
-    hud.updateSkinDisplay(skinKey, skin);
   }
 
   function makeCar() {
     const car = new THREE.Group();
-    const bodyPivot = new THREE.Group();
+    bodyPivot = new THREE.Group();
     bodyPivot.position.y = BODY_Y;
-    const g = new THREE.Group();
-    g.position.y = -BODY_Y;
-    bodyPivot.add(g);
     car.add(bodyPivot);
 
-    const add = (geo, mat, x, y, z) => {
-      const m = new THREE.Mesh(geo, mat);
-      m.position.set(x, y, z);
-      g.add(m);
-      return m;
-    };
-
-    trainBodyMeshes = [];
-    trainBandMeshes = [];
-    trainAccentMeshes = [];
-    headlightSpotlights = [];
-    volumetricBeamMeshes = [];
-    headlightLensMeshes = [];
-    pantographInsulatorMeshes = [];
-
-    const initialSkin = SKINS[skinKeys[currentSkinIdx]];
-    const bodyMat = std(initialSkin.bodyColor, initialSkin.bodyMetal, initialSkin.bodyRough);
-    const bandMat = std(initialSkin.bandColor, 0.2, 0.3, { emissive: initialSkin.bandEmissive, emissiveIntensity: 0.6 });
-    const glassMat = std(0xffd166, 0.2, 0.1, { emissive: 0xffd166, emissiveIntensity: 0.4 }); // Illuminated passenger cabin
-    const darkTrimMat = std(0x181e26, 0.8, 0.3);
-    const chromeMat = std(0xf1f5f9, 0.95, 0.1);
-    const aeroSkirtMat = std(initialSkin.bodyColor, initialSkin.bodyMetal, initialSkin.bodyRough);
-    const pantographMat = std(0x334155, 0.7, 0.3);
-    const pantographShoeMat = std(0x0f172a, 0.4, 0.6);
-    const insulatorMat = std(initialSkin.accentColor, 0.3, 0.3, { emissive: initialSkin.bandEmissive, emissiveIntensity: 0.7 });
-    const underglowMat = std(initialSkin.lightColor, 0.1, 0.8, { emissive: initialSkin.lightColor, emissiveIntensity: 1.6, transparent: true, opacity: 0.75 });
-
-    // 1. Main Coach Body Shell
-    const mainBody = add(makeBodyGeo(), bodyMat, 0, BODY_Y, 0);
-    trainBodyMeshes.push(mainBody);
-
-    // 2. Aerodynamic Nose Cone (+X Front Cockpit)
-    const noseBaseX = CAR_LEN / 2;
-    // Lower aerodynamic nose wedge
-    const noseLower = add(box(1.2, 0.78, CAR_W - 0.04), bodyMat, noseBaseX + 0.52, BODY_Y + 0.4, 0);
-    trainBodyMeshes.push(noseLower);
-    // Upper aerodynamic nose slope
-    const noseUpper = add(box(0.9, 0.5, CAR_W - 0.1), bodyMat, noseBaseX + 0.38, BODY_Y + 0.92, 0);
-    trainBodyMeshes.push(noseUpper);
-    // Front chin splitter / aerodynamic lip
-    add(box(0.95, 0.14, CAR_W + 0.02), darkTrimMat, noseBaseX + 0.5, BODY_Y - 0.18, 0);
-    const chinLip = add(box(1.0, 0.04, CAR_W + 0.04), bandMat, noseBaseX + 0.52, BODY_Y - 0.24, 0);
-    trainBandMeshes.push(chinLip);
-
-    // Raked cockpit windshield
-    const windshield = add(box(0.72, 0.56, CAR_W * 0.82), std(0x090d16, 0.95, 0.05, { emissive: 0x00f2fe, emissiveIntensity: 0.08 }), noseBaseX + 0.28, BODY_Y + 1.25, 0);
-    windshield.rotation.z = -0.42;
-    // Cockpit A-pillars and top sun-visor brow
-    const cockpitVisor = add(box(0.14, 0.58, CAR_W * 0.85), bodyMat, noseBaseX + 0.29, BODY_Y + 1.27, 0);
-    cockpitVisor.rotation.z = -0.42;
-    trainBodyMeshes.push(cockpitVisor);
-    const wiper = add(box(0.32, 0.02, 0.02), darkTrimMat, noseBaseX + 0.42, BODY_Y + 1.14, 0);
-    wiper.rotation.z = -0.42;
-
-    // Twin High-Intensity Projector Headlight Pods
-    [-0.46, 0.46].forEach((zOff) => {
-      // Bezel & Chrome Reflector Cup
-      add(xCyl(0.14, 0.12, 16), darkTrimMat, noseBaseX + 0.98, BODY_Y + 0.42, zOff);
-      add(xCyl(0.11, 0.08, 16), chromeMat, noseBaseX + 1.02, BODY_Y + 0.42, zOff);
-      // Glowing Optical Lens
-      const lensMat = std(0xffffff, 0.1, 0.1, { emissive: initialSkin.lightColor, emissiveIntensity: 2.8 });
-      const lens = add(xCyl(0.09, 0.03, 16), lensMat, noseBaseX + 1.05, BODY_Y + 0.42, zOff);
-      headlightLensMeshes.push(lens);
-
-      // Daytime Running Light (DRL) LED Bar
-      const drl = add(box(0.14, 0.03, 0.22), bandMat, noseBaseX + 0.98, BODY_Y + 0.24, zOff);
-      trainBandMeshes.push(drl);
-    });
-
-    // 3. Rear Coach End Vestibule & Gangway Bellows (-X)
-    const rearBaseX = -CAR_LEN / 2;
-    [-0.08, -0.16, -0.24, -0.32].forEach((ox) => {
-      add(box(0.045, SIDE_H * 0.86, CAR_W * 0.74), std(0x18181b, 0.1, 0.85), rearBaseX + ox, BODY_Y + SIDE_H * 0.43, 0);
-    });
-    // Automatic knuckle coupler
-    add(xCyl(0.05, 0.42, 8), std(0x374151, 0.8, 0.3), rearBaseX - 0.25, BODY_Y - 0.12, 0);
-    add(box(0.16, 0.16, 0.18), darkTrimMat, rearBaseX - 0.45, BODY_Y - 0.12, 0);
-
-    // Twin High-Visibility Red LED Tail Lamps
-    [-0.52, 0.52].forEach((zOff) => {
-      add(box(0.06, 0.12, 0.24), darkTrimMat, rearBaseX - 0.02, BODY_Y + 0.6, zOff);
-      add(box(0.04, 0.08, 0.18), std(0xff1744, 0.1, 0.2, { emissive: 0xff1744, emissiveIntensity: 2.5 }), rearBaseX - 0.04, BODY_Y + 0.6, zOff);
-    });
-
-    // 4. Undercarriage Aerodynamic Skirts & Equipment
-    [-1, 1].forEach((sd) => {
-      const skirt = add(box(BOGIE * 1.5, 0.34, 0.03), aeroSkirtMat, 0, BODY_Y - 0.15, sd * (W2 - 0.015));
-      trainBodyMeshes.push(skirt);
-      const skirtStripe = add(box(BOGIE * 1.5, 0.04, 0.035), bandMat, 0, BODY_Y - 0.30, sd * (W2 - 0.012));
-      trainBandMeshes.push(skirtStripe);
-    });
-    // Underside traction inverter pack
-    add(box(2.2, 0.28, CAR_W * 0.7), std(0x1e242d, 0.6, 0.4), 0, BODY_Y - 0.15, 0);
-    // Compressed air reservoirs
-    [-0.32, 0.32].forEach((tz) => {
-      add(xCyl(0.14, 1.8, 12), std(0x475569, 0.8, 0.3), -1.8, BODY_Y - 0.16, tz);
-    });
-
-    // 5. Articulated High-Speed Roof Pantograph
-    const pantoX = -BOGIE + 0.4;
-    // Aerodynamic wind deflector ramp
-    add(box(0.48, 0.14, 0.8), darkTrimMat, pantoX + 0.55, ROOF_Y + 0.07, 0);
-    // Base frame
-    add(box(0.82, 0.05, 0.7), pantographMat, pantoX, ROOF_Y + 0.04, 0);
-    // 4 Ceramic insulators
-    [-0.3, 0.3].forEach((px) => {
-      [-0.26, 0.26].forEach((pz) => {
-        const ins = add(cyl(0.042, 0.12, 8), insulatorMat, pantoX + px, ROOF_Y + 0.09, pz);
-        pantographInsulatorMeshes.push(ins);
-      });
-    });
-    // Articulated diamond arms
-    const pantoArm1 = add(cyl(0.022, 0.62, 6), std(0x64748b, 0.85, 0.2), pantoX - 0.12, ROOF_Y + 0.32, 0);
-    pantoArm1.rotation.z = 0.52;
-    const pantoArm2 = add(cyl(0.018, 0.58, 6), std(0x94a3b8, 0.85, 0.2), pantoX + 0.02, ROOF_Y + 0.65, 0);
-    pantoArm2.rotation.z = -0.55;
-    // Top contact shoe
-    add(box(0.05, 0.03, 1.15), pantographShoeMat, pantoX, ROOF_Y + 0.88, 0);
-    [-0.56, 0.56].forEach((hz) => {
-      add(box(0.05, 0.08, 0.03), std(0x94a3b8, 0.8, 0.2), pantoX, ROOF_Y + 0.84, hz);
-    });
-
-    // 6. Rooftop Climate Control Modules (HVAC) & High-Voltage Cable
-    [-0.4, 1.9].forEach((hx) => {
-      add(box(1.25, 0.22, 1.12), std(0x94a3b8, 0.5, 0.4), hx, ROOF_Y + 0.11, 0);
-      add(box(0.04, 0.14, 0.9), darkTrimMat, hx - 0.61, ROOF_Y + 0.11, 0);
-      add(box(0.04, 0.14, 0.9), darkTrimMat, hx + 0.61, ROOF_Y + 0.11, 0);
-      [-0.32, 0.32].forEach((fx) => {
-        add(cyl(0.22, 0.03, 16), std(0x334155, 0.7, 0.3), hx + fx, ROOF_Y + 0.22, 0);
-        add(cyl(0.08, 0.035, 12), std(0x0f172a, 0.9, 0.1), hx + fx, ROOF_Y + 0.22, 0);
-      });
-    });
-    // High-voltage copper conduit pipe
-    add(xCyl(0.022, 4.8, 8), std(0xd97706, 0.9, 0.2), 0.7, ROOF_Y + 0.04, 0);
-
-    // 7. Panoramic Windows & Sliding Passenger Doors
-    [-1, 1].forEach((sd) => {
-      // Main neon accent speed stripe
-      const mainStripe = add(box(CAR_LEN - 0.2, 0.12, 0.038), bandMat, 0, BODY_Y + 0.78, sd * (W2 + 0.018));
-      trainBandMeshes.push(mainStripe);
-      // Secondary roof-line pin stripe
-      const topStripe = add(box(CAR_LEN - 0.4, 0.035, 0.035), bandMat, 0, BODY_Y + 1.58, sd * (W2 + 0.016));
-      trainBandMeshes.push(topStripe);
-
-      // 6 Panoramic Passenger Windows per side
-      [-2.8, -1.9, -1.0, 0.8, 1.7, 2.6].forEach((wx) => {
-        // Metallic outer frame
-        add(box(0.78, 0.56, 0.036), darkTrimMat, wx, BODY_Y + 1.22, sd * (W2 + 0.015));
-        // Illuminated glass
-        add(box(0.72, 0.50, 0.038), glassMat, wx, BODY_Y + 1.22, sd * (W2 + 0.016));
-        // Vertical mullion
-        add(box(0.025, 0.50, 0.04), std(0x334155, 0.8, 0.2), wx, BODY_Y + 1.22, sd * (W2 + 0.017));
-      });
-
-      // 2 Passenger Entrance Doors per side
-      [-0.1, 3.6].forEach((dx) => {
-        // Recessed frame
-        const dFrame = add(box(0.68, 1.48, 0.035), bodyMat, dx, BODY_Y + 0.74, sd * (W2 + 0.014));
-        trainBodyMeshes.push(dFrame);
-        // Dark door panel
-        add(box(0.62, 1.42, 0.036), std(0x18181b, 0.6, 0.4), dx, BODY_Y + 0.74, sd * (W2 + 0.015));
-        // Door narrow window
-        add(box(0.18, 0.60, 0.038), glassMat, dx, BODY_Y + 1.05, sd * (W2 + 0.016));
-        // Stainless steel grab handle
-        add(cyl(0.014, 0.65, 6), chromeMat, dx + 0.24, BODY_Y + 0.75, sd * (W2 + 0.024));
-        // Green LED door indicator
-        add(box(0.08, 0.03, 0.04), std(0x10b981, 0.2, 0.2, { emissive: 0x10b981, emissiveIntensity: 2.0 }), dx, BODY_Y + 1.52, sd * (W2 + 0.018));
-      });
-    });
-
-    // 8. Ground Neon Underglow
-    underglowMesh = add(box(CAR_LEN - 1.0, 0.04, CAR_W - 0.35), underglowMat, 0, BODY_Y - 0.28, 0);
-
-    // 9. Bogies
     const bogies = [makeBogie(), makeBogie()];
     bogies[0].position.x = BOGIE;
     bogies[1].position.x = -BOGIE;
     bogies.forEach((b) => car.add(b));
 
-    // 10. Volumetric Headlights & Spotlights
-    const beamGeo = new THREE.ConeGeometry(1.6, 22, 16);
-    beamGeo.rotateZ(-Math.PI / 2);
-    beamGeo.translate(11, 0, 0);
-    const beamMat = new THREE.MeshBasicMaterial({
-      color: initialSkin.lightColor,
-      transparent: true,
-      opacity: 0.16,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-      side: THREE.DoubleSide
-    });
-
-    [-0.46, 0.46].forEach((zOff) => {
-      const spot = new THREE.SpotLight(initialSkin.lightColor, initialSkin.lightIntensity, 40, Math.PI / 6.5, 0.35, 1.2);
-      spot.position.set(noseBaseX + 1.05, BODY_Y + 0.42, zOff);
-      const target = new THREE.Object3D();
-      target.position.set(noseBaseX + 22, BODY_Y + 0.2, zOff);
-      g.add(target);
-      spot.target = target;
-      g.add(spot);
-      headlightSpotlights.push(spot);
-
-      const vMesh = new THREE.Mesh(beamGeo, beamMat.clone());
-      vMesh.position.set(noseBaseX + 1.05, BODY_Y + 0.42, zOff);
-      g.add(vMesh);
-      volumetricBeamMeshes.push(vMesh);
-    });
-
     car.userData.body = bodyPivot;
     car.userData.bogies = bogies;
     car.userData.wheelsets = bogies.flatMap((b) => b.userData.wheelsets);
+
+    applyTrainModel(currentTrainId);
 
     car.traverse((o) => {
       if (o.isMesh) {
@@ -1149,6 +958,10 @@ import { HudManager } from '../ui/hud.js';
 
   // ---------- AERIAL STUNTS & TYPESAFE JEV AI JUDGE ----------
   async function evaluateStuntWithJev(stuntType, airDuration, peakHeight) {
+    const runId = run.state.runId;
+    const eventId = run.eventId('judge');
+    const controller = new AbortController();
+    pendingJudges.add(controller);
     try {
       const telemetry = {
         stunt_type: stuntType,
@@ -1161,44 +974,44 @@ import { HudManager } from '../ui/hud.js';
       const res = await fetch('/api/stunt-judge', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(telemetry)
+        body: JSON.stringify(telemetry),
+        signal: controller.signal
       });
 
       if (res.ok) {
         const data = await res.json();
-        score += data.bonus || 50;
-        hud.showStunt(`${data.title}! +${data.bonus}`, `${data.title} (${Math.round((data.confidence || 0.9) * 100)}% Match)`);
-        sound.stunt();
+        if (!Number.isFinite(data.bonus)) return;
+        run.deliver(runId, eventId, () => {
+          const bonus = addPoints(Math.max(0, Math.min(100, Math.round(data.bonus))), 'judge', eventId, false);
+          present(() => hud.showStunt(`${String(data.title || 'MANOBRA')}! +${bonus}`));
+          sound.stunt();
+        });
       }
     } catch {
       // Non-blocking fallback
+    } finally {
+      pendingJudges.delete(controller);
     }
   }
 
-  function launch(end, r, y0, p0 = 0) {
-    const other = end === 'front' ? 'rear' : 'front';
-    const isDiagonal = Math.abs(ends[other] - r.tz) >= RAMP_HIT;
-    const peak = isDiagonal ? LINE_AIR1 : LINE_AIR2;
-    const vy = Math.sqrt(2 * JUMP_G * Math.max(0, peak - y0));
-
-    Object.assign(jump, { on: true, t: 0, y0, vy, spin: isDiagonal, p0 });
+  function launch(event) {
+    const isDiagonal = event.spin;
     sound.launch(isDiagonal);
-    jump.T = (vy + Math.sqrt(vy * vy + 2 * JUMP_G * y0)) / JUMP_G;
 
     const stuntName = isDiagonal ? 'BARREL ROLL 360°' : 'BACKFLIP VERTICAL';
-    score += Math.round(50 * driftCombo);
-    hud.showStunt(`${stuntName}! +${Math.round(50 * driftCombo)}`);
+    const pts = addPoints(Math.round(50 * driftCombo));
+    present(() => hud.showStunt(`${stuntName}! +${pts}`));
     sound.stunt();
 
     // Trigger TypeSafe Jev AI Stunt Evaluation
-    evaluateStuntWithJev(stuntName, jump.T, peak);
+    evaluateStuntWithJev(stuntName, event.duration, event.peak);
   }
 
   function landJump() {
+    if (run.state.mode === 'playing') run.metrics.stuntsLanded += 1;
     riding.front = riding.rear = null;
     ['front', 'rear'].forEach((e) => {
       sag[e].v -= SAG_HIT * JUMP_LAND;
-      lands.push(e);
     });
     shake = SHAKE_HIT * 1.8;
     if (mode === 'playing') sound.bigLand();
@@ -1206,9 +1019,10 @@ import { HudManager } from '../ui/hud.js';
 
   // ---------- CRASH PHYSICS & GAME OVER ----------
   function triggerCrash(reason) {
-    if (mode !== 'playing') return;
+    if (!run.crash(reason)) return;
     sound.crash();
-    mode = 'crash';
+    mode = run.state.mode;
+    for (const controller of pendingJudges) controller.abort();
     shake = SHAKE_HIT * 3;
 
     car.updateMatrixWorld(true);
@@ -1220,14 +1034,6 @@ import { HudManager } from '../ui/hud.js';
 
     rb.w.set(rnd(-2, 2), rnd(2, 5), rnd(-2, 2));
 
-    setTimeout(() => {
-      if (score > best) {
-        best = score;
-        try { localStorage.setItem('acrobatic_train_best', String(best)); } catch {}
-      }
-      mode = 'over';
-      hud.showGameOver(score, best, reason);
-    }, 1800);
   }
 
   function stepCrash(dt) {
@@ -1245,6 +1051,7 @@ import { HudManager } from '../ui/hud.js';
 
   // Hit testing & Switches
   function checkHits(half, slant, lf, lr, jy) {
+    if (run.state.mode !== 'playing') return;
     const sOf = { front: dist + half, rear: dist - half };
     const lift = { front: lf, rear: lr };
 
@@ -1258,13 +1065,18 @@ import { HudManager } from '../ui/hud.js';
 
     // Danger Poles
     const latC = (ends.front + ends.rear) / 2;
-    const ca = Math.cos(slant), sa = Math.sin(slant);
     const bottom = jy + Math.min(lf, lr);
+
+    const collisionPose = { dist, front: ends.front, rear: ends.rear, slant, bottom };
+    for (const block of barriers) {
+      if (hitsBarrier(block, collisionPose, TRAIN_GEOMETRY)) {
+        triggerCrash('Colisão com a barreira de obras! Desvie e alinhe os dois truques.'); return;
+      }
+    }
 
     for (const p of poles) {
       if (Math.abs(p.s - dist) < CAR_LEN && bottom < POLE_H) {
-        const ds = p.s - dist, dl = p.lat - latC;
-        if (Math.abs(ds * ca + dl * sa) < CAR_LEN / 2 + POLE_R && Math.abs(-ds * sa + dl * ca) < CAR_W / 2 + POLE_R) {
+        if (hitsPole(p, collisionPose, TRAIN_GEOMETRY)) {
           triggerCrash('Colisão lateral violenta com o poste entre os trilhos!');
           return;
         }
@@ -1276,14 +1088,15 @@ import { HudManager } from '../ui/hud.js';
     items.forEach((o) => {
       if (o.taken || Math.abs(o.s - dist) > CAR_LEN) return;
       const ds = o.s - dist, dl = o.lat - latC;
-      if (Math.abs(ds * ca + dl * sa) < CAR_LEN / 2 + ITEM_R && Math.abs(-ds * sa + dl * ca) < CAR_W / 2 + ITEM_R) {
+      if (canCollect(o, { dist, front: ends.front, rear: ends.rear, slant, bottom }, { carLength: CAR_LEN, carWidth: CAR_W, itemRadius: ITEM_R, bodyHeight: ROOF_Y, diagonalMin: DIAG_MIN })) {
         if (o.diag && Math.abs(ends.front - ends.rear) < DIAG_MIN) return;
         o.taken = true;
+        run.metrics.items += 1;
+        if (o.level > 0) run.metrics.aerialItems += 1;
         o.mesh.visible = false;
-        const awardedPoints = Math.round(o.pts * driftCombo);
-        score += awardedPoints;
+        const awardedPoints = addPoints(Math.round(o.pts * driftCombo), 'pickup', `${run.state.runId}:item:${o.id || o.s + ':' + o.lat + ':' + o.y}`);
         sound.point(o.level);
-        if (o.diag) hud.showStunt(`DRIFT DIAGONAL! +${awardedPoints}`);
+        if (o.diag) present(() => hud.showStunt(`DRIFT DIAGONAL! +${awardedPoints}`));
       }
     });
   }
@@ -1350,44 +1163,34 @@ import { HudManager } from '../ui/hud.js';
     camera.lookAt(camLook);
   }
 
-  function cycleSkin() {
-    currentSkinIdx = (currentSkinIdx + 1) % skinKeys.length;
-    applyTrainSkin(skinKeys[currentSkinIdx]);
-    hud.showStunt(`PINTURA: ${SKINS[skinKeys[currentSkinIdx]].name.toUpperCase()}`);
-  }
-
   // ---------- KEYBOARD & CONTROLS SETUP ----------
   const keyboard = new KeyboardController({
     onMoveFront: (dir) => {
-      if (mode === 'ready') startGame();
       if (mode !== 'playing') return;
       const currIdx = TRACKS.indexOf(moves.front.to);
       const nextIdx = Math.max(0, Math.min(TRACKS.length - 1, currIdx + dir));
       setTarget('front', TRACKS[nextIdx]);
     },
     onMoveRear: (dir) => {
-      if (mode === 'ready') startGame();
       if (mode !== 'playing') return;
       const currIdx = TRACKS.indexOf(moves.rear.to);
       const nextIdx = Math.max(0, Math.min(TRACKS.length - 1, currIdx + dir));
       setTarget('rear', TRACKS[nextIdx]);
     },
     onStraighten: () => {
-      if (mode === 'ready') startGame();
       if (mode !== 'playing') return;
       setTarget('rear', moves.front.to);
     },
     onCenter: () => {
-      if (mode === 'ready') startGame();
       if (mode !== 'playing') return;
       setTarget('front', 0);
       setTarget('rear', 0);
     },
     onHorn: blowHorn,
     onCycleSkin: cycleSkin,
+    onStoreToggle: () => toggleStore(),
     onAction: () => {
-      if (mode === 'ready') startGame();
-      else if (mode === 'over') resetGame();
+      if (mode === 'over' || mode === 'levelComplete') resetGame();
       else if (mode === 'paused') togglePause();
       else if (mode === 'playing') blowHorn();
     },
@@ -1398,90 +1201,156 @@ import { HudManager } from '../ui/hud.js';
     }
   });
 
+  function cycleSkin() {
+    const catalogKeys = Object.keys(TRAIN_CATALOG);
+    const unlocked = catalogKeys.filter((k) => unlockedTrains.includes(k) || TRAIN_CATALOG[k].price === 0);
+    const currIdx = unlocked.indexOf(shop.selected);
+    const nextIdx = (currIdx + 1) % unlocked.length;
+    equipTrain(unlocked[nextIdx]);
+  }
+
   function blowHorn() {
     if (mode === 'playing') {
-      sound.horn();
-      hud.showStunt('📢 APITO DA LOCOMOTIVA!');
+      const train = TRAIN_CATALOG[currentTrainId];
+      sound.playWhistle(train?.whistleType || currentTrainId);
+      hud.showStunt(`📢 APITO: ${train?.name?.toUpperCase() || 'LOCOMOTIVA'}!`);
       emitSparks(car.position.clone().add(V(0, ROOF_Y + 0.3, 0)), 12, -speed * 0.1);
     }
   }
 
-  function togglePause() {
-    if (mode === 'playing') {
-      mode = 'paused';
-      hud.showPause(true);
-    } else if (mode === 'paused') {
-      mode = 'playing';
-      hud.showPause(false);
-      lastTime = performance.now();
+  function renderStore() {
+    syncShop();
+    hud.renderStore(TRAIN_CATALOG, unlockedTrains, shop.selected, bankPoints, equipTrain, buyTrain);
+  }
+
+  function toggleStore(forceState) {
+    if (mode === 'crash') return;
+    const opening = forceState ?? (hud.storeModal?.hidden ?? true);
+    if (opening) {
+      run.pause('store'); mode = run.state.mode;
+      renderStore(); hud.showStore(true); hud.showPause(false);
+    } else {
+      hud.showStore(false); run.resume('store'); mode = run.state.mode;
+      hud.showPause(run.state.pauseReasons.has('manual')); clock.reset();
     }
   }
 
-  function startGame() {
-    hud.hideTutorial();
-    mode = 'playing';
+  function buyTrain(trainId) {
+    if (!shop.buy(trainId)) return;
+    sound.storePurchase(); equipTrain(trainId); renderStore();
   }
 
-  function resetGame() {
-    segs.forEach(disposeSeg);
-    segs.length = 0;
-    dist = 0;
-    speed = SPEED_START;
-    score = 0;
-    driftTime = 0;
-    driftCombo = 1.0;
-    ['front', 'rear'].forEach((e) => {
-      ends[e] = 0;
-      Object.assign(moves[e], { from: 0, to: 0, t: 1, h0: 0, airT: 0 });
-      sag[e].x = sag[e].v = 0;
-      riding[e] = null;
-    });
-    roll.x = roll.v = 0;
-    shake = 0;
-    jump.on = false;
-    camH = 0;
-    lands.length = 0;
-    initTrack();
-    hud.hideGameOver();
-    mode = 'playing';
+  function equipTrain(trainId) {
+    if (!shop.equip(trainId)) return;
+    if (mode === 'ready' || mode === 'over' || mode === 'levelComplete') {
+      currentTrainId = shop.selected;
+      activeProfile = getTrainGameplayProfile(currentTrainId, activeLevel);
+      applyTrainModel(currentTrainId);
+    }
+    sound.playWhistle(TRAIN_CATALOG[trainId].whistleType || trainId);
+    renderStore();
+    hud.showStunt(mode === 'playing' || mode === 'paused' ? 'Trem selecionado para a próxima tentativa' : `EQUIPADO: ${TRAIN_CATALOG[trainId].name}`);
   }
 
-  document.getElementById('start-game-btn')?.addEventListener('click', startGame);
+  function togglePause() {
+    if (!hud.storeModal.hidden) { toggleStore(false); return; }
+    if (run.state.pauseReasons.has('manual')) run.resume('manual');
+    else run.pause('manual');
+    mode = run.state.mode;
+    hud.showPause(run.state.pauseReasons.has('manual')); clock.reset();
+  }
+
+  function clearAttempt() {
+    for (const controller of pendingJudges) controller.abort();
+    pendingJudges.clear(); uiCommands = [];
+    segs.forEach(disposeSeg); segs.length = 0;
+    dist = 0; speed = activeProfile.startSpeedMps; score = 0;
+    driftTime = 0; driftCombo = 1; lastComboStep = 1;
+    for (const end of ['front', 'rear']) {
+      ends[end] = 0;
+      Object.assign(moves[end], { value: 0, from: 0, to: 0, t: 1, h0: 0, airT: 0 });
+      sag[end].x = sag[end].v = 0; riding[end] = null;
+    }
+    roll.x = roll.v = 0; shake = 0; jump.on = false; camH = 0; camLift = 0;
+    sparks.length = 0; interpolation.clear();
+    Object.assign(pose, { x: 0, z: 0, h: 0, yaw: 0, air: 0 });
+    currentTrainId = shop.selected; applyTrainModel(currentTrainId);
+    trackRandom = createRng(activeLevel?.seed ?? `infinite:${run.state.runId}`);
+    initTrack(); hud.hideGameOver(); hud.showLevelResult(false);
+    hud.showPause(false); hud.showStore(false); clock.reset();
+  }
+
+  function startGame(type = selectedMode, levelId = selectedLevelId) {
+    if (!['ready', 'over', 'levelComplete'].includes(run.state.mode) || !hud.storeModal.hidden) return;
+    if (type === 'campaign' && !progress.canPlay(levelId)) return false;
+    selectedMode = type; selectedLevelId = levelId;
+    activeLevel = type === 'campaign' ? getLevel(levelId) : null;
+    activeProfile = getTrainGameplayProfile(shop.selected, activeLevel);
+    if (!run.start(activeProfile, activeLevel)) return;
+    clearAttempt(); mode = run.state.mode; campaignUi.hide(); hud.hideTutorial(); hud.showRun(activeLevel);
+    return true;
+  }
+
+  function resetGame() { startGame(selectedMode); }
+
+  function returnToMenu() {
+    run.stop(); mode = run.state.mode;
+    activeLevel = selectedMode === 'campaign' ? getLevel(selectedLevelId) : null;
+    activeProfile = getTrainGameplayProfile(shop.selected, activeLevel);
+    clearAttempt(); campaignUi.hide(); hud.showTutorial(); hud.showRun(null); campaignUi.refreshMenu();
+  }
+
+  function openMap() {
+    returnToMenu(); hud.hideTutorial(); run.state.showScreen('map'); campaignUi.showMap();
+  }
+
+  function chooseLevel(id) {
+    if (!progress.canPlay(id) || !['ready', 'over', 'levelComplete'].includes(run.state.mode)) return false;
+    selectedLevelId = id; campaignUi.showBriefing(getLevel(id)); hud.hideTutorial(); run.state.showScreen('briefing'); return true;
+  }
+
+  campaignUi.bind({ chooseLevel, openMap, menu: returnToMenu, start: () => startGame('campaign', selectedLevelId), next: () => chooseLevel(`level-0${Number(selectedLevelId.slice(-2)) + 1}`) });
+
+  run.events.on('gameOver', snapshot => present(() => {
+    shop.saveBest(snapshot.score); syncShop(); hud.showGameOver(snapshot.score, best, snapshot.reason);
+  }));
+  run.events.on('levelCompleted', snapshot => present(() => {
+    progress.complete({ levelId: snapshot.levelId, score: snapshot.score, timeS: snapshot.timeS, eventId: `${snapshot.runId}:${snapshot.levelId}:complete` });
+    shop.saveBest(snapshot.score); syncShop(); campaignUi.showResult(snapshot); sound.stunt();
+    for (const controller of pendingJudges) controller.abort();
+  }));
+
+  document.getElementById('start-game-btn')?.addEventListener('click', openMap);
+  document.getElementById('start-infinite-btn')?.addEventListener('click', () => startGame('infinite'));
   document.getElementById('retry-btn')?.addEventListener('click', resetGame);
-  document.getElementById('resume-btn')?.addEventListener('click', () => {
-    if (mode === 'paused') togglePause();
-  });
+  document.getElementById('level-retry-btn')?.addEventListener('click', resetGame);
+  document.getElementById('level-menu-btn')?.addEventListener('click', openMap);
+  document.getElementById('over-menu-btn')?.addEventListener('click', returnToMenu);
+  document.getElementById('pause-menu-btn')?.addEventListener('click', returnToMenu);
+  document.getElementById('resume-btn')?.addEventListener('click', togglePause);
   document.getElementById('horn-btn')?.addEventListener('click', blowHorn);
   document.getElementById('pause-btn')?.addEventListener('click', togglePause);
   document.getElementById('skin-toggle-btn')?.addEventListener('click', cycleSkin);
-  document.getElementById('sound-btn')?.addEventListener('click', () => {
-    const active = sound.toggleSound();
-    hud.setSoundActive(active);
+  document.getElementById('sound-btn')?.addEventListener('click', () => hud.setSoundActive(sound.toggleSound()));
+  hud.storeBtn?.addEventListener('click', () => toggleStore());
+  document.getElementById('menu-store-btn')?.addEventListener('click', () => toggleStore(true));
+  document.getElementById('pause-store-btn')?.addEventListener('click', () => toggleStore(true));
+  hud.storeCloseBtn?.addEventListener('click', () => toggleStore(false));
+  hud.storeBackBtn?.addEventListener('click', () => toggleStore(false));
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { run.pause('manual'); mode = run.state.mode; hud.showPause(mode === 'paused'); }
+    clock.reset();
   });
 
   // ---------- MAIN ENGINE LOOP (60 FPS) ----------
   initTrack();
-  applyTrainSkin(skinKeys[currentSkinIdx]);
+  applyTrainModel(currentTrainId);
+  hud.updateCoins(bankPoints);
 
-  let lastTime = performance.now();
-  function gameLoop(now) {
-    let dt = Math.max(0, Math.min((now - lastTime) / 1000, 1 / 30));
-    lastTime = now;
-
-    if (mode === 'paused') {
-      renderer.render(scene, camera);
-      requestAnimationFrame(gameLoop);
-      return;
-    }
-
-    // Bullet-time slow motion during aerial stunts for cinematic feel
-    if (jump.on && jump.t / jump.T > 0.3 && jump.t / jump.T < 0.7) {
-      dt *= 0.65;
-    }
+  function stepWorld(dt) {
+    mode = run.state.mode; speed = run.travel.speed; dist = run.travel.dist;
 
     if (mode === 'playing') {
-      speed = Math.min(SPEED_MAX, speed + SPEED_ACCEL * dt);
-      dist += speed * dt;
       blurSpan = speed * dt;
       stepMoves(dt);
 
@@ -1495,7 +1364,7 @@ import { HudManager } from '../ui/hud.js';
           lastComboStep = comboStep;
           sound.driftComboRise(comboStep);
         }
-        hud.updateDriftCombo(driftCombo, (driftTime % 1.5) * 66.6);
+
 
         // Emit physical sparks from wheels during drift
         const bogieF = car.userData.bogies[0];
@@ -1506,12 +1375,17 @@ import { HudManager } from '../ui/hud.js';
           driftCombo = 1.0;
           lastComboStep = 1;
         }
-        hud.updateDriftCombo(driftCombo, 0);
+
       }
 
       // Wheel rail clack rhythm
       if (Math.floor(dist / 25) !== Math.floor((dist - speed * dt) / 25)) {
         sound.clack();
+      }
+
+      // Steam locomotive chuff rhythm
+      if (currentTrainId === 'steam' && Math.floor(dist / 5) !== Math.floor((dist - speed * dt) / 5)) {
+        sound.steamChuff(speed * 3.6);
       }
     } else if (mode === 'crash') {
       stepCrash(dt);
@@ -1521,52 +1395,26 @@ import { HudManager } from '../ui/hud.js';
     stepSprings(dt);
     updateSparks(dt);
 
+    if (smokeEmitter && (mode === 'playing' || mode === 'ready')) {
+      smokeEmitter.update(dt, car.position, car.quaternion, speed);
+    }
+
     if (mode === 'playing' || mode === 'ready') {
       const pc = pathAt(dist);
-      const slant = Math.asin(Math.max(-1, Math.min(1, (ends.front - ends.rear) / (BOGIE * 2))));
-      const half = BOGIE * Math.cos(slant);
+      const motion = stepAcrobatics({ dist, speed, dt, ends, moves, jump, riding, ramps });
+      const { slant, half, jy, jPitch, lf, lr } = motion;
+      for (const event of motion.events) {
+        if (event.type === 'launch') launch(event);
+        else landJump();
+      }
       const pf = pathAt(dist + half), pr = pathAt(dist - half);
       const wf = offsetPt(pf, ends.front), wr = offsetPt(pr, ends.rear);
       const cx = (wf.x + wr.x) / 2, cz = (wf.z + wr.z) / 2;
       const yaw = Math.atan2(wf.z - wr.z, wf.x - wr.x);
 
-      // Ramp detection
-      const rh = { front: 0, rear: 0 };
-      if (!jump.on) {
-        const sOf = { front: dist + half, rear: dist - half };
-        ['front', 'rear'].forEach((end) => {
-          const r = rampAt(sOf[end], ends[end]);
-          if (r) rh[end] = ((RAMP_H * (sOf[end] - r.s)) / RAMP_LEN) * Math.min(1, 2 * (1 - Math.abs(ends[end] - r.tz) / RAMP_HIT));
-        });
-        ['front', 'rear'].forEach((end) => {
-          const prev = riding[end], r = rampAt(sOf[end], ends[end]);
-          if (!jump.on && prev && !r && sOf[end] - prev.s > RAMP_LEN && Math.abs(ends[end] - prev.tz) < RAMP_HIT) {
-            const other = end === 'front' ? 'rear' : 'front';
-            const p0 = Math.atan2(end === 'front' ? RAMP_H - rh.rear : rh.front - RAMP_H, BOGIE * 2);
-            launch(end, prev, (RAMP_H + rh[other]) / 2, p0);
-          }
-          riding[end] = r;
-        });
-      }
-
-      let jy = 0, jPitch = 0;
-      if (jump.on) {
-        jump.t += dt;
-        if (jump.t >= jump.T) {
-          jump.on = false;
-          landJump();
-        } else {
-          jy = jump.y0 + jump.vy * jump.t - (JUMP_G * jump.t * jump.t) / 2;
-          const k = jump.t / jump.T;
-          jPitch = jump.p0 * (1 - k) * (1 - k);
-          if (!jump.spin) jPitch += Math.atan2(jump.vy - JUMP_G * jump.t, speed) * JUMP_PITCH * Math.sin(Math.PI * k);
-        }
-      }
-
       camLift = jy * CAM_JUMP_FOLLOW;
       pose.air = jy;
 
-      const lf = Math.max(liftOf('front'), rh.front), lr = Math.max(liftOf('rear'), rh.rear);
       qYaw.setFromAxisAngle(UP, -yaw);
       qPitch.setFromAxisAngle(FLIP_AXIS, Math.atan2(lf - lr, BOGIE * 2) + jPitch);
       car.quaternion.copy(qYaw).multiply(qPitch);
@@ -1581,6 +1429,23 @@ import { HudManager } from '../ui/hud.js';
         car.quaternion.multiply(qSpin);
         pivB.set(0, SPIN_PIVOT_Y, 0).applyQuaternion(car.quaternion);
         car.position.add(pivA).sub(pivB);
+      }
+
+      // Update trailing carriages (e.g. 12 cars for Southeastern Class 395!)
+      if (carriages.length > 0) {
+        carriages.forEach((c) => {
+          const cDist = dist - c.offsetDist;
+          if (cDist >= segs[0].s0) {
+            const cp = pathAt(cDist);
+            const cpt = offsetPt(cp, ends.rear);
+            const carriageY = (lf + lr) / 2 + Math.max(0, jy - c.index * 0.12);
+            c.mesh.position.set(cpt.x, carriageY, cpt.z);
+            c.mesh.quaternion.setFromAxisAngle(UP, -cp.h);
+            c.mesh.visible = true;
+          } else {
+            c.mesh.visible = false;
+          }
+        });
       }
 
       // Suspension reactions
@@ -1614,13 +1479,38 @@ import { HudManager } from '../ui/hud.js';
       placeCamera();
     }
 
-    bg.position.set(camera.position.x, 0, camera.position.z);
-    renderer.render(scene, camera);
-
-    const isDiagonal = Math.abs(ends.front - ends.rear) >= TRACK_SPACING * 0.7;
-    hud.update(score, best, speed * 3.6, moves.front.to, moves.rear.to, isDiagonal);
-    requestAnimationFrame(gameLoop);
   }
+
+  function simulationStep(dt) {
+    interpolation.capture([car, camera, ...carriages.map(c => c.mesh)]);
+    run.step(dt, stepWorld);
+    mode = run.state.mode; speed = run.travel.speed; dist = run.travel.dist; score = run.score;
+  }
+
+  function renderFrame(now) {
+    if (destroyed) return;
+    if (!window.__TRAIN_TEST_CONFIG__?.manualClock) clock.frame(now, simulationStep, () => {
+      run.pause('manual'); mode = run.state.mode; hud.showPause(mode === 'paused');
+    });
+    if (mode === 'ready') stepWorld(0);
+    const commands = uiCommands; uiCommands = [];
+    for (const command of commands) if (command.runId === run.state.runId) command.callback();
+    bg.position.set(camera.position.x, 0, camera.position.z);
+    interpolation.render([car, camera, ...carriages.map(c => c.mesh)], window.__TRAIN_TEST_CONFIG__?.manualClock ? 1 : clock.accumulator / clock.stepS, () => renderer.render(scene, camera));
+    renderedFrames += 1;
+    hud.renderSnapshot({ score, best, bankPoints, speedKmh: speed * 3.6, front: moves.front.to, rear: moves.rear.to,
+      diagonal: Math.abs(ends.front - ends.rear) >= TRACK_SPACING * 0.7,
+      driftCombo, driftFill: driftTime ? (driftTime % 1.5) * 66.6 : 0, dist, lengthM: activeLevel?.lengthM, warning: getWarning(activeLevel, dist), metrics: run.metrics });
+    animationFrame = requestAnimationFrame(renderFrame);
+  }
+
+  if (window.__TRAIN_TEST_CONFIG__) window.__TRAIN_TEST_HOOKS__ = {
+    snapshot: () => ({ ...run.snapshot(), air: pose.air, progress: progress.snapshot(), jump: { ...jump }, barriers: barriers.map(b => ({ s: b.s, lat: b.lat, length: b.length, width: b.width, height: b.height })), ramps: ramps.map(r => ({ s: r.s, tz: r.tz })), renderedFrames, clock: { lastMs: clock.lastMs, accumulator: clock.accumulator }, testConfig: { ...window.__TRAIN_TEST_CONFIG__ }, shop: shop.snapshot(), currentTrainId, ends: { ...ends }, targets: { front: moves.front.to, rear: moves.rear.to }, gaps: gaps.map(g => ({ tz: g.tz, a: g.a, b: g.b })), track: segs.map(s => ({ s0: s.s0, len: s.len, k: s.k })), layout: items.map(i => ({ s: i.s, lat: i.lat, id: i.id })), memory: { ...renderer.info.memory }, pendingJudges: pendingJudges.size }),
+    step: ticks => { for (let i = 0; i < Math.min(10000, ticks); i++) simulationStep(1 / 60); },
+    openMap, chooseLevel, startLevel: id => startGame('campaign', id), menu: returnToMenu,
+    judge: () => evaluateStuntWithJev('TEST STUNT', 1, 4),
+    crash: () => triggerCrash('Colisão de teste'),
+  };
 
   function onResize() {
     const w = window.innerWidth, h = window.innerHeight;
@@ -1632,5 +1522,23 @@ import { HudManager } from '../ui/hud.js';
   window.addEventListener('resize', onResize);
   onResize();
 
-  requestAnimationFrame(gameLoop);
+  hud.showTutorial();
+  if (shop.storageError) hud.showStunt('Armazenamento indisponível; esta sessão usa memória');
+  animationFrame = requestAnimationFrame(renderFrame);
+
+  function destroy(event) {
+    if (event?.persisted || destroyed) return;
+    destroyed = true; cancelAnimationFrame(animationFrame);
+    run.stop(); run.events.clear(); interpolation.clear();
+    for (const controller of pendingJudges) controller.abort();
+    keyboard.dispose(); hud.dispose(); sound.dispose();
+    window.removeEventListener('resize', onResize);
+    scene.traverse(object => { object.shadow?.map?.dispose(); object.shadow?.mapPass?.dispose(); });
+    smokeEmitter?.dispose();
+    const disposed = disposeObject(scene);
+    for (const geometry of [...geoCache.values(), rampGeo, poleGeo, ringGeo, itemGeo]) if (!disposed.geometries.has(geometry)) geometry.dispose();
+    for (const material of [rampMat, poleMat, railMat, railTopMat, ballastMat, gapMat, ...itemMats]) if (!disposed.materials.has(material)) material.dispose();
+    renderer.dispose();
+  }
+  window.addEventListener('pagehide', destroy);
 })();

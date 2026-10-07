@@ -1,6 +1,6 @@
 # M0 — Integração da Train Shop
 
-Status: planejado. Dependência: entrega do outro agente. Próximo: [M1](m1-base-campanha.md). Referências: [contratos](../CONTRATOS.md), [testes](../TESTES.md).
+Status: validado em 06/10/2026 após integração autorizada. [Resultados e contrato final](../VALIDACAO_M0_M1.md). Dependência: entrega da loja recebida. Próximo: [M1](m1-base-campanha.md). Referências: [contratos](../CONTRATOS.md), [testes](../TESTES.md).
 
 ## Objetivo e fronteira
 

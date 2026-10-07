@@ -1,0 +1,14 @@
+{
+  "runId": "m1-infinite-20261006",
+  "generatedAt": "2026-10-06T22:20:17.589Z",
+  "reports": [
+    {
+      "viewport": "desktop-infinite",
+      "passed": true,
+      "dist": 650.311717592562,
+      "mode": "playing",
+      "levelId": null,
+      "pageErrors": []
+    }
+  ]
+}

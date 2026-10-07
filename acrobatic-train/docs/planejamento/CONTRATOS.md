@@ -1,6 +1,6 @@
 # Contratos comuns de implementação e conteúdo
 
-Status: proposto, não implementado. Aplicável a [todos os marcos e fases](README.md). Mudanças de contrato devem atualizar os documentos afetados e seus fixtures antes de retomar o balanceamento.
+Status: contratos aplicados à implementação M0/M1/M2; partes futuras e avaliação humana permanecem previstas nos respectivos marcos. Aplicável a [todos os marcos e fases](README.md). Mudanças de contrato devem atualizar os documentos afetados e seus fixtures antes de retomar o balanceamento.
 
 ## 1. Unidades e configuração
 

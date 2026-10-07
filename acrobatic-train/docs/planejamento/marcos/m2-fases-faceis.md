@@ -1,6 +1,6 @@
 # M2 — Fases 1–3, progresso e interface da campanha
 
-Status: planejado. Dependência: [M1](m1-base-campanha.md). Próximo: [M3](m3-fases-medias.md). Conteúdo: [1](../fases/fase-01.md), [2](../fases/fase-02.md), [3](../fases/fase-03.md).
+Status: implementado em 06/10/2026; validação automatizada aprovada; gate humano M2-A07 pendente. [Relatório por aceite](../VALIDACAO_M2.md). Dependência: [M1](m1-base-campanha.md). Próximo: [M3](m3-fases-medias.md). Conteúdo: [1](../fases/fase-01.md), [2](../fases/fase-02.md), [3](../fases/fase-03.md).
 
 ## Objetivo
 

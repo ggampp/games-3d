@@ -1,0 +1,39 @@
+{
+  "version": "m2-v1",
+  "seed": "acrobatic-campaign-v1-02",
+  "profile": "cyber",
+  "stepS": 0.016666666666666666,
+  "maxTicks": 4200,
+  "commands": [
+    {
+      "atM": 60,
+      "front": -1,
+      "rear": -1
+    },
+    {
+      "atM": 190,
+      "front": 0,
+      "rear": 0
+    },
+    {
+      "atM": 315,
+      "front": 1,
+      "rear": 1
+    },
+    {
+      "atM": 455,
+      "front": 0,
+      "rear": 0
+    },
+    {
+      "atM": 565,
+      "front": -1,
+      "rear": -1
+    }
+  ],
+  "expected": {
+    "mode": "levelComplete",
+    "dist": 750,
+    "scoreRequired": 0
+  }
+}
