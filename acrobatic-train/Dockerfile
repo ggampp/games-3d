@@ -9,6 +9,7 @@ RUN npm ci --omit=dev
 
 # Copy web assets and code
 COPY index.html index.css ./
+COPY assets/ ./assets/
 COPY src/ ./src/
 COPY scripts/ ./scripts/
 
