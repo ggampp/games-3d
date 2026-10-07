@@ -1,0 +1,224 @@
+{
+  "runId": "m5-e2e-20261007",
+  "generatedAt": "2026-10-07T02:31:18.941Z",
+  "reports": [
+    {
+      "scenario": "m5-rtt50",
+      "passed": true,
+      "label": "m5-rtt50",
+      "levelId": "level-04",
+      "network": {
+        "rttMs": 50,
+        "jitterMs": 0
+      },
+      "result": {
+        "reason": "finish-tie",
+        "winner": null,
+        "draw": true,
+        "players": [
+          {
+            "name": "Ana",
+            "state": "finished",
+            "endTick": 2267,
+            "dist": 950
+          },
+          {
+            "name": "Bia",
+            "state": "finished",
+            "endTick": 2267,
+            "dist": 950
+          }
+        ]
+      },
+      "clients": {
+        "Ana": {
+          "lead": 6,
+          "inputs": 6,
+          "corrections": 0,
+          "maxCorrection": 0,
+          "distDrift": 0,
+          "crashMismatch": 0,
+          "maxExtrapolatedMs": 669,
+          "staleFrames": 2,
+          "errors": [],
+          "leadAtInput": [
+            6,
+            6,
+            6,
+            6,
+            6,
+            6
+          ]
+        },
+        "Bia": {
+          "lead": 7,
+          "inputs": 6,
+          "corrections": 0,
+          "maxCorrection": 0,
+          "distDrift": 0,
+          "crashMismatch": 0,
+          "maxExtrapolatedMs": 391,
+          "staleFrames": 2,
+          "errors": [],
+          "leadAtInput": [
+            7,
+            7,
+            7,
+            7,
+            7,
+            7
+          ]
+        }
+      },
+      "ghostSeen": true,
+      "third": {
+        "thirdBrowser": "A sala já tem dois jogadores.",
+        "legacyClient": "version"
+      },
+      "mid": {
+        "overlaysRefused": true,
+        "ticksDuringAttempt": 91
+      }
+    },
+    {
+      "scenario": "m5-rtt150",
+      "passed": true,
+      "label": "m5-rtt150",
+      "levelId": "level-06",
+      "network": {
+        "rttMs": 150,
+        "jitterMs": 25
+      },
+      "result": {
+        "reason": "finish",
+        "winner": "Ana",
+        "draw": false,
+        "players": [
+          {
+            "name": "Ana",
+            "state": "finished",
+            "endTick": 2393,
+            "dist": 1200
+          },
+          {
+            "name": "Bia",
+            "state": "crashed",
+            "endTick": 346,
+            "dist": 144.24
+          }
+        ]
+      },
+      "clients": {
+        "Ana": {
+          "lead": 10,
+          "inputs": 6,
+          "corrections": 0,
+          "maxCorrection": 0,
+          "distDrift": 0,
+          "crashMismatch": 0,
+          "maxExtrapolatedMs": 484,
+          "staleFrames": 2,
+          "errors": [],
+          "leadAtInput": [
+            10,
+            10,
+            10,
+            10,
+            10,
+            10
+          ]
+        },
+        "Bia": {
+          "lead": 10,
+          "inputs": 0,
+          "corrections": 0,
+          "maxCorrection": 0,
+          "distDrift": 0,
+          "crashMismatch": 0,
+          "maxExtrapolatedMs": 496,
+          "staleFrames": 3,
+          "errors": [],
+          "leadAtInput": []
+        }
+      },
+      "ghostSeen": true
+    },
+    {
+      "scenario": "m5-rtt300",
+      "passed": true,
+      "label": "m5-rtt300",
+      "levelId": "level-09",
+      "network": {
+        "rttMs": 300,
+        "jitterMs": 50
+      },
+      "result": {
+        "reason": "finish",
+        "winner": "Bia",
+        "draw": false,
+        "players": [
+          {
+            "name": "Ana",
+            "state": "crashed",
+            "endTick": 225,
+            "dist": 114.97
+          },
+          {
+            "name": "Bia",
+            "state": "finished",
+            "endTick": 2437,
+            "dist": 1500
+          }
+        ]
+      },
+      "clients": {
+        "Ana": {
+          "lead": 15,
+          "inputs": 0,
+          "corrections": 0,
+          "maxCorrection": 0,
+          "distDrift": 0,
+          "crashMismatch": 0,
+          "maxExtrapolatedMs": 1042,
+          "staleFrames": 2,
+          "errors": [],
+          "leadAtInput": []
+        },
+        "Bia": {
+          "lead": 15,
+          "inputs": 12,
+          "corrections": 0,
+          "maxCorrection": 0,
+          "distDrift": 0,
+          "crashMismatch": 0,
+          "maxExtrapolatedMs": 468,
+          "staleFrames": 3,
+          "errors": [],
+          "leadAtInput": [
+            15,
+            15,
+            15,
+            15,
+            15,
+            15,
+            15,
+            15
+          ]
+        }
+      },
+      "ghostSeen": true
+    },
+    {
+      "scenario": "m5-cleanup",
+      "passed": true,
+      "stats": {
+        "rooms": 0,
+        "connections": 0,
+        "loop": false,
+        "sockets": 0
+      },
+      "note": "Rooms in result state live for the 2-minute result TTL, then close (unit-tested)."
+    }
+  ],
+  "limitation": "Two Chromium contexts on one machine, software GPU (~1–2 FPS render) and client-side simulated RTT/jitter (FIFO). Real networks, mobile radios and hardware input latency unverified."
+}
