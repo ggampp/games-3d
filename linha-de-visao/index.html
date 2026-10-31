@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Linha de Visão</title>
+  <style>
+    :root {
+      --bg: #cfcca0;
+      --bg-edge: #b6b384;
+      --ink: #3d3826;
+      --ink-soft: #6b6447;
+      --card: rgba(255, 253, 240, 0.92);
+      --accent: #c8341f;
+      --beam: #f4e16c;
+      --font: ui-rounded, "SF Pro Rounded", "Nunito", "Segoe UI", system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; overflow: hidden; }
+    body {
+      background: radial-gradient(ellipse at 50% 40%, var(--bg) 40%, var(--bg-edge) 100%);
+      color: var(--ink);
+      font-family: var(--font);
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+    }
+    canvas#view { position: fixed; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; }
+    canvas#view.dragging { cursor: grabbing; }
+
+    .hud { position: fixed; left: 0; right: 0; pointer-events: none; display: flex; padding: 16px; gap: 12px; }
+    .hud.top { top: 0; justify-content: space-between; align-items: flex-start; }
+    .hud.bottom { bottom: 0; flex-direction: column; align-items: center; gap: 10px; padding-bottom: max(18px, env(safe-area-inset-bottom)); }
+    .hud > * { pointer-events: auto; }
+    .title-block .num { font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); }
+    .title-block .name { font-size: 24px; font-weight: 800; }
+    .title-block .falls { font-size: 13px; color: var(--ink-soft); margin-top: 2px; }
+    .icons { display: flex; gap: 8px; }
+    .icon-btn {
+      width: 44px; height: 44px; border-radius: 50%; border: none; cursor: pointer;
+      background: var(--card); color: var(--ink); font-size: 20px; line-height: 44px; text-align: center;
+      box-shadow: 0 2px 0 rgba(0,0,0,.12);
+    }
+    .icon-btn:active { transform: translateY(1px); }
+    .hint {
+      max-width: 520px; text-align: center; font-size: 15px; line-height: 1.35; color: var(--ink);
+      background: rgba(255, 253, 240, 0.7); padding: 8px 14px; border-radius: 14px;
+    }
+    .release {
+      border: none; cursor: pointer; font-family: var(--font); font-weight: 800; font-size: 18px;
+      background: var(--accent); color: #fff; padding: 12px 30px; border-radius: 999px;
+      box-shadow: 0 4px 0 #7a1a0e; transition: opacity .2s, transform .1s;
+    }
+    .release:active { transform: translateY(3px); box-shadow: 0 1px 0 #7a1a0e; }
+    .release:disabled { opacity: .35; cursor: default; }
+    .keys { font-size: 12px; color: var(--ink-soft); }
+
+    .overlay {
+      position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 16px;
+      background: rgba(207, 204, 160, 0.55); backdrop-filter: blur(3px);
+    }
+    .overlay[hidden] { display: none; }
+    .card {
+      background: var(--card); border-radius: 22px; padding: 26px 24px; width: min(460px, 100%);
+      max-height: calc(100vh - 32px); overflow: auto; text-align: center; box-shadow: 0 10px 40px rgba(60,55,30,.25);
+    }
+    .card h1 { margin: 0; font-size: 38px; font-weight: 900; letter-spacing: -.01em; }
+    .card h1 span { color: var(--accent); }
+    .card .sub { margin: 4px 0 18px; color: var(--ink-soft); }
+    .rules { text-align: left; margin: 0 0 18px; padding: 0; list-style: none; display: grid; gap: 10px; }
+    .rules li { display: grid; grid-template-columns: 30px 1fr; gap: 8px; align-items: start; font-size: 15px; line-height: 1.35; }
+    .rules b { display: inline-block; width: 26px; height: 26px; border-radius: 50%; background: var(--beam); text-align: center; line-height: 26px; }
+    .levels { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 6px; }
+    .lvl {
+      border: none; border-radius: 14px; padding: 12px 6px; cursor: pointer; font-family: var(--font);
+      background: var(--beam); color: var(--ink); font-weight: 800; font-size: 20px; box-shadow: 0 3px 0 #c9b443;
+    }
+    .lvl small { display: block; font-size: 12px; font-weight: 600; margin-top: 2px; min-height: 1.2em; letter-spacing: .1em; }
+    .lvl:disabled { background: #e5e1c4; color: #a8a385; box-shadow: none; cursor: default; }
+    .big {
+      border: none; cursor: pointer; font-family: var(--font); font-weight: 800; font-size: 18px;
+      background: var(--accent); color: #fff; padding: 12px 26px; border-radius: 999px; box-shadow: 0 4px 0 #7a1a0e; margin: 4px;
+    }
+    .big.ghost { background: #e9e5c8; color: var(--ink); box-shadow: 0 4px 0 #c4bf9a; }
+    .stars { font-size: 40px; letter-spacing: 6px; color: var(--accent); margin: 6px 0; }
+    .stars .off { color: #d8d3b0; }
+    .toast {
+      position: fixed; top: 38%; left: 50%; transform: translate(-50%, -50%); pointer-events: none;
+      font-size: 64px; font-weight: 900; color: var(--accent); text-shadow: 0 4px 0 rgba(255,255,255,.7);
+      opacity: 0; transition: opacity .25s, transform .4s;
+    }
+    .toast.show { opacity: 1; transform: translate(-50%, -60%); }
+    @media (max-width: 520px) {
+      .title-block .name { font-size: 19px; }
+      .hint { font-size: 14px; }
+      .keys { display: none; }
+      .card h1 { font-size: 32px; }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="view"></canvas>
+
+  <div class="hud top">
+    <div class="title-block">
+      <div class="num" id="lvl-num">Fase 1/6</div>
+      <div class="name" id="lvl-name">—</div>
+      <div class="falls" id="lvl-falls"></div>
+    </div>
+    <div class="icons">
+      <button class="icon-btn" id="btn-sound" title="Som" aria-label="Som">♪</button>
+      <button class="icon-btn" id="btn-restart" title="Reiniciar (R)" aria-label="Reiniciar">↺</button>
+      <button class="icon-btn" id="btn-menu" title="Fases" aria-label="Fases">☰</button>
+    </div>
+  </div>
+
+  <div class="hud bottom">
+    <div class="hint" id="hint"></div>
+    <button class="release" id="btn-release" disabled>Soltar a bola ▶</button>
+    <div class="keys">arraste ou ← → ↑ ↓ para girar · espaço solta a bola · R reinicia</div>
+  </div>
+
+  <div class="toast" id="toast">Strike!</div>
+
+  <div class="overlay" id="menu">
+    <div class="card">
+      <h1>Linha de <span>Visão</span></h1>
+      <p class="sub">um puzzle de ilusão de ótica</p>
+      <ul class="rules">
+        <li><b>1</b><span>Arraste para girar a estrutura.</span></li>
+        <li><b>2</b><span><strong>Se parece conectado, está conectado.</strong> Quando duas vigas se encostam na tela, a bola passa de uma para a outra.</span></li>
+        <li><b>3</b><span><strong>O que não se vê não existe.</strong> Um vão escondido atrás de um bloco pode ser atravessado.</span></li>
+        <li><b>4</b><span>Leve a bola do lampião até o pino. Você pode girar com ela rolando.</span></li>
+      </ul>
+      <div class="levels" id="levels"></div>
+    </div>
+  </div>
+
+  <div class="overlay" id="win" hidden>
+    <div class="card">
+      <h1 id="win-title">Strike!</h1>
+      <div class="stars" id="win-stars"></div>
+      <p class="sub" id="win-sub"></p>
+      <button class="big ghost" id="btn-again">Repetir</button>
+      <button class="big" id="btn-next">Próxima ▶</button>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
