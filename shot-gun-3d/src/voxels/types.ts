@@ -7,7 +7,7 @@ const HP_SCALE = VOXEL_SIZE / HP_REF_SIZE;
 
 export const MAT_IDS = [
   'wood', 'plank', 'adobe', 'steel', 'hinge', 'lantern', 'cactus', 'rock',
-  'glass', 'brick', 'hay', 'bronze', 'gold',
+  'glass', 'brick', 'hay', 'bronze', 'gold', 'tnt',
 ] as const;
 
 export type MatId = (typeof MAT_IDS)[number];
@@ -53,6 +53,8 @@ export const MATERIALS: Record<MatId, MaterialDef> = {
   hay:     m(3,  0.3, 0xd9b55a, 0.95, 0.00, 'hay', 1, 0, 0, false, 0.7, 3),
   bronze:  m(22, 3.0, 0xb07a3c, 0.35, 0.75, 'bell', 2),
   gold:    m(14, 4.0, 0xffd24a, 0.25, 0.9,  'coin', 5, 0xffb300, 0.6),
+  /** Barril de pólvora: frágil, queima rápido e explode (ver `Game.triggerTnt`). */
+  tnt:     m(3,  0.8, 0xc0281e, 0.7,  0.05, 'wood', 4, 0x3a0400, 0.4, false, 0.6, 1.4),
 };
 
 /**

@@ -450,3 +450,92 @@ html, body {
 #hud.touch .slot { width: 38px; min-height: 42px; padding: 3px 2px; }
 #hud.touch .slot .ico { width: 32px; height: 22px; font-size: 1rem; }
 #hud.touch .slot .ico svg { max-width: 30px; max-height: 20px; }
+
+/* --- bandidos: vida, onda, acerto, dano --- */
+.vitals {
+  position: absolute;
+  left: max(18px, env(safe-area-inset-left));
+  bottom: calc(26px + var(--safe));
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+  text-shadow: 0 1px 0 #3a2010, 0 0 8px rgba(0, 0, 0, 0.6);
+}
+.vitals .heart { color: #d8443a; font-size: 1.5rem; line-height: 1; }
+.vitals-bar {
+  width: 150px;
+  height: 12px;
+  background: var(--panel);
+  border: 2px solid #3a2a18;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.vitals-fill {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #a8281e, #e0503a);
+  transition: width 0.15s;
+}
+.vitals-num { font-size: 1.3rem; color: var(--cream); min-width: 3ch; font-variant-numeric: tabular-nums; }
+.vitals.low .heart { animation: heartbeat 0.6s infinite; }
+.vitals.low .vitals-fill { background: #ff3a2a; }
+@keyframes heartbeat { 50% { transform: scale(1.3); } }
+
+.wave {
+  position: absolute;
+  top: max(56px, calc(env(safe-area-inset-top) + 46px));
+  left: max(12px, env(safe-area-inset-left));
+  padding: 5px 10px;
+  background: var(--panel);
+  border: 2px solid #3a2a18;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+}
+.wave strong { color: var(--gold); }
+.wave span { opacity: 0.75; }
+.wave.hidden { display: none; }
+
+.crosshair.hit::before, .crosshair.hit::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 26px;
+  height: 3px;
+  background: #fff;
+  box-shadow: 0 0 2px #000;
+  transform: translate(-50%, -50%) rotate(45deg);
+  animation: hit-pop 0.18s ease-out;
+}
+.crosshair.hit::after { transform: translate(-50%, -50%) rotate(-45deg); }
+.crosshair.head::before, .crosshair.head::after { background: #ff4a3a; }
+.crosshair.kill::before, .crosshair.kill::after { width: 36px; height: 4px; }
+@keyframes hit-pop { from { opacity: 0.2; width: 40px; } }
+
+.dmg-dir {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 240px;
+  height: 240px;
+  border-radius: 50%;
+  border-top: 10px solid rgba(220, 40, 30, 0.85);
+  border-right: 10px solid transparent;
+  border-left: 10px solid transparent;
+  border-bottom: 10px solid transparent;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s;
+  filter: blur(1px);
+}
+.dmg-dir.on { opacity: 1; transition: opacity 0.05s; }
+
+#hud.dead .crosshair, #hud.dead .hotbar, #hud.dead .ammo { opacity: 0; }
+
+#hud.touch .vitals { bottom: auto; top: max(56px, calc(env(safe-area-inset-top) + 46px)); }
+#hud.touch .wave { top: max(92px, calc(env(safe-area-inset-top) + 82px)); }
+@media (max-width: 1100px) {
+  #hud:not(.touch) .vitals { bottom: calc(118px + var(--safe)); }
+}

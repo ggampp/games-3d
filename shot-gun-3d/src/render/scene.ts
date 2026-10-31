@@ -101,17 +101,89 @@ export function createWorldKit(
   scene.add(plaza);
 
   // Estrada principal de terra batida da Main Street (corredor central como na foto de referência)
+  // Textura própria: antes a estrada reaproveitava a da areia e o
+  // repeat (3, 8) dela esticava o chão inteiro.
+  const roadTex = textures.sand.clone();
+  roadTex.needsUpdate = true;
+  roadTex.repeat.set(3, 8);
   const roadMat = new THREE.MeshStandardMaterial({
     color: 0xcaa06e,
-    map: textures.sand,
+    map: roadTex,
     roughness: 0.95,
     metalness: 0.01,
   });
-  textures.sand.repeat.set(3, 8);
   const mainStreet = new THREE.Mesh(new THREE.PlaneGeometry(7.2, 22), roadMat);
   mainStreet.rotation.x = -Math.PI / 2;
   mainStreet.position.set(0, 0.01, -1.0);
   mainStreet.receiveShadow = true;
   mainStreet.name = 'road';
   scene.add(mainStreet);
+
+  // Deserto além da vila: anel de areia até perto do horizonte (some na névoa).
+  const outerTex = textures.sand.clone();
+  outerTex.needsUpdate = true;
+  outerTex.repeat.set(60, 60);
+  const outer = new THREE.Mesh(
+    new THREE.RingGeometry(GROUND_RADIUS - 0.05, 140, 64, 1),
+    new THREE.MeshStandardMaterial({ color: 0xe0c9a0, map: outerTex, roughness: 1, metalness: 0 }),
+  );
+  outer.rotation.x = -Math.PI / 2;
+  outer.position.y = -0.005;
+  outer.receiveShadow = true;
+  outer.name = 'desert';
+  scene.add(outer);
+
+  // Trilhas de carroça saindo da vila (faixas de terra mais escura).
+  const trailMat = new THREE.MeshStandardMaterial({ color: 0xb08a5c, map: roadTex, roughness: 1, metalness: 0 });
+  for (const [x, z, rot, len] of [[0, 22, 0, 26], [0, -24, 0, 26], [-24, 2, Math.PI / 2, 26]] as const) {
+    const trail = new THREE.Mesh(new THREE.PlaneGeometry(3.2, len), trailMat);
+    trail.rotation.set(-Math.PI / 2, 0, rot);
+    trail.position.set(x, 0.006, z);
+    trail.receiveShadow = true;
+    scene.add(trail);
+  }
+
+  scene.add(createMesas());
+}
+
+/** Mesas e buttes vermelhos em camadas no horizonte (low-poly, flat shading). */
+function createMesas(): THREE.Group {
+  const g = new THREE.Group();
+  g.name = 'mesas';
+  const bands = [0xa8553a, 0xc46e48, 0x9a4a34, 0xd08458, 0xb45e40].map(
+    (c) => new THREE.MeshStandardMaterial({ color: c, roughness: 1, metalness: 0, flatShading: true }),
+  );
+  const talus = new THREE.MeshStandardMaterial({ color: 0xc8956a, roughness: 1, flatShading: true });
+  let seed = 7;
+  const rnd = () => {
+    seed = (seed * 16807) % 2147483647;
+    return seed / 2147483647;
+  };
+  const spots = 11;
+  for (let i = 0; i < spots; i++) {
+    const a = (i / spots) * Math.PI * 2 + rnd() * 0.35;
+    const d = 46 + rnd() * 22;
+    const mesa = new THREE.Group();
+    const wide = rnd() < 0.55;
+    const r = wide ? 6 + rnd() * 6 : 2 + rnd() * 2;
+    const h = wide ? 7 + rnd() * 6 : 9 + rnd() * 8;
+    // saia de detritos na base
+    const skirt = new THREE.Mesh(new THREE.CylinderGeometry(r * 1.05, r * 1.7, h * 0.3, 7), talus);
+    skirt.position.y = h * 0.15;
+    mesa.add(skirt);
+    // paredes em faixas de cor
+    const layers = 4;
+    for (let k = 0; k < layers; k++) {
+      const lh = (h * 0.75) / layers;
+      const rr = r * (1 - k * 0.04);
+      const m = new THREE.Mesh(new THREE.CylinderGeometry(rr * 0.97, rr, lh, 7), bands[(i + k) % bands.length]);
+      m.position.y = h * 0.25 + lh * (k + 0.5);
+      mesa.add(m);
+    }
+    mesa.scale.z = wide ? 0.55 + rnd() * 0.3 : 1;
+    mesa.rotation.y = rnd() * Math.PI;
+    mesa.position.set(Math.cos(a) * d, -0.4, Math.sin(a) * d);
+    g.add(mesa);
+  }
+  return g;
 }

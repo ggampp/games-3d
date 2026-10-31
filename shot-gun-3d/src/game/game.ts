@@ -23,12 +23,19 @@ import { Hud } from '../ui/hud.ts';
 import type { HudState } from '../ui/hud.ts';
 import { GameAudio } from '../audio/audio.ts';
 import { Player } from '../player/player.ts';
+import { Enemies, ENEMY_DAMAGE } from './enemies.ts';
+import type { Enemy } from './enemies.ts';
+import { TNT_PREFIX } from '../voxels/structures/destructibles.ts';
 
 const SENS = 0.0022;
 const PICKUP_SPOTS: { x: number; z: number }[] = [
   { x: 2.6, z: -2.2 }, { x: -6.2, z: -1.2 }, { x: 9.4, z: 4.6 }, { x: -1.8, z: 6.6 }, { x: 6.6, z: -6.6 }, { x: -9.6, z: 8.2 },
 ];
 const PICKUP_RESPAWN = 45;
+const MAX_HEALTH = 100;
+/** Segundos sem levar dano até a vida começar a voltar. */
+const REGEN_DELAY = 5;
+const RESPAWN_TIME = 3.5;
 
 interface Contract {
   text: string;
@@ -122,7 +129,18 @@ export class Game {
   private windT = 0;
   private tumbleVoxels: Voxel[] = [];
   lastHit: unknown = null;
+  /** Diagnóstico: o jogador não leva dano. */
+  godMode = false;
   private hookMat = new THREE.MeshBasicMaterial({ color: 0x5a3a20 });
+  private enemies!: Enemies;
+  private health = MAX_HEALTH;
+  private sinceHurt = 99;
+  private hurtFlash = 0;
+  private deadT = 0;
+  private kills = 0;
+  private tntFired = new Set<string>();
+  private blasts: { t: number; voxels: Voxel[] }[] = [];
+  private drops: { mesh: THREE.Object3D; x: number; z: number; kind: 'health' | 'ammo'; life: number }[] = [];
   /** ms por fase no último frame (diagnóstico). */
   timings = { physics: 0, sync: 0, render: 0, total: 0, shot: 0 };
 
@@ -209,6 +227,24 @@ export class Game {
       land: (impact) => this.audio.play('land', Math.min(0.8, 0.25 + impact * 0.08)),
     });
 
+    this.enemies = new Enemies(physics, {
+      grid: () => this.grid,
+      isStatic: (v) => !this.physics.isDynamic(v),
+      player: () => ({
+        eye: this.player.eye(),
+        speed: this.player.speedNorm,
+        crouched: this.player.isCrouched,
+        alive: this.deadT <= 0,
+      }),
+      hurtPlayer: (dmg, from) => this.hurtPlayer(dmg, from),
+      missHit: (o, d, range) => this.strayBullet(o, d, range),
+      throwBomb: (o, v) => this.physics.spawnBomb(o, v),
+      sound: (id, vol, at) => this.audio.play(id, vol, at, 40),
+      dust: (x, y, z, n, c, sp, opts) => this.dust.burst(x, y, z, n, c, sp, opts),
+      killed: (e, head) => this.onKill(e, head),
+    });
+    this.scene.add(this.enemies.group);
+
     this.setupWorld();
     this.viewmodel.setWeapon(this.weapon.id);
     this.syncHud();
@@ -223,7 +259,15 @@ export class Game {
         look: (yaw: number, pitch: number) => { game.yaw = yaw; game.pitch = pitch; },
         teleport: (x: number, z: number, y = 0) => { game.physics.setPlayerPosition(x, y + 0.9, z); },
         weapon: (id: WeaponId) => game.setWeapon(id),
+        vm: (id: WeaponId, patch: Parameters<Viewmodel['debugPose']>[1]) => game.viewmodel.debugPose(id, patch),
+        vmGroup: () => game.viewmodel.group,
         ignite: (x: number, y: number, z: number, r: number) => game.fire.igniteAround(x, y, z, r, 1),
+        god: (on = true) => { game.godMode = on; },
+        /** Avança `frames` quadros de 1/30 s sem depender do rAF (aba oculta). */
+        step: (frames = 30) => { for (let i = 0; i < frames; i++) game.update(1 / 30); },
+        fire: (on = true) => game.input.setFiring(on),
+        bandits: (on = true) => { game.enemies.enabled = on; if (!on) game.enemies.clear(); },
+        enemyAt: (i = 0) => { const e = game.enemies.list[i]; return e ? game.enemies.feet(e) : null; },
       },
       get state() {
         return {
@@ -238,6 +282,10 @@ export class Game {
           hook: game.hook.active,
           lastHit: game.lastHit,
           fire: game.fire.count,
+          health: game.health,
+          wave: game.enemies.wave,
+          bandits: game.enemies.alive,
+          kills: game.kills,
           physics: game.physics.diagnostics(),
         };
       },
@@ -286,6 +334,12 @@ export class Game {
     this.setupPickups();
     this.contractTime = 0;
     this.contractDone = false;
+    this.tntFired.clear();
+    this.blasts = [];
+    this.health = MAX_HEALTH;
+    this.deadT = 0;
+    for (const d of this.drops) this.scene.remove(d.mesh);
+    this.drops = [];
     this.targets.clear();
     this.tumbleVoxels = [];
     const seen = new Set<string>();
@@ -397,7 +451,9 @@ export class Game {
     this.scorches = [];
     this.grid = buildTown();
     this.score = 0;
+    this.kills = 0;
     this.toast = null;
+    this.enemies.restart();
     this.setupWorld();
     this.syncHud();
   }
@@ -490,6 +546,12 @@ export class Game {
       this.showToast(t === 'noon' ? 'Meio-dia' : t === 'dusk' ? 'Entardecer' : 'Noite');
     }
     if (e.code === 'KeyP') this.post.enabled = !this.post.enabled;
+    if (e.code === 'KeyB') {
+      this.enemies.enabled = !this.enemies.enabled;
+      if (!this.enemies.enabled) this.enemies.clear();
+      else this.enemies.breakT = 3;
+      this.showToast(this.enemies.enabled ? 'Bandidos: ligados' : 'Bandidos: desligados');
+    }
     if (e.code === 'KeyM') {
       this.audio.setMuted(!this.audio.muted);
       this.syncHud();
@@ -539,11 +601,22 @@ export class Game {
     this.swayX += (-look.dx * 0.0006 - this.swayX) * Math.min(1, dt * 10);
     this.swayY += (look.dy * 0.0005 - this.swayY) * Math.min(1, dt * 10);
 
+    const alive = this.deadT <= 0;
     if (!this.paused) {
-      const mv = this.input.move();
+      const mv = alive ? this.input.move() : { x: 0, z: 0 };
+      const jump = this.input.consumeJump() && alive;
       this.player.update(dt, this.yaw, {
-        x: mv.x, z: mv.z, run: this.input.run, crouch: this.input.crouch, jump: this.input.consumeJump(),
+        x: mv.x, z: mv.z, run: this.input.run, crouch: this.input.crouch || !alive, jump,
       }, () => this.physics.groundUnderPlayer());
+      this.updateHealth(dt);
+      const msg = this.enemies.update(dt);
+      if (msg) {
+        this.showToast(msg);
+        if (msg.endsWith('limpa!')) { this.score += 200 + this.enemies.wave * 50; this.audio.play('coin', 0.8); }
+        else this.audio.play('bell', 0.5);
+      }
+      this.updateBlasts(dt);
+      this.updateDrops(dt);
       this.updateWeaponState(dt);
       if (this.input.consumeReload()) this.startReload();
       if (this.input.consumeInteract()) this.interact();
@@ -561,6 +634,12 @@ export class Game {
     }
 
     const eye = this.player.eye();
+    if (this.deadT > 0) {
+      // Caído: câmera desce e tomba.
+      const k = Math.min(1, (RESPAWN_TIME - this.deadT) / 0.6);
+      eye.y -= k * 1.0;
+      eye.roll += k * 0.9;
+    }
     this.shake = Math.max(0, this.shake - dt * 2.2);
     const sh = this.shake * this.shake;
     this.shakeVec.set((Math.random() - 0.5) * sh * 0.12, (Math.random() - 0.5) * sh * 0.1, 0);
@@ -568,18 +647,25 @@ export class Game {
     this.camera.position.set(eye.x + this.shakeVec.x, eye.y + this.shakeVec.y, eye.z);
     this.camera.quaternion.setFromEuler(new THREE.Euler(this.pitch + this.recoilPitch, this.yaw + this.shakeVec.x * 0.5, eye.roll + this.shakeVec.y * 0.6, 'YXZ'));
     this.camera.getWorldDirection(this.forward);
-    this.viewmodel.group.position.x = 0.28 + this.swayX;
-    this.viewmodel.group.position.y = -0.26 + this.swayY - (this.player.isCrouched ? 0.02 : 0);
-    this.viewmodel.update(dt);
+    this.viewmodel.update(dt, {
+      swayX: this.swayX,
+      swayY: this.swayY,
+      speed: this.player.speedNorm,
+      running: this.input.run,
+      crouched: this.player.isCrouched,
+      grounded: this.player.isGrounded,
+    });
     this.audio.setListener(eye.x, eye.y, eye.z);
     this.muzzle.position.copy(this.camera.position).addScaledVector(this.forward, 0.6);
 
-    if (!this.paused && this.input.isHolding()) this.tryFire();
+    this.viewmodel.group.visible = alive;
+    if (!this.paused && alive && this.input.isHolding()) this.tryFire();
     else if (!this.weapon.beam || !this.input.firing) this.laserBeam.visible = false;
 
     const tA = performance.now();
     const { exploded } = this.physics.step(dt);
     const contacts = this.physics.detonateWhere((x, y, z) => this.bombHitsVoxel(x, y, z));
+    contacts.push(...this.physics.detonateNear(this.enemies.centers(), 0.6));
     for (const p of exploded) this.explode(p.x, p.y, p.z);
     for (const p of contacts) this.explode(p.x, p.y, p.z);
     const tB = performance.now();
@@ -744,6 +830,12 @@ export class Game {
     for (let i = 0; i < w.pellets; i++) {
       const dir = spreadDirection({ x: this.forward.x, y: this.forward.y, z: this.forward.z }, w.spread * (this.player.isCrouched ? 0.55 : 1));
       const hit = this.raycast(origin, dir, w.range);
+      const eh = this.enemies.raycast(origin, dir, hit ? hit.dist : w.range);
+      if (eh) {
+        beamEnd.set(eh.point.x, eh.point.y, eh.point.z);
+        this.hitEnemy(eh.enemy, w.id, dir, eh.head, eh.point);
+        continue;
+      }
       if (!hit) continue;
       this.lastHit = { mat: hit.voxel.mat, group: hit.voxel.group, dist: hit.dist, dyn: this.physics.isDynamic(hit.voxel), burn: MATERIALS[hit.voxel.mat].burn };
       beamEnd.set(hit.point.x, hit.point.y, hit.point.z);
@@ -815,9 +907,12 @@ export class Game {
     this.laserBeam.visible = true;
   }
 
-  private explode(x: number, y: number, z: number): void {
-    const w = weaponById('bomb');
+  private explode(x: number, y: number, z: number, power = 1): void {
+    const base = weaponById('bomb');
+    const w = { radius: base.radius * power, damage: base.damage * power, impulse: base.impulse * power };
     this.audio.play('bomb', 1, { x, y, z });
+    this.enemies.explosion(x, y, z, w.radius * 2.2, 190 * power);
+    this.blastPlayer(x, y, z, w.radius * 2.1, 55 * power);
     const destroyed = new Map<number, Voxel>();
     for (const v of damageAt(this.grid, x, y, z, w.radius, w.damage, VOXEL_SIZE, undefined, this.physics.dynamicVoxelsNear({ x, y, z }, w.radius), (v) => this.physics.poseOf(v))) {
       destroyed.set(v.id, v);
@@ -854,6 +949,7 @@ export class Game {
     if (destroyed.size === 0) return;
     const list = [...destroyed.values()];
     for (const v of list) this.fire.forget(v);
+    for (const v of list) if (v.group.startsWith(TNT_PREFIX)) this.triggerTnt(v);
     const sounds = new Map<string, { n: number; at: Voxel }>();
     for (const v of list) {
       this.grid.remove(v);
@@ -956,6 +1052,12 @@ export class Game {
       this.dust.burst(end.x, end.y, end.z, put * 2, 0xdddddd, 0.8, { life: 1.2, up: 1.5, gravity: -0.6 });
       this.score += put;
     }
+    const eh = this.enemies.raycast(origin, dir, hit ? hit.dist : w.range);
+    if (eh) {
+      this.enemies.extinguish(eh.enemy);
+      this.enemies.shove(eh.enemy, { x: dir.x * 0.6, y: 0, z: dir.z * 0.6 });
+      this.dust.burst(eh.point.x, eh.point.y, eh.point.z, 3, 0x9fd8ff, 1.2, { life: 0.5, gravity: 6 });
+    }
     if (hit) {
       this.physics.applyImpulse(hit.voxel, dir, w.impulse, hit.point);
       if (Math.random() < 0.5) this.dust.burst(hit.point.x, hit.point.y, hit.point.z, 3, 0x9fd8ff, 1.2, { life: 0.5, gravity: 6 });
@@ -968,6 +1070,14 @@ export class Game {
     this.audio.play('hook-fire', 0.6);
     this.viewmodel.fireKick();
     const hit = this.raycast(origin, { x: this.forward.x, y: this.forward.y, z: this.forward.z }, w.range);
+    const eh = this.enemies.raycast(origin, { x: this.forward.x, y: this.forward.y, z: this.forward.z }, hit ? hit.dist : w.range);
+    if (eh) {
+      // Fisgou um bandido: puxa ele para perto.
+      this.audio.play('hook-hit', 0.7, eh.point);
+      this.enemies.shove(eh.enemy, { x: -this.forward.x * 11, y: 3, z: -this.forward.z * 11 });
+      this.hitEnemy(eh.enemy, 'hook', { x: -this.forward.x, y: 0, z: -this.forward.z }, false, eh.point);
+      return;
+    }
     if (!hit) return;
     this.hook.active = true;
     this.hook.point.set(hit.point.x, hit.point.y, hit.point.z);
@@ -1102,8 +1212,186 @@ export class Game {
     const n = this.fire.count;
     const d0 = near[0]?.d ?? 99;
     this.audio.setLoop('fire', Math.min(0.9, n * 0.03), n > 0 ? { x: near[0].x, y: near[0].y, z: near[0].z } : null);
-    this.post.setHit(n > 0 ? Math.max(0, 0.5 - d0 * 0.16) : 0);
+    this.post.setHit(Math.max(n > 0 ? Math.max(0, 0.5 - d0 * 0.16) : 0, this.hurtFlash * 0.8, this.deadT > 0 ? 0.6 : 0));
     void dt;
+  }
+
+  // ------------------------------------------------------------ bandidos e vida
+
+  /** Tiro do jogador acertou um bandido. */
+  private hitEnemy(e: Enemy, weapon: WeaponId | 'hook', dir: { x: number; y: number; z: number }, head: boolean, at: { x: number; y: number; z: number }): void {
+    const base = ENEMY_DAMAGE[weapon] ?? 10;
+    const dmg = base * (head && weapon !== 'laser' ? 2.2 : 1);
+    if (weapon === 'laser') {
+      this.enemies.ignite(e, 4);
+      if (this.frame % 3 === 0) this.dust.burst(at.x, at.y, at.z, 2, 0xff8a20, 0.5, { life: 0.3, bright: 2.4, gravity: -1 });
+    } else {
+      this.dust.burst(at.x, at.y, at.z, head ? 14 : 8, 0x8a1a12, 1.2, { life: 0.6, up: 0.6, gravity: 6 });
+    }
+    this.enemies.damage(e, dmg, dir, head);
+    if (weapon !== 'laser' || this.frame % 6 === 0) {
+      this.hud.hitMarker(head);
+      this.audio.play('target-hit', head ? 0.55 : 0.35, undefined, 50);
+    }
+  }
+
+  private onKill(e: Enemy, head: boolean): void {
+    this.kills += 1;
+    const pts = e.def.score + (head ? 50 : 0);
+    this.score += pts;
+    this.showToast(head ? `Tiro na cabeça! +${pts}` : `Bandido abatido! +${pts}`);
+    this.hud.hitMarker(true, true);
+    const f = this.enemies.feet(e);
+    const r = Math.random();
+    if (r < 0.4) this.spawnDrop(f.x, f.z, 'health');
+    else if (r < 0.65) this.spawnDrop(f.x, f.z, 'ammo');
+  }
+
+  private hurtPlayer(dmg: number, from: { x: number; y: number; z: number }): void {
+    if (this.deadT > 0 || this.godMode) return;
+    this.health -= dmg;
+    this.sinceHurt = 0;
+    this.hurtFlash = Math.min(1, this.hurtFlash + dmg / 25);
+    this.shake = Math.max(this.shake, Math.min(0.5, dmg / 30));
+    this.audio.play('land', 0.6, undefined, 60);
+    const pl = this.player.position();
+    // Ângulo da origem do dano relativo para onde o jogador olha (0 = à frente).
+    const a = Math.atan2(from.x - pl.x, from.z - pl.z) - Math.atan2(-Math.sin(this.yaw), -Math.cos(this.yaw));
+    this.hud.damageFrom(-a);
+    if (this.health <= 0) {
+      this.health = 0;
+      this.deadT = RESPAWN_TIME;
+      this.showToast(`Você foi abatido! Onda ${this.enemies.wave} — voltando...`);
+      this.audio.play('collapse', 0.5);
+      this.detachHook();
+    }
+  }
+
+  /** Dano e empurrão de explosão no jogador. */
+  private blastPlayer(x: number, y: number, z: number, radius: number, power: number): void {
+    const pl = this.player.position();
+    const dx = pl.x - x, dy = pl.y - y, dz = pl.z - z;
+    const d = Math.hypot(dx, dy, dz);
+    if (d > radius) return;
+    const k = 1 - d / radius;
+    const n = Math.max(d, 0.3);
+    this.player.impulse((dx / n) * 6 * k, 3.5 * k, (dz / n) * 6 * k);
+    this.hurtPlayer(power * k, { x, y, z });
+  }
+
+  private updateHealth(dt: number): void {
+    this.hurtFlash = Math.max(0, this.hurtFlash - dt * 1.6);
+    if (this.deadT > 0) {
+      this.deadT -= dt;
+      if (this.deadT <= 0) {
+        this.deadT = 0;
+        this.health = MAX_HEALTH;
+        this.player.spawn(SPAWN.x, SPAWN.z);
+        this.yaw = 0;
+        this.pitch = 0;
+        this.enemies.retryWave();
+        this.showToast('De volta à vila');
+      }
+      return;
+    }
+    this.sinceHurt += dt;
+    if (this.sinceHurt > REGEN_DELAY && this.health < MAX_HEALTH) this.health = Math.min(MAX_HEALTH, this.health + dt * 9);
+  }
+
+  /** Bala perdida de bandido: lasca o que estiver no caminho. */
+  private strayBullet(o: { x: number; y: number; z: number }, d: { x: number; y: number; z: number }, range: number): void {
+    const hit = voxelRaycast(this.grid, o, d, range, VOXEL_SIZE, (v) => !this.physics.isDynamic(v));
+    if (!hit) return;
+    const destroyed = new Map<number, Voxel>();
+    for (const v of damageAt(this.grid, hit.point.x, hit.point.y, hit.point.z, 0.1, 5, VOXEL_SIZE, hit.voxel)) destroyed.set(v.id, v);
+    this.impactFx(hit.voxel, hit.point, false);
+    this.commitDestroyed(destroyed, d, 2);
+  }
+
+  /** Barril de pólvora atingido: explode logo depois (dá tempo da corrente). */
+  private triggerTnt(v: Voxel): void {
+    if (this.tntFired.has(v.group)) return;
+    this.tntFired.add(v.group);
+    const b = this.physics.bindingOf(v);
+    this.blasts.push({ t: 0.12 + Math.random() * 0.14, voxels: b ? [...b.voxels] : [v] });
+  }
+
+  private updateBlasts(dt: number): void {
+    for (let i = this.blasts.length - 1; i >= 0; i--) {
+      const bl = this.blasts[i];
+      bl.t -= dt;
+      if (bl.t > 0) continue;
+      this.blasts.splice(i, 1);
+      const rest = new Map<number, Voxel>();
+      let at: { x: number; y: number; z: number } | null = null;
+      for (const v of bl.voxels) {
+        if (this.grid.get(v.ix, v.iy, v.iz) !== v) continue;
+        rest.set(v.id, v);
+        at ??= this.physics.poseOf(v);
+      }
+      if (!at) {
+        const v = bl.voxels[0];
+        at = { x: v.ix * VOXEL_SIZE, y: v.iy * VOXEL_SIZE + 0.3, z: v.iz * VOXEL_SIZE };
+      }
+      this.commitDestroyed(rest, { x: 0, y: 1, z: 0 }, 1, true);
+      this.explode(at.x, at.y, at.z, 1.25);
+      this.score += 25;
+    }
+  }
+
+  private spawnDrop(x: number, z: number, kind: 'health' | 'ammo'): void {
+    const g = new THREE.Group();
+    if (kind === 'health') {
+      // Garrafa de tônico verde com rolha.
+      const glass = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.08, 0.22, 8), new THREE.MeshStandardMaterial({ color: 0x3fbf5a, emissive: 0x1a8a30, emissiveIntensity: 0.9, roughness: 0.2 }));
+      glass.position.y = 0.11;
+      const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.035, 0.08, 6), glass.material);
+      neck.position.y = 0.26;
+      const cork = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.03, 6), new THREE.MeshStandardMaterial({ color: 0x8a5a30 }));
+      cork.position.y = 0.315;
+      g.add(glass, neck, cork);
+    } else {
+      const box = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.14, 0.14), new THREE.MeshStandardMaterial({ color: 0x6b4a2a, roughness: 0.8 }));
+      box.position.y = 0.07;
+      const band = new THREE.Mesh(new THREE.BoxGeometry(0.235, 0.04, 0.15), new THREE.MeshStandardMaterial({ color: 0xffd24a, emissive: 0xffa000, emissiveIntensity: 0.9 }));
+      band.position.y = 0.07;
+      g.add(box, band);
+    }
+    g.traverse((o) => { if (o instanceof THREE.Mesh) o.castShadow = true; });
+    g.position.set(x, 0.05, z);
+    this.scene.add(g);
+    this.drops.push({ mesh: g, x, z, kind, life: 30 });
+  }
+
+  private updateDrops(dt: number): void {
+    const pl = this.player.position();
+    for (let i = this.drops.length - 1; i >= 0; i--) {
+      const d = this.drops[i];
+      d.life -= dt;
+      d.mesh.rotation.y += dt * 2;
+      d.mesh.position.y = 0.06 + Math.sin(performance.now() * 0.004 + d.x) * 0.04;
+      d.mesh.visible = d.life > 4 || Math.floor(d.life * 6) % 2 === 0;
+      const take = this.deadT <= 0 && Math.hypot(d.x - pl.x, d.z - pl.z) < 1.0
+        && (d.kind === 'ammo' || this.health < MAX_HEALTH);
+      if (!take && d.life > 0) continue;
+      this.scene.remove(d.mesh);
+      this.drops.splice(i, 1);
+      if (!take) continue;
+      if (d.kind === 'health') {
+        this.health = Math.min(MAX_HEALTH, this.health + 35);
+        this.showToast('Tônico: +35 de vida');
+        this.dust.burst(d.x, 0.4, d.z, 14, 0x5aff7a, 1.2, { life: 0.7, bright: 2, gravity: 2 });
+      } else {
+        for (const w of WEAPONS) {
+          if (w.mag === 0) continue;
+          const a = this.ammo.get(w.id)!;
+          a.reserve = Math.min(w.reserve * 2, a.reserve + Math.ceil(w.reserve * 0.25));
+        }
+        this.showToast('Munição +25%');
+        this.dust.burst(d.x, 0.3, d.z, 12, 0xffd24a, 1.2, { life: 0.7, bright: 2, gravity: 3 });
+      }
+      this.audio.play('pickup', 0.7);
+    }
   }
 
   // ------------------------------------------------------------ visuals
@@ -1205,6 +1493,11 @@ export class Game {
       prompt: this.prompt,
       remoteSticks: this.physics.remoteCount(),
       fireCount: this.fire.count,
+      health: this.health / MAX_HEALTH,
+      dead: this.deadT > 0,
+      bandits: this.enemies.enabled
+        ? { wave: this.enemies.wave, left: this.enemies.remaining, next: this.enemies.remaining === 0 ? Math.max(0, this.enemies.breakT) : 0, kills: this.kills }
+        : null,
     });
   }
 }

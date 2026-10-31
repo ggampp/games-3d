@@ -22,6 +22,11 @@ export interface HudState {
   /** Bananas de dinamite com detonador remoto colocadas. */
   remoteSticks: number;
   fireCount: number;
+  /** Vida 0..1. */
+  health: number;
+  dead: boolean;
+  /** Bandidos (null = desligados). `next` = segundos até a próxima onda. */
+  bandits: { wave: number; left: number; next: number; kills: number } | null;
 }
 
 export interface HudHandlers {
@@ -57,6 +62,15 @@ export class Hud {
   private promptEl: HTMLElement;
   private boomBtn: HTMLButtonElement;
   private fireWarn: HTMLElement;
+  private vitals: HTMLElement;
+  private vitalsFill: HTMLElement;
+  private vitalsNum: HTMLElement;
+  private waveEl: HTMLElement;
+  private cross: HTMLElement;
+  private dmgDir: HTMLElement;
+  private hitTimer = 0;
+  private dmgTimer = 0;
+  private lastHealth = -1;
   private slots = new Map<WeaponId, HTMLButtonElement>();
   private h: HudHandlers;
   private lastToast = '';
@@ -110,6 +124,22 @@ export class Hud {
 
     this.fireWarn = el('div', 'fire-warn hidden', '');
     this.root.appendChild(this.fireWarn);
+
+    this.vitals = el('div', 'vitals');
+    this.vitals.innerHTML = '<span class="heart">♥</span>';
+    const vbar = el('div', 'vitals-bar');
+    this.vitalsFill = el('div', 'vitals-fill');
+    vbar.appendChild(this.vitalsFill);
+    this.vitals.appendChild(vbar);
+    this.vitalsNum = el('b', 'vitals-num', '100');
+    this.vitals.appendChild(this.vitalsNum);
+    this.root.appendChild(this.vitals);
+
+    this.waveEl = el('div', 'wave hidden', '');
+    this.root.appendChild(this.waveEl);
+
+    this.dmgDir = el('div', 'dmg-dir', '');
+    this.root.appendChild(this.dmgDir);
 
     const bar = el('div', 'hotbar');
     for (const w of WEAPONS) {
@@ -239,13 +269,32 @@ export class Hud {
     this.overlayText = el('p', 'overlay-copy', 'Clique para entrar na vila');
     this.overlayHint = el('p', 'overlay-hint', this.isTouch
       ? 'joystick anda · arraste para mirar · FOGO atira · PULO pula · USAR interage · 1–8 armas'
-      : 'WASD anda · Shift corre · Espaço pula · Ctrl agacha · mouse mira · 1–8 armas · R recarrega · E usa · Q/botão direito detona · L hora do dia · T modo · Backspace reconstrói');
+      : 'WASD anda · Shift corre · Espaço pula · Ctrl agacha · mouse mira · 1–8 armas · R recarrega · E usa · Q/botão direito detona · B bandidos · L hora do dia · T modo · Backspace reconstrói');
     this.overlay.appendChild(this.overlayText);
     this.overlay.appendChild(this.overlayHint);
     this.root.appendChild(this.overlay);
 
-    const cross = el('div', 'crosshair');
-    this.root.appendChild(cross);
+    this.cross = el('div', 'crosshair');
+    this.root.appendChild(this.cross);
+  }
+
+  /** Marcador de acerto na mira (vermelho na cabeça, maior quando mata). */
+  hitMarker(head: boolean, kill = false): void {
+    this.cross.classList.remove('hit', 'head', 'kill');
+    void this.cross.offsetWidth; // reinicia a animação
+    this.cross.classList.add('hit');
+    if (head) this.cross.classList.add('head');
+    if (kill) this.cross.classList.add('kill');
+    window.clearTimeout(this.hitTimer);
+    this.hitTimer = window.setTimeout(() => this.cross.classList.remove('hit', 'head', 'kill'), kill ? 380 : 180);
+  }
+
+  /** Arco vermelho na borda indicando de onde veio o tiro (rad, 0 = à frente). */
+  damageFrom(angle: number): void {
+    this.dmgDir.style.transform = `translate(-50%, -50%) rotate(${angle}rad)`;
+    this.dmgDir.classList.add('on');
+    window.clearTimeout(this.dmgTimer);
+    this.dmgTimer = window.setTimeout(() => this.dmgDir.classList.remove('on'), 650);
   }
 
   private toolBtn(key: string, label: string, fn: () => void): HTMLButtonElement {
@@ -270,7 +319,7 @@ export class Hud {
     const playing = state.locked || this.isTouch;
     this.overlay.classList.toggle('hidden', playing && !state.paused && !state.collapsed);
     if (state.collapsed) {
-      this.overlayText.textContent = 'A vila caiu. R para reconstruir.';
+      this.overlayText.textContent = 'A vila caiu. Backspace para reconstruir.';
     } else if (state.paused) {
       this.overlayText.textContent = 'Pausado';
     } else if (!playing) {
@@ -328,6 +377,23 @@ export class Hud {
     }
     this.boomBtn.classList.toggle('hidden', state.remoteSticks === 0);
     this.boomBtn.textContent = `BOOM ×${state.remoteSticks}`;
+    const hp = Math.round(state.health * 100);
+    if (hp !== this.lastHealth) {
+      this.lastHealth = hp;
+      this.vitalsFill.style.width = `${hp}%`;
+      this.vitalsNum.textContent = String(hp);
+      this.vitals.classList.toggle('low', hp <= 30);
+    }
+    this.root.classList.toggle('dead', state.dead);
+    if (state.bandits) {
+      const b = state.bandits;
+      this.waveEl.classList.remove('hidden');
+      this.waveEl.innerHTML = b.left > 0
+        ? `<strong>Onda ${b.wave}</strong> · ${b.left} bandido${b.left === 1 ? '' : 's'} · <span>${b.kills} abatidos</span>`
+        : `<strong>${b.wave === 0 ? 'Bandidos' : `Onda ${b.wave + 1}`}</strong> em ${Math.ceil(b.next)} s · <span>${b.kills} abatidos</span>`;
+    } else {
+      this.waveEl.classList.add('hidden');
+    }
     if (state.fireCount > 0) {
       this.fireWarn.classList.remove('hidden');
       this.fireWarn.textContent = `🔥 ${state.fireCount}`;

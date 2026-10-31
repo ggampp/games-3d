@@ -63,6 +63,18 @@ export const COL_BOMB = 0x0008;
 export const COL_GROUND = 0x0010;
 export const COL_PLAYER = 0x0020;
 export const COL_FENCE = 0x0040;
+export const COL_ENEMY = 0x0080;
+
+/** Bandido: cápsula cinemática movida por character controller. */
+export interface Agent {
+  body: RigidBody;
+  collider: Collider;
+  controller: InstanceType<typeof RAPIER.KinematicCharacterController>;
+  halfHeight: number;
+  radius: number;
+}
+const AGENT_FILTER = COL_WORLD | COL_GROUND | COL_DEBRIS | COL_BOMB | COL_FENCE | COL_PLAYER | COL_ENEMY;
+const PLAYER_FILTER = COL_WORLD | COL_GROUND | COL_DEBRIS | COL_BOMB | COL_FENCE | COL_CHAIN | COL_ENEMY;
 
 export function colGroups(membership: number, filter: number): number {
   return ((membership & 0xffff) << 16) | (filter & 0xffff);
@@ -137,7 +149,7 @@ export class PhysicsSim {
         RAPIER.ColliderDesc.cuboid(0.2, 4, len / 2 + 0.2)
           .setTranslation(Math.cos(a) * PLAY_RADIUS, 4, -Math.sin(a) * PLAY_RADIUS)
           .setRotation(q)
-          .setCollisionGroups(colGroups(COL_FENCE, COL_PLAYER)),
+          .setCollisionGroups(colGroups(COL_FENCE, COL_PLAYER | COL_ENEMY)),
         fence,
       );
     }
@@ -756,7 +768,7 @@ export class PhysicsSim {
     if (this.player) return;
     const body = this.world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(x, y, z));
     const collider = this.world.createCollider(
-      RAPIER.ColliderDesc.capsule(0.55, 0.3).setCollisionGroups(colGroups(COL_PLAYER, COL_WORLD | COL_GROUND | COL_DEBRIS | COL_BOMB | COL_FENCE | COL_CHAIN)),
+      RAPIER.ColliderDesc.capsule(0.55, 0.3).setCollisionGroups(colGroups(COL_PLAYER, PLAYER_FILTER)),
       body,
     );
     const controller = this.world.createCharacterController(0.03);
@@ -773,7 +785,7 @@ export class PhysicsSim {
   movePlayer(desired: Vec): { moved: Vec; grounded: boolean } {
     const p = this.player;
     if (!p) return { moved: desired, grounded: true };
-    p.controller.computeColliderMovement(p.collider, desired, undefined, colGroups(COL_PLAYER, COL_WORLD | COL_GROUND | COL_DEBRIS | COL_BOMB | COL_FENCE | COL_CHAIN));
+    p.controller.computeColliderMovement(p.collider, desired, undefined, colGroups(COL_PLAYER, PLAYER_FILTER));
     const m = p.controller.computedMovement();
     const t = p.body.translation();
     p.body.setNextKinematicTranslation({ x: t.x + m.x, y: t.y + m.y, z: t.z + m.z });
@@ -819,6 +831,74 @@ export class PhysicsSim {
       if (Math.abs(py - PLAZA_TOP / 2) < 1e-3) return 'plaza';
     }
     return 'voxel';
+  }
+
+  // --------------------------------------------------------------- agents
+
+  createAgent(x: number, y: number, z: number, radius: number, halfHeight: number): Agent {
+    const body = this.world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(x, y, z));
+    const collider = this.world.createCollider(
+      RAPIER.ColliderDesc.capsule(halfHeight, radius).setCollisionGroups(colGroups(COL_ENEMY, AGENT_FILTER)),
+      body,
+    );
+    const controller = this.world.createCharacterController(0.03);
+    controller.enableAutostep(0.34, 0.12, true);
+    controller.enableSnapToGround(0.3);
+    controller.setMaxSlopeClimbAngle((55 * Math.PI) / 180);
+    controller.setApplyImpulsesToDynamicBodies(true);
+    controller.setCharacterMass(90);
+    return { body, collider, controller, halfHeight, radius };
+  }
+
+  moveAgent(a: Agent, desired: Vec): { moved: Vec; grounded: boolean } {
+    a.controller.computeColliderMovement(a.collider, desired, undefined, colGroups(COL_ENEMY, AGENT_FILTER));
+    const m = a.controller.computedMovement();
+    const t = a.body.translation();
+    a.body.setNextKinematicTranslation({ x: t.x + m.x, y: t.y + m.y, z: t.z + m.z });
+    return { moved: { x: m.x, y: m.y, z: m.z }, grounded: a.controller.computedGrounded() };
+  }
+
+  removeAgent(a: Agent): void {
+    this.world.removeCharacterController(a.controller);
+    this.world.removeRigidBody(a.body);
+  }
+
+  /** Bomba (não remota) perto de algum ponto: detona no contato com bandidos. */
+  detonateNear(points: Vec[], r: number): Vec[] {
+    if (points.length === 0) return [];
+    const exploded: Vec[] = [];
+    this.bombs = this.bombs.filter((bomb) => {
+      if (bomb.remote || this.now - bomb.born < 0.15) return true;
+      const t = bomb.body.translation();
+      if (!points.some((p) => Math.hypot(p.x - t.x, p.y - t.y, p.z - t.z) < r)) return true;
+      exploded.push({ x: t.x, y: t.y, z: t.z });
+      this.world.removeRigidBody(bomb.body);
+      return false;
+    });
+    return exploded;
+  }
+
+  /** Pedaço solto genérico (partes do bandido abatido). */
+  spawnGib(center: Vec, half: Vec, rot: Quat, vel: Vec, angvel: Vec): RigidBody {
+    const body = this.world.createRigidBody(
+      RAPIER.RigidBodyDesc.dynamic()
+        .setTranslation(center.x, center.y, center.z)
+        .setRotation(rot)
+        .setLinvel(vel.x, vel.y, vel.z)
+        .setAngvel(angvel)
+        .setLinearDamping(0.3)
+        .setAngularDamping(0.8),
+    );
+    this.world.createCollider(
+      RAPIER.ColliderDesc.cuboid(half.x, half.y, half.z).setDensity(0.9).setFriction(0.8).setRestitution(0.05)
+        .setCollisionGroups(colGroups(COL_DEBRIS, COL_WORLD | COL_GROUND | COL_DEBRIS)),
+      body,
+    );
+    return body;
+  }
+
+  removeBody(body: RigidBody): void {
+    this.world.removeRigidBody(body);
   }
 
   // ----------------------------------------------------------------- step

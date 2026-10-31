@@ -23,7 +23,7 @@ npm run build
 | WASD anda · Shift corre · Espaço pula · Ctrl/C agacha | joystick anda · PULO | analógico esq. · A pula · L3 corre · LT agacha |
 | mouse mira · clique atira · 1–8 troca arma · R recarrega | arrasta para mirar · FOGO · RECARGA · barra | analógico dir. · RT atira · LB/RB arma · X recarrega |
 | E usa (sino, poço, empurrar) · Q ou botão direito detona | USAR · BOOM | Y usa · B detona |
-| L hora do dia · P pós-processamento · T modo · Backspace reconstrói · M som · Esc pausa | botões no topo | |
+| B liga/desliga bandidos · L hora do dia · P pós-processamento · T modo · Backspace reconstrói · M som · Esc pausa | botões no topo | |
 
 ## Armas
 
@@ -32,6 +32,28 @@ npm run build
 8 detonador (bananas remotas; Q explode tudo).
 
 Munição limitada nas armas 1–4 e 8: caixas douradas espalhadas pela vila repõem 50% e reaparecem.
+
+## Bandidos
+
+Ondas de bandidos chegam pelas bordas da vila (B desliga). Pistoleiros param
+para mirar — o cano brilha antes do tiro —, dinamiteiros (camisa vermelha, a
+partir da onda 2) arremessam bananas de dinamite, e o grandalhão de escopeta
+(onda 3+) avança para o corpo a corpo. Eles desviam de paredes, se escondem
+atrás do cenário e as balas perdidas lascam os voxels. Tiro na cabeça vale
+×2,2 de dano; o laser põe fogo neles, a água apaga, o gancho puxa e a
+dinamite (inclusive a deles) explode quem estiver perto. Quando morrem, viram
+pedaços com física e às vezes deixam tônico (+35 de vida) ou munição.
+
+O jogador tem 100 de vida, que volta sozinha depois de 5 s sem levar dano. Ao
+cair, volta ao início e a onda recomeça.
+
+## Objetos destrutíveis
+
+Barris de pólvora vermelhos explodem ao serem atingidos ou queimados (e
+detonam os vizinhos em cadeia — há alguns perto da caixa d'água, do saloon e
+do estábulo). Também há caixotes empilhados, garrafas em trilhos de cerca,
+carroça de feno, barris d'água, bebedouro, torre de vigia, casinha, varal,
+tumbleweeds ao vento e, fora da vila, cactos, pedras e árvores secas.
 
 ## Modos
 

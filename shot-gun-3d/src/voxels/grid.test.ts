@@ -185,7 +185,8 @@ describe('builder e vila', () => {
     for (const v of g.values()) present.add(v.s);
     for (let i = 0; i < TOWN.length; i++) expect(present.has(i)).toBe(true);
     expect(g.size).toBeGreaterThan(10000);
-    expect(g.size).toBeLessThan(90000);
+    // ~89 k da vila + ~15 k de objetos soltos, decoração do deserto e torre/casinha.
+    expect(g.size).toBeLessThan(110000);
   });
 
   it('cada estrutura pontuável tem um componente apoiado no chão', () => {
