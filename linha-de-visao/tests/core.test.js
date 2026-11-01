@@ -50,7 +50,17 @@ function solve(level) {
       }
       return steps;
     }
-    for (const e of edges.get(p.id)) {
+    const options = [...edges.get(p.id)];
+    // Batente ou lampião: a bola volta pelo mesmo trilho até a outra ponta.
+    if (viaTrack && (p.type === 'cap' || p.type === 'start')) {
+      const back = level.ports[p.track * 2 + (1 - p.end)];
+      const k = key(back, true);
+      if (!prev.has(k)) {
+        prev.set(k, { from: [p, viaTrack], edge: { to: back, via: 'track' } });
+        queue.push([back, true]);
+      }
+    }
+    for (const e of options) {
       const isTrack = e.via === 'track';
       if (isTrack === viaTrack) continue; // alterna: trilho, salto, trilho...
       const k = key(e.to, isTrack);

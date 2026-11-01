@@ -22,8 +22,26 @@ npm run build
    mesmo estando a metros de distância em 3D.
 2. **O que não se vê não existe.** Um vão escondido atrás de um bloco (laranja) pode ser
    atravessado, mas só enquanto continuar escondido. Gire no meio da travessia e a bola cai.
-3. Pontas abertas sem ligação derrubam a bola (ela volta ao lampião). Batentes fazem ela voltar.
+3. Pontas abertas sem ligação derrubam a bola (ela volta ao lampião). Batentes fazem ela voltar
+   pelo mesmo trilho, e na volta a mesma ponta pode se encostar em outra viga.
 4. Dá para girar com a bola rolando, e as fases mais avançadas exigem isso.
+
+## Fases
+
+| # | Fase | O que ensina |
+|---|---|---|
+| 1 | Ponto de vista | primeira ligação: duas vigas viram uma |
+| 2 | Duas verdades | duas ligações, girando com a bola rolando |
+| 3 | O que não se vê | vão escondido atrás de um bloco |
+| 4 | Atrás do cubo | ligação seguida de vão |
+| 5 | Escada de Penrose | escada que só sobe numa vista isométrica |
+| 6 | A ponte | três ângulos seguidos |
+| 7 | Vai e volta | o batente devolve a bola para outra ligação |
+| 8 | Ladeira | rampas também se encostam |
+| 9 | Encruzilhada | uma ponta, duas ligações; uma é armadilha |
+| 10 | Atrás da coluna | coluna em diagonal esconde o vão |
+| 11 | Zigue-zague | sobe, desce, sobe: um lado da estrutura por degrau |
+| 12 | Fim da linha | ligação, batente, ligação e vão na mesma corrida |
 
 Estrelas: 3 sem quedas, 2 com até duas quedas, 1 nos demais casos.
 
@@ -67,7 +85,7 @@ src/
   render/scene.js  extrusão das vigas com meia-esquadria, colunas com pé curvo, lampião,
                    pino, bola + "fantasma" (silhueta quando atrás de algo), confete
   audio.js         efeitos sintetizados com WebAudio
-  levels.js        as 6 fases (dados declarativos)
+  levels.js        as 12 fases (dados declarativos)
   main.js          loop, input, HUD, progresso (localStorage)
 tests/core.test.js
 ```
@@ -75,8 +93,8 @@ tests/core.test.js
 Seguindo `../ARQUITETURA-REFERENCIA.md`: nenhuma classe de gameplay lê o relógio nem
 escreve em `Object3D`; o render só copia o estado no fim do frame.
 
-Os testes incluem um **oráculo**: uma busca em largura no grafo (trilho → salto → trilho)
-acha o caminho do lampião ao pino, e uma simulação ajusta a câmera para cada salto na
+Os testes incluem um **oráculo**: uma busca em largura no grafo (trilho → salto → trilho,
+com o batente devolvendo a bola pelo mesmo trilho) acha o caminho do lampião ao pino, e uma simulação ajusta a câmera para cada salto na
 hora em que a bola se aproxima. Toda fase precisa ser vencida pelo oráculo e **não**
 pode ser vencida com a vista inicial parada.
 
