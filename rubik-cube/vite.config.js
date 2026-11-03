@@ -1,8 +1,6 @@
 import { defineConfig } from 'vite';
-import { scanTwoShotPlugin } from './vite.scan-plugin.js';
 
 export default defineConfig({
-  plugins: [scanTwoShotPlugin()],
   optimizeDeps: {
     entries: ['index.html']
   },

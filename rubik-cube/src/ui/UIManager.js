@@ -226,12 +226,25 @@ export class UIManager {
     });
 
     // 11. Limpar Histórico
+    // Confirmação em dois toques (diálogos nativos não aparecem em todos os ambientes)
+    const clearLabel = this.btnClearHistory.textContent;
+    let clearArmedTimer = 0;
     this.btnClearHistory.addEventListener('click', () => {
-      if (confirm('Deseja realmente limpar todo o histórico de resoluções?')) {
-        this.timer.clearHistory();
-        this.updateStatsDisplay();
-        this.updateHistoryModal();
+      if (!clearArmedTimer) {
+        this.btnClearHistory.textContent = 'Toque de novo para limpar';
+        clearArmedTimer = setTimeout(() => {
+          clearArmedTimer = 0;
+          this.btnClearHistory.textContent = clearLabel;
+        }, 3000);
+        return;
       }
+      clearTimeout(clearArmedTimer);
+      clearArmedTimer = 0;
+      this.btnClearHistory.textContent = clearLabel;
+      this.timer.clearHistory();
+      this.updateStatsDisplay();
+      this.updateHistoryModal();
+      this.showToast('Histórico limpo.');
     });
 
     // 12. Fechar Banner de Vitória
@@ -460,19 +473,38 @@ export class UIManager {
   }
 
   /**
+   * Mensagem curta na parte de baixo da tela.
+   */
+  showToast(message, duration = 2800) {
+    if (!this.toastEl) {
+      this.toastEl = document.createElement('div');
+      this.toastEl.className = 'app-toast';
+      this.toastEl.setAttribute('role', 'status');
+      this.toastEl.setAttribute('aria-live', 'polite');
+      document.body.appendChild(this.toastEl);
+    }
+    this.toastEl.textContent = message;
+    this.toastEl.hidden = false;
+    clearTimeout(this.toastTimer);
+    this.toastTimer = setTimeout(() => {
+      this.toastEl.hidden = true;
+    }, duration);
+  }
+
+  /**
    * Solucionador Passo a Passo
    */
   startSolver() {
     if (this.cubeView.isAnimating) return;
 
     if (this.cubeState.isSolved()) {
-      alert('O cubo já se encontra 100% resolvido!');
+      this.showToast('O cubo já está resolvido.');
       return;
     }
 
     this.solverSteps = CubeSolver.generateSolutionSteps(this.cubeState);
     if (this.solverSteps.length === 0) {
-      alert('Não foi possível gerar a solução para o estado atual.');
+      this.showToast('Não foi possível gerar a solução para o estado atual.');
       return;
     }
 

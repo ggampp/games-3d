@@ -100,6 +100,43 @@ export class CubeImageScanner {
   }
 
   /**
+   * Cor representativa de uma região RGBA: mediana por canal, ignorando pixels
+   * muito escuros (plástico preto entre as peças, sombras) e reflexos estourados.
+   * A mediana resiste melhor a brilho e bordas do que a média simples.
+   */
+  static robustColor(data) {
+    const rs = [];
+    const gs = [];
+    const bs = [];
+    const all = [[], [], []];
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      all[0].push(r);
+      all[1].push(g);
+      all[2].push(b);
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      if (max < 40) continue; // borda preta / sombra
+      if (min > 250) continue; // reflexo estourado
+      rs.push(r);
+      gs.push(g);
+      bs.push(b);
+    }
+    // Se quase tudo foi descartado, usa a região inteira.
+    const useAll = rs.length < Math.max(4, all[0].length * 0.2);
+    const median = (arr) => {
+      if (arr.length === 0) return 0;
+      const sorted = [...arr].sort((a, b) => a - b);
+      return sorted[Math.floor(sorted.length / 2)];
+    };
+    return useAll
+      ? [median(all[0]), median(all[1]), median(all[2])]
+      : [median(rs), median(gs), median(bs)];
+  }
+
+  /**
    * Carrega uma imagem a partir de src se for string
    */
   static loadImage(srcOrImg) {
@@ -179,26 +216,14 @@ export class CubeImageScanner {
           Math.max(1, Math.round(sampleRadius * 2))
         );
 
-        let sumR = 0;
-        let sumG = 0;
-        let sumB = 0;
-        const totalPixels = imgData.data.length / 4;
-
-        for (let i = 0; i < imgData.data.length; i += 4) {
-          sumR += imgData.data[i];
-          sumG += imgData.data[i + 1];
-          sumB += imgData.data[i + 2];
-        }
-
-        const avgR = Math.round(sumR / totalPixels);
-        const avgG = Math.round(sumG / totalPixels);
-        const avgB = Math.round(sumB / totalPixels);
+        const [avgR, avgG, avgB] = this.robustColor(imgData.data);
 
         const face = this.classifyColor(avgR, avgG, avgB);
         details.push({
           face,
           label: labels[face] || face,
-          rgb: `rgb(${avgR}, ${avgG}, ${avgB})`
+          rgb: `rgb(${avgR}, ${avgG}, ${avgB})`,
+          rgbValues: [avgR, avgG, avgB]
         });
       }
     }
@@ -221,6 +246,7 @@ export class CubeImageScanner {
     const details = this.extractGridDetails(img, options);
     return {
       grid: details.map(d => d.face),
+      samples: details.map(d => d.rgbValues),
       details
     };
   }
