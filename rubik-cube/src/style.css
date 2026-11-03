@@ -1545,6 +1545,42 @@ kbd {
   background: rgba(0, 0, 0, 0.35);
 }
 
+.net-facelet.is-uncertain {
+  outline: 2px dashed var(--accent-rose);
+  outline-offset: 1px;
+  animation: facelet-attention 1.4s ease-in-out infinite;
+}
+
+@keyframes facelet-attention {
+  50% { outline-color: transparent; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .net-facelet.is-uncertain { animation: none; }
+}
+
+.glass-btn-sm:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.app-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  max-width: min(420px, calc(100vw - 32px));
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--text-main);
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  box-shadow: var(--shadow-lg);
+  z-index: 2000;
+  text-align: center;
+}
+
 .scan-summary-box {
   background: #f8fafc;
   border: 1px solid var(--border-glass);

@@ -9,6 +9,7 @@ import { FACE_NAMES } from '../cube/CubeState.js';
 import { analyzeSixFacePhotos } from './scanSixFacesClient.js';
 import { getExampleSixFacePhotos, COLOR_HEX_MAP } from './exampleSixFaceData.js';
 import { countColors, validateSixFaces } from './sixFacesReconstructor.js';
+import { calibrateFaces } from './colorCalibration.js';
 
 export { COLOR_HEX_MAP };
 
@@ -78,7 +79,12 @@ export class CubeScanModal {
     this.facePhotos = { U: null, L: null, F: null, R: null, B: null, D: null };
     this.faceRotations = { U: 0, L: 0, F: 0, R: 0, B: 0, D: 0 };
     this.detectedGrids = { U: null, L: null, F: null, R: null, B: null, D: null };
-    this.isExampleLoaded = false;
+    // Cores amostradas ([r,g,b] ×9) de cada face, usadas na calibração pelos centros
+    this.faceSamples = { U: null, L: null, F: null, R: null, B: null, D: null };
+    // Correções feitas à mão no assistente: { U: { 3: 'R' }, ... }
+    this.manualCells = { U: {}, L: {}, F: {}, R: {}, B: {}, D: {} };
+    // Peças com leitura duvidosa, destacadas no mapa 2D
+    this.uncertainCells = null;
 
     this.wizardIndex = 0;
     this.wizardGrid = Array(9).fill(null);
@@ -242,6 +248,7 @@ export class CubeScanModal {
           R: Array(9).fill('R'),
           L: Array(9).fill('L')
         };
+        this.uncertainCells = null;
         this.render2DNet();
         this.updateStatsAndValidation();
       });
@@ -281,6 +288,7 @@ export class CubeScanModal {
       R: [...this.cubeState.faces.R],
       L: [...this.cubeState.faces.L]
     };
+    this.uncertainCells = null;
 
     this.render2DNet();
     this.updateStatsAndValidation();
@@ -325,7 +333,7 @@ export class CubeScanModal {
   refreshAnalyzeButton() {
     const loadedCount = ALL_FACES.filter(f => Boolean(this.facePhotos[f])).length;
     if (this.btnAnalyzeSixFaces) {
-      this.btnAnalyzeSixFaces.disabled = loadedCount === 0;
+      this.btnAnalyzeSixFaces.disabled = loadedCount < 6;
     }
   }
 
@@ -354,6 +362,7 @@ export class CubeScanModal {
         rotation: this.faceRotations[face]
       });
       this.detectedGrids[face] = result.grid;
+      this.faceSamples[face] = result.samples;
       this.renderMiniGrid(face, result.grid);
       if (el.badge) {
         el.badge.textContent = 'Extraída ✔';
@@ -397,6 +406,7 @@ export class CubeScanModal {
         rotation: this.faceRotations[face]
       });
       this.detectedGrids[face] = result.grid;
+      this.faceSamples[face] = result.samples;
       this.renderMiniGrid(face, result.grid);
     } catch (err) {
       console.warn(`Erro ao girar face ${face}:`, err);
@@ -410,6 +420,7 @@ export class CubeScanModal {
     this.facePhotos[face] = null;
     this.faceRotations[face] = 0;
     this.detectedGrids[face] = null;
+    this.faceSamples[face] = null;
 
     const el = this.faceElements[face];
     if (!el) return;
@@ -442,7 +453,6 @@ export class CubeScanModal {
     for (const face of ALL_FACES) {
       this.clearFacePhoto(face);
     }
-    this.isExampleLoaded = false;
     this.setSixFacesStatus('Todas as fotos foram removidas. Adicione novas fotos das 6 faces.');
   }
 
@@ -468,7 +478,6 @@ export class CubeScanModal {
     const file = event.target.files && event.target.files[0];
     if (!file) return;
 
-    this.isExampleLoaded = false;
     const reader = new FileReader();
     reader.onload = (e) => {
       this.setFaceImage(face, e.target.result);
@@ -483,7 +492,6 @@ export class CubeScanModal {
     const files = Array.from(event.target.files || []);
     if (files.length === 0) return;
 
-    this.isExampleLoaded = false;
     // Preenche as faces que estiverem vazias ou na sequência U, L, F, R, B, D
     const targetFaces = ALL_FACES.filter(f => !this.facePhotos[f]);
     const queue = targetFaces.length >= files.length ? targetFaces : ALL_FACES;
@@ -505,7 +513,6 @@ export class CubeScanModal {
    * Carrega o conjunto de 6 fotos de exemplo
    */
   async loadSixFaceExample() {
-    this.isExampleLoaded = true;
     this.setSixFacesStatus('Carregando 6 fotos de exemplo...', 'busy');
 
     const examplePhotos = getExampleSixFacePhotos();
@@ -531,13 +538,10 @@ export class CubeScanModal {
     this.setSixFacesStatus('Processando as 6 imagens e conferindo consistência geométrica...', 'busy');
 
     try {
-      const result = await analyzeSixFacePhotos(
-        this.facePhotos,
-        this.faceRotations,
-        { allowExampleFixture: this.isExampleLoaded }
-      );
+      const result = await analyzeSixFacePhotos(this.facePhotos, this.faceRotations);
 
       if (result.faces) {
+        this.uncertainCells = result.uncertain || null;
         this.scannedFaces = {
           U: [...result.faces.U],
           D: [...result.faces.D],
@@ -552,21 +556,23 @@ export class CubeScanModal {
 
       const counts = countColors(this.scannedFaces);
       const countLine = ALL_FACES.map((c) => `${c}:${counts[c]}`).join('  ');
-      const provName = result.provider || 'Visão Computacional';
+      const provName = result.provider || 'Visão computacional no navegador';
       const warn = (result.warnings || []).join('\n');
+      const doubtful = this.countUncertain();
 
       let verdict = '';
       if (result.solvable) {
-        verdict = '✔ Cubo 100% Válido e Solucionável! Veja o mapa 2D e clique em "Aplicar no 3D e Resolver".';
-      } else if (result.legal) {
-        verdict = 'Contagem e peças válidas (9 de cada cor). Confira o mapa 2D antes de resolver.';
+        verdict = '✔ Cubo válido e solucionável. Confira o mapa 2D e clique em "Aplicar e ver solução".';
       } else {
-        verdict = 'Leitura concluída. Algumas cores podem precisar de pequeno ajuste no Editor 2D.';
+        verdict = 'Leitura concluída, mas o cubo ainda não fecha. Corrija as peças destacadas no mapa 2D.';
+      }
+      if (doubtful > 0) {
+        verdict += `\n${doubtful} peça(s) com leitura duvidosa estão destacadas no mapa 2D.`;
       }
 
       this.setSixFacesStatus(
         `${verdict}\nMétodo: ${provName}\nContagem de facetas: ${countLine}${warn ? `\n${warn}` : ''}`,
-        result.solvable ? 'ok' : (result.legal ? '' : 'error')
+        result.solvable ? 'ok' : 'error'
       );
 
       this.switchTab('editor2d');
@@ -621,8 +627,16 @@ export class CubeScanModal {
         if (i === 4) {
           faceletBtn.classList.add('center-facelet');
         }
+        if (this.uncertainCells && this.uncertainCells[face] && this.uncertainCells[face][i]) {
+          faceletBtn.classList.add('is-uncertain');
+          faceletBtn.title += ' (confira esta peça)';
+        }
 
         faceletBtn.addEventListener('click', () => {
+          if (this.uncertainCells && this.uncertainCells[face]) {
+            this.uncertainCells[face][i] = false;
+          }
+          faceletBtn.classList.remove('is-uncertain');
           this.scannedFaces[face][i] = this.activeColor;
           faceletBtn.style.backgroundColor = COLOR_HEX_MAP[this.activeColor];
           faceletBtn.title = `${face}[${i}]: ${COLOR_LABELS[this.activeColor]}`;
@@ -662,18 +676,34 @@ export class CubeScanModal {
       }).join('');
     }
 
-    const isAllNine = Object.values(counts).every(c => c === 9);
+    let validation;
+    try {
+      validation = validateSixFaces(this.scannedFaces);
+    } catch (err) {
+      validation = { solvable: false, warnings: [err.message] };
+    }
+    this.lastValidation = validation;
 
     if (this.validationBadge) {
-      if (isAllNine) {
+      if (validation.solvable) {
         this.validationBadge.className = 'scan-validation-badge valid';
-        this.validationBadge.innerHTML = '✔ Cubo 100% Válido! Pronto para resolver.';
-        if (this.btnApplyAndSolve) this.btnApplyAndSolve.disabled = false;
+        this.validationBadge.textContent = '✔ Cubo válido e solucionável. Pronto para aplicar.';
       } else {
+        const reasons = (validation.warnings || []).join(' ');
         this.validationBadge.className = 'scan-validation-badge invalid';
-        this.validationBadge.innerHTML = '⚠️ Ajuste as cores no Editor 2D (cada uma das 6 cores deve ter exatamente 9 peças).';
+        this.validationBadge.textContent = `⚠️ Este cubo ainda não existe num cubo real. ${reasons} Toque nas peças e escolha a cor certa na paleta.`;
       }
     }
+    if (this.btnApplyAndSolve) this.btnApplyAndSolve.disabled = !validation.solvable;
+    if (this.btnApplyScan) this.btnApplyScan.disabled = !validation.solvable;
+  }
+
+  countUncertain() {
+    if (!this.uncertainCells) return 0;
+    return ALL_FACES.reduce(
+      (total, face) => total + (this.uncertainCells[face] || []).filter(Boolean).length,
+      0
+    );
   }
 
   currentWizardStep() {
@@ -716,7 +746,10 @@ export class CubeScanModal {
       this.wizardPalette.querySelectorAll('button').forEach((btn) => {
         btn.addEventListener('click', () => {
           if (this.wizardSelectedCell < 0) this.wizardSelectedCell = 0;
-          this.wizardGrid[this.wizardSelectedCell] = btn.getAttribute('data-color');
+          if (this.wizardSelectedCell === 4) return; // o centro define a face
+          const color = btn.getAttribute('data-color');
+          this.wizardGrid[this.wizardSelectedCell] = color;
+          this.manualCells[this.currentWizardStep().face][this.wizardSelectedCell] = color;
           this.paintWizardGrid();
         });
       });
@@ -852,7 +885,8 @@ export class CubeScanModal {
     ctx.drawImage(video, 0, 0);
     const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
 
-    this.wizardGrid = CubeImageScanner.extractGridColors(video);
+    const details = CubeImageScanner.extractGridDetails(canvas);
+    this.wizardGrid = details.map((d) => d.face);
     this.paintWizardGrid();
 
     if (this.wizardFreeze) {
@@ -862,6 +896,8 @@ export class CubeScanModal {
 
     const step = this.currentWizardStep();
     this.facePhotos[step.face] = dataUrl;
+    this.faceSamples[step.face] = details.map((d) => d.rgbValues);
+    this.manualCells[step.face] = {};
     this.detectedGrids[step.face] = [...this.wizardGrid];
     this.setWizardStatus('Foto congelada. Toque numa célula e numa cor se precisar corrigir, depois confirme.');
     this.updateWizardButtons();
@@ -885,6 +921,8 @@ export class CubeScanModal {
         this.paintWizardGrid();
         const step = this.currentWizardStep();
         this.facePhotos[step.face] = src;
+        this.faceSamples[step.face] = result.samples;
+        this.manualCells[step.face] = {};
         this.detectedGrids[step.face] = [...this.wizardGrid];
         this.setWizardStatus('Foto lida. Corrija as cores se alguma estiver errada e confirme a face.');
       } catch (err) {
@@ -927,34 +965,46 @@ export class CubeScanModal {
     }
 
     this.stopWizardCamera();
+    this.calibrateWizardFaces();
     this.switchTab('editor2d');
     this.setWizardStatus('As 6 faces foram lidas. Confira o mapa 2D e aplique no cubo 3D.');
+  }
+
+  /**
+   * Reclassifica as 54 peças usando as cores reais dos 6 centros como referência.
+   * Correções feitas à mão no assistente são mantidas.
+   */
+  calibrateWizardFaces() {
+    if (!ALL_FACES.every((f) => Array.isArray(this.faceSamples[f]))) {
+      this.uncertainCells = null;
+      return;
+    }
+    try {
+      const { faces, uncertain } = calibrateFaces(this.faceSamples, { locked: this.manualCells });
+      this.scannedFaces = faces;
+      this.uncertainCells = uncertain;
+      for (const face of ALL_FACES) this.detectedGrids[face] = [...faces[face]];
+      this.render2DNet();
+      this.updateStatsAndValidation();
+    } catch (err) {
+      console.warn('Calibração de cores falhou, mantendo a leitura de cada face:', err);
+    }
   }
 
   /**
    * Aplica o estado ao cubo 3D e opcionalmente dispara o solucionador.
    */
   applyAndSolve(startSolver = true) {
-    const counts = { U: 0, D: 0, F: 0, B: 0, R: 0, L: 0 };
-    for (const face of FACE_NAMES) {
-      for (let i = 0; i < 9; i++) {
-        const c = this.scannedFaces[face][i];
-        if (counts[c] !== undefined) counts[c]++;
-      }
-    }
-
-    const isAllNine = Object.values(counts).every(c => c === 9);
-    if (!isAllNine) {
-      const confirmContinue = confirm(
-        'Atenção: A contagem de algumas cores não está em 9 peças. Deseja aplicar assim mesmo?'
-      );
-      if (!confirmContinue) return;
-    }
+    this.updateStatsAndValidation();
+    if (!this.lastValidation || !this.lastValidation.solvable) return;
 
     try {
-      this.cubeState.setFaces(this.scannedFaces);
+      this.cubeState.setFaces(this.lastValidation.faces);
     } catch (err) {
-      alert(err.message || 'Não foi possível aplicar este cubo.');
+      if (this.validationBadge) {
+        this.validationBadge.className = 'scan-validation-badge invalid';
+        this.validationBadge.textContent = err.message || 'Não foi possível aplicar este cubo.';
+      }
       return;
     }
     this.cubeView.applyState(this.cubeState);

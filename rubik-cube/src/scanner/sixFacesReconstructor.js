@@ -154,29 +154,54 @@ export function analyzePieces(faces) {
   };
 }
 
-let solverReady = false;
-
-export function ensureSolver() {
-  if (!solverReady) {
-    try {
-      Cube.initSolver();
-    } catch {
-      /* solver already initialized or in progress */
-    }
-    solverReady = true;
-  }
+function isPermutation(perm, size) {
+  if (!Array.isArray(perm) || perm.length !== size) return false;
+  const seen = new Set(perm);
+  return seen.size === size && perm.every((v) => Number.isInteger(v) && v >= 0 && v < size);
 }
 
+function permutationParity(perm) {
+  const visited = new Array(perm.length).fill(false);
+  let parity = 0;
+  for (let i = 0; i < perm.length; i++) {
+    if (visited[i]) continue;
+    let len = 0;
+    let j = i;
+    while (!visited[j]) {
+      visited[j] = true;
+      j = perm[j];
+      len++;
+    }
+    parity ^= (len - 1) & 1;
+  }
+  return parity;
+}
+
+/**
+ * Verifica se o estado é alcançável num cubo real, pelas invariantes do grupo do cubo:
+ * peças únicas, soma da orientação dos cantos ≡ 0 (mod 3), soma da orientação das
+ * arestas ≡ 0 (mod 2) e mesma paridade nas permutações de cantos e arestas.
+ * (O `solve()` do cubejs devolve uma "solução" mesmo para estados impossíveis,
+ * por isso não serve como teste.)
+ */
 export function isCubejsSolvable(faces) {
   try {
-    ensureSolver();
     const cube = new CubeState();
     cube.setFaces(faces);
     const str54 = cube.toString54();
     if (str54.length !== 54) return false;
-    const instance = Cube.fromString(str54);
-    const sol = instance.solve();
-    return typeof sol === 'string' && sol.length > 0;
+    const centers = FACE_NAMES.map((f) => cube.faces[f][4]).join('');
+    if (centers !== FACE_NAMES.join('')) return false;
+
+    const pieces = analyzePieces(cube.faces);
+    if (pieces.illegalCorners || pieces.illegalEdges) return false;
+    if (pieces.uniqueCorners !== 8 || pieces.uniqueEdges !== 12) return false;
+
+    const { cp, co, ep, eo } = Cube.fromString(str54);
+    if (!isPermutation(cp, 8) || !isPermutation(ep, 12)) return false;
+    if (co.reduce((a, b) => a + b, 0) % 3 !== 0) return false;
+    if (eo.reduce((a, b) => a + b, 0) % 2 !== 0) return false;
+    return permutationParity(cp) === permutationParity(ep);
   } catch {
     return false;
   }
@@ -215,8 +240,10 @@ export function validateSixFaces(faces) {
   const counts = countColors(normalized);
   const isAllNine = Object.values(counts).every(c => c === 9);
   const pieces = analyzePieces(normalized);
+  const wrongCenters = FACE_NAMES.filter((face) => normalized[face][4] !== face);
   const legalPieces =
     isAllNine &&
+    wrongCenters.length === 0 &&
     pieces.uniqueCorners === 8 &&
     pieces.uniqueEdges === 12 &&
     pieces.illegalCorners === 0 &&
@@ -225,6 +252,9 @@ export function validateSixFaces(faces) {
   const solvable = legalPieces ? isCubejsSolvable(normalized) : false;
   const warnings = [];
 
+  if (wrongCenters.length > 0) {
+    warnings.push(`O centro das faces ${wrongCenters.join(', ')} não bate com a cor da face.`);
+  }
   if (!isAllNine) {
     warnings.push('A contagem de cores difere de 9 peças por cor.');
   }
@@ -234,8 +264,12 @@ export function validateSixFaces(faces) {
   if (pieces.illegalEdges > 0) {
     warnings.push(`${pieces.illegalEdges} arestas possuem cores conflitantes.`);
   }
+  if (pieces.illegalCorners === 0 && pieces.illegalEdges === 0 && isAllNine &&
+      (pieces.uniqueCorners !== 8 || pieces.uniqueEdges !== 12)) {
+    warnings.push('Há peças repetidas: alguma cor foi lida trocada em um canto ou aresta.');
+  }
   if (legalPieces && !solvable) {
-    warnings.push('Contagem válida, mas o cubo possui erro de paridade ou orientação de peça invertida.');
+    warnings.push('As peças existem, mas o cubo é impossível: um canto torcido, uma aresta invertida ou duas peças trocadas.');
   }
 
   return {
